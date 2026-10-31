@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<modDesc descVersion="94">
+    <author>ubuntu811</author>
+    <version>0.1.0.0</version>
+    <title>
+        <en>HorseDynamics</en>
+    </title>
+    <description>
+        <en><![CDATA[
+Makes the horses of a pasture follow you. Call the nearest one with Right Ctrl + C (again for each further horse); they walk, trot or gallop to you depending on the distance, in bursts
+(a few seconds of walking, then they stand a while), give up when a fence is in the way, and go back into a stable by themselves when you lead them to one. Right Ctrl + V gives them all back.
+Built on the game's own horse riding: a horse becomes a rideable vehicle that is steered by a virtual rider.
+
+Single player only for now.
+]]></en>
+    </description>
+    <iconFilename>icon.dds</iconFilename>
+    <multiplayer supported="false" />
+
+    <extraSourceFiles>
+        <sourceFile filename="scripts/HorseGate.lua" />
+        <sourceFile filename="scripts/HorseRope.lua" />
+        <sourceFile filename="scripts/HorseLead.lua" />
+        <sourceFile filename="scripts/HorseDynamics.lua" />
+    </extraSourceFiles>
+
+    <!-- two hand tools in the shop's "animals" hand tool category (the one the game's own horse brush is in) -->
+    <storeItems>
+        <storeItem xmlFilename="handTools/carrot/carrot.xml"/>
+        <storeItem xmlFilename="handTools/leash/leash.xml"/>
+    </storeItems>
+    <handToolSpecializations>
+        <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
+        <specialization name="horseLeash" filename="scripts/HandToolHorseLeash.lua" className="HandToolHorseLeash"/>
+    </handToolSpecializations>
+    <handToolTypes>
+        <type name="horseCarrot" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseCarrot"/>
+        </type>
+        <type name="horseLeash" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseLeash"/>
+        </type>
+    </handToolTypes>
+
+    <actions>
+        <!-- no category: these have to work from a vehicle's seat as well (leading horses while driving to the new stable) -->
+        <action name="HORSEDYN_CALL" axisType="HALF"/>
+        <action name="HORSEDYN_RELEASE" axisType="HALF"/>
+    </actions>
+
+    <inputBinding>
+        <actionBinding action="HORSEDYN_CALL">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_c" index="1" />
+        </actionBinding>
+        <actionBinding action="HORSEDYN_RELEASE">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_v" index="1" />
+        </actionBinding>
+    </inputBinding>
+
+    <l10n>
+        <text name="action_horseCarrot">
+            <en>Call the horses of the pasture / let them go</en>
+            <de>Pferde der Weide rufen / freilassen</de>
+        </text>
+        <text name="action_horseLeash">
+            <en>Leash the nearest horse / let it go</en>
+            <de>Nächstes Pferd anleinen / freilassen</de>
+        </text>
+        <text name="input_HORSEDYN_CALL">
+            <en>Call the nearest horse</en>
+            <de>Nächstes Pferd rufen</de>
+        </text>
+        <text name="input_HORSEDYN_RELEASE">
+            <en>Give the horses back</en>
+            <de>Pferde freigeben</de>
+        </text>
+    </l10n>
+</modDesc>

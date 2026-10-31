@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<handTool type="horseLeash" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/handTool.xsd">
+    <storeData>
+        <name>
+            <en>Leash</en>
+            <de>Führstrick</de>
+        </name>
+        <functions>
+            <function>Takes the nearest horse on the leash; use again to let it go.</function>
+        </functions>
+        <image>store/leash.dds</image>
+        <price>25</price>
+        <lifetime>1000</lifetime>
+        <dailyUpkeep>0</dailyUpkeep>
+        <showInStore>true</showInStore>
+        <rotation>0</rotation>
+        <brand>NONE</brand>
+        <species>HANDTOOL</species>
+        <category>handtoolsAnimals</category>
+        <canBeSold>true</canBeSold>
+    </storeData>
+
+    <!-- the model is a rope prop of the base game (rope01, from the map AS pier props) in a wrapper i3d with the hand nodes; the hand placement is the horse brush's, to be tuned in the game -->
+    <base>
+        <typeDesc>Horse leash</typeDesc>
+        <filename>handTools/leash/leash.i3d</filename>
+        <graphics node="graphics" lockFirstPerson="true"/>
+        <handNode node="handNode"/>
+        <firstPersonNode node="firstPersonNode"/>
+    </base>
+
+    <storable>
+        <holderType type="HANDTOOL" node="graphics"/>
+    </storable>
+
+    <i3dMappings>
+        <i3dMapping id="graphics" node="0>0" />
+        <i3dMapping id="handNode" node="0>1" />
+        <i3dMapping id="firstPersonNode" node="0>2" />
+    </i3dMappings>
+</handTool>

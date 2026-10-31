@@ -1,0 +1,5 @@
+# recordings and build output do not belong in the repo
+assets/*.mp4
+build/.build_staging/
+build/*.zip
+assets/*.zip
