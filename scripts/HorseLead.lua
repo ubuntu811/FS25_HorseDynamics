@@ -872,8 +872,28 @@ function HorseLead.stepRide(ride, dt)
     local px, _, pz = playerPosition()
     if not vehicle.isDeleted and HorseLead.isTakenOver(vehicle) then
         HorseLead.unclaimVehicle(vehicle)
+        if ride.harness then
+            -- a horse in its harness that somebody mounts is not given up: the player drives it (the game's own controls), the harness and what it pulls stay (until a proper wagon has a seat); only the
+            -- halter and the lead rope go, the saddle has the reins
+            if not ride.ridden then
+                ride.ridden = true
+                ride.leash, ride.stay, ride.carrot, ride.halterOn = nil, nil, nil, nil
+                if HorseRope ~= nil then
+                    HorseRope.remove(ride, true)
+                end
+                say("ride: the horse in its harness was mounted: you drive it, the harness and what it pulls stay on")
+            end
+            return false
+        end
         say("ride: somebody mounted the horse: it is not led any more (the others keep following)")
         return true
+    end
+    if ride.ridden then
+        -- the rider got off: the horse stands where it is, in its harness, with the virtual rider again
+        ride.ridden = nil
+        ride.stay = true
+        HorseLead.claimVehicle(vehicle)
+        say("ride: the rider got off: the horse stands in its harness")
     end
     if vehicle.isDeleted or spec == nil or px == nil then
         say("ride: the horse is gone (back in its pasture, or deleted)")
@@ -1084,6 +1104,7 @@ function HorseLead.updateRide(dt)
     end
     if HorseHitch ~= nil then
         HorseHitch.updatePlayer()                                              -- (the player is slowed by what the horses pull)
+        HorseHitch.updateSaddle()                                              -- (the attach key on the horse you ride in its harness)
     end
     for i = #HorseLead.rides, 1, -1 do
         local ride = HorseLead.rides[i]

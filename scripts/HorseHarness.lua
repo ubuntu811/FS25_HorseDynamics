@@ -50,10 +50,13 @@ function HorseHarness.defaults()
             points = { { 0.13, 1.68, -0.58 }, { 0.17, 1.63, -0.58 }, { 0.235, 1.57, -0.58 }, { 0.27, 1.50, -0.58 }, { 0.31, 1.40, -0.56 } } },
         -- the breeching behind the buttocks (the rump ends at z -0.78 at x 0.15), from each ring to the middle: { x, y, z }, sagging by `slack` at the middle
         breeching = { bone = "Root_M", diameter = 0.022, strap = 0.045, slack = 0.03, points = { { 0.30, 1.26, -0.64 }, { 0.255, 1.25, -0.73 }, { 0.195, 1.245, -0.80 }, { 0.12, 1.24, -0.84 }, { 0, 1.235, -0.85 } } },
-        -- the traces: from the collar's ring along the shoulder and the flank through the tug ring and on behind the horse, where the end hangs (slack): { bone, x, y, z, weight }
+        -- the traces: from the collar's ring along the shoulder and the flank through the tug ring and on behind the horse, to the hook: { bone, x, y, z, weight }
         trace = { diameter = 0.02, strap = 0.04, slack = 0.30,
             before = { { "Chest_M", 0.30, 1.48, 0.62 }, { "Chest_M", 0.285, 1.45, 0.41 } },
-            after = { { "RootPart1_M", 0.33, 1.38, -0.15, 0 }, { "Root_M", 0.37, 1.28, -0.72, 0.3 }, { "Root_M", 0.40, 1.20, -1.00, 1 } } },
+            after = { { "RootPart1_M", 0.33, 1.38, -0.15, 0 }, { "Root_M", 0.37, 1.28, -0.72, 0.3 } } },
+        -- the hitch hook: ONE fixed steel ring behind the rump, rigid on the hip bone (no slack), where both traces end; a trailer's drawbar eye is pinned to its middle (HorseHitch). In the vertical plane along the
+        -- horse, `radius` 6 cm, at the height of a trailer's hitch (the Wooden Trailer's is 0.87 above the ground), 20 cm behind the breeching (the rump ends at z -0.8)
+        hook = { bone = "Root_M", at = { 0, 1.08, -1.06 }, radius = 0.06, diameter = 0.014 },
     }
 end
 HorseHarness.spec = HorseHarness.defaults()
@@ -104,7 +107,7 @@ function HorseHarness.build(vehicle, gear)
         bones[name] = node
     end
     local s = HorseHarness.spec
-    local rig = { nodes = {}, bone = {}, locals = {}, slack = {}, pieces = {}, targets = {}, tied = {}, traceEnds = {}, bones = bones, frames = 0, model = {} }
+    local rig = { nodes = {}, bone = {}, locals = {}, slack = {}, pieces = {}, targets = {}, tied = {}, bones = bones, frames = 0, model = {} }
     local function point(boneName, x, y, z, slack)
         local node = createTransformGroup("horseHarnessPoint")
         link(getRootNode(), node)
@@ -299,6 +302,11 @@ function HorseHarness.build(vehicle, gear)
 
     -- the traces: collar ring, two points along the shoulder, the tug ring, three points behind (the last hangs free)
     local t = s.trace
+    local hk = s.hook
+    local hookRing = ringAt(hk.bone, hk.at[1], hk.at[2], hk.at[3], hk.radius, 0, hk.diameter)
+    hookRing.close()
+    rig.hookNode = point(hk.bone, hk.at[1], hk.at[2], hk.at[3], 0)                       -- (the middle of the ring, rigid on the bone: HorseHitch pins the drawbar eye here)
+    rig.hookRear = hookRing.near(hk.at[2], hk.at[3] - 1)                                 -- (the ring's point furthest behind: a tow bar starts there)
     for _, sign in ipairs({ 1, -1 }) do
         local nodes = {}
         local first = t.before[1]
@@ -313,8 +321,9 @@ function HorseHarness.build(vehicle, gear)
         for _, p in ipairs(t.after) do
             tail[#tail + 1] = point(p[1], sign * p[2], p[3], p[4], t.slack * (p[5] or 0))
         end
+        local last = t.after[#t.after]
+        tail[#tail + 1] = hookRing.near(last[3], last[4])           -- (both traces end on the same point of the hook ring: a V that meets at the hook)
         chain(tail, t.diameter, t.strap)
-        rig.traceEnds[sign] = tail[#tail]                        -- (HorseHitch ties the trace ropes to a trailer here)
     end
     HorseHarness.place(rig)
     return rig
@@ -386,7 +395,7 @@ function HorseHarness.sync(ride)
     pcall(HorseHarness.place, rig)
     for i, rope in ipairs(rig.pieces) do
         HorseRope.applyMaterial(rope)
-        pcall(rope.setVisibility, rope, true)
+        HorseRope.setShown(rope, true)
         if rig.tied[i] then
             pcall(rope.update, rope, 0)               -- (the points moved just now: the piece follows them this frame)
         end

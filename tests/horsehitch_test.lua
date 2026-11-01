@@ -1,18 +1,20 @@
--- plain Lua with a fake engine: a harnessed horse pulls a trailer (the drawbar eye pinned to a steel ring at the harness by a stiff servo), the click hitches / unhitches, the ropes, the swing damping and the brake follow
+-- plain Lua with a fake engine: a harnessed horse pulls a trailer (the wagon is driven kinematically so that its drawbar eye is glued to the harness's hook), the click hitches / unhitches, the lift, the keys and the saddle prompt follow
 local passed, failed = 0, 0
 local realPrint = print
 local log = {}
 print = function(text) log[#log + 1] = text end
 local function check(name, ok) if ok then passed = passed + 1 else failed = failed + 1; realPrint("  FAIL " .. name) end end
 
--- nodes: 1 horse root, 2 / 3 trace ends left / right (the pin is their middle: 0, 0.9, -1), 10 the joint (the drawbar eye), 20 the player
-local nodes = { [1] = { 0, 0, 0 }, [2] = { 0.4, 0.9, -1 }, [3] = { -0.4, 0.9, -1 }, [10] = { 0, 0.6, -4 }, [20] = { 0, 0, -3 } }
+-- nodes: 1 horse root, 2 the harness's hook (the pin: 0, 0.9, -1), 3 the hook ring's rear point, 10 the joint (the drawbar eye), 20 the player
+local nodes = { [1] = { 0, 0, 0 }, [2] = { 0, 0.9, -1 }, [3] = { 0, 0.9, -1.06 }, [10] = { 0, 0.6, -4 }, [20] = { 0, 0, -3 } }
 getWorldTranslation = function(n) local p = nodes[n]; return p[1], p[2], p[3] end
 entityExists = function(n) return nodes[n] ~= nil end
 local velocity = { 0, 0, 0 }
-getLinearVelocity = function() return velocity[1], velocity[2], velocity[3] end
+local VELS = {}                                  -- (a velocity of one node: the others have `velocity`)
+getLinearVelocity = function(n) local v = VELS[n] or velocity; return v[1], v[2], v[3] end
 local MASS = 2
-getMass = function() return MASS end
+local MASSES = {}                                -- (the mass of one node: the others have MASS)
+getMass = function(n) return MASSES[n] or MASS end
 local function noHorizontalForce(list)
     for _, f in ipairs(list) do
         if math.abs(f[2]) > 1e-9 or math.abs(f[4]) > 1e-9 then
@@ -22,7 +24,15 @@ local function noHorizontalForce(list)
     return true
 end
 local rootBack = { 0, 0, -1 }
-localDirectionToWorld = function(n, x, y, z) return rootBack[1], rootBack[2], rootBack[3] end
+local SETLIN, SETANG, ANGS, HEADING = {}, {}, {}, {}      -- (the speeds the hitch set per node, the angular speeds the engine has, the heading of a body)
+setLinearVelocity = function(n, x, y, z) SETLIN[n] = { x, y, z } end
+setAngularVelocity = function(n, x, y, z) SETANG[n] = { x, y, z } end
+getAngularVelocity = function(n) local v = ANGS[n] or { 0, 0, 0 }; return v[1], v[2], v[3] end
+localDirectionToWorld = function(n, x, y, z)
+    if n == 1 then return rootBack[1], rootBack[2], rootBack[3] end        -- (the horse: its way back)
+    local h = HEADING[n] or 0
+    return math.sin(h), 0, math.cos(h)                                      -- (any body: its forward axis)
+end
 local forces = {}
 addForce = function(node, fx, fy, fz, px, py, pz, isLocal) forces[#forces + 1] = { node, fx, fy, fz, px, py, pz, isLocal } end
 
@@ -34,14 +44,16 @@ setTranslation = function(n, x, y, z) nodes[n] = { x, y, z } end
 delete = function(n) deletedNodes[#deletedNodes + 1] = n; nodes[n] = nil end
 local brake, support = {}, {}
 local pickResult
-local vehicle = { isDeleted = false, getName = function() return "Small Trailer" end }
+local vehicle = { isDeleted = false, getName = function() return "Small Trailer" end, updateActionEvents = function() INPUTLOG[#INPUTLOG + 1] = "vehicle update" end }
 local target = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye" }
 HITCHCAPS = {}
+NEARESTJOINT = nil
 g_currentMission = { winchTow = {
     pick = function() return pickResult end,
     setBrakeOff = function(t, off) brake[#brake + 1] = off end,
     setSupportUp = function(t, up) support[#support + 1] = up end,
     pullMass = function(v, c) return v.total or getMass(c) end,
+    nearest = function(x, z, radius, except) NEARESTARGS = { x, z, radius, except }; return NEARESTJOINT end,
     pullSpeed = function(mass) if mass >= 10 then return 2 / 3.6 end return 3.5 end,
     setSpeedCap = function(source, cap) HITCHCAPS[source] = cap end,
 } }
@@ -61,14 +73,37 @@ HorseRope = {
     end,
     gearOptions = function(w, b, x, y, z, gear) if gear == "leather" then return { leather = true } end return nil end,
     applyMaterial = function(rope) if not rope.rfMaterialDone then rope.materialDone = true end end,
+    setShown = function(rope, visible) rope.visible = visible end,
 }
 HorseHarness = { spec = { trace = { diameter = 0.02 } } }
 local player = true
 HorseLead = { rides = {}, playerPosition = function() if player then return 0, 0, -3 end return nil end }
+-- the input system: the vehicle's registration of its keys, replayed for the player on foot
+INPUTLOG = {}
+CONTEXT = "PLAYER"                              -- the input context the player is in
+SADDLE = { active = {}, text = {}, priority = {}, removed = {} }
+g_inputBinding = { getContextName = function() return CONTEXT end, beginActionEventsModification = function(_, context) INPUTLOG[#INPUTLOG + 1] = "begin " .. context end, endActionEventsModification = function() INPUTLOG[#INPUTLOG + 1] = "end" end,
+    setActionEventTextPriority = function(_, id, p) SADDLE.priority[id] = p end,
+    setActionEventActive = function(_, id, a) SADDLE.active[id] = a end,
+    setActionEventText = function(_, id, t) SADDLE.text[id] = t end,
+    removeActionEvent = function(_, id) SADDLE.removed[#SADDLE.removed + 1] = id end }
+InputAction = { ATTACH = "ATTACH" }
+GS_PRIO_VERY_HIGH = 5
+g_i18n = { getText = function(_, key) return key end }
+PlayerInputComponent = { INPUT_CONTEXT_NAME = "PLAYER" }
+SPECERROR = false
+SpecializationUtil = { raiseEvent = function(v, name, a, b)
+    if SPECERROR then error("a spec broke") end
+    INPUTLOG[#INPUTLOG + 1] = name .. " " .. tostring(a) .. " " .. tostring(b)
+end }
+Vehicle = { INPUT_CONTEXT_NAME = "VEHICLE", registerActionEvents = function(self) INPUTLOG[#INPUTLOG + 1] = "game registers" end }
+Rideable = Rideable or {}
+Rideable.onRegisterActionEvents = function(self, a, b) INPUTLOG[#INPUTLOG + 1] = "rideable registers" end
+Utils = { appendedFunction = function(old, new) return function(...) old(...); new(...) end end }
 dofile("scripts/HorseHitch.lua")
-HorseHitch.MAX_PULL_KN = 1000        -- (the servo law first, the horse's limit below)
+HorseHitch.MAX_PULL_KN = 1000        -- (the drive first, the horse's limit below)
 
-local ride = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "leather", rig = { traceEnds = { [1] = 2, [-1] = 3 } } }
+local ride = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "leather", rig = { hookNode = 2, hookRear = 3 } }
 HorseLead.rides = { ride }
 
 -- the click: nothing in view -> not its business
@@ -79,83 +114,114 @@ pickResult = target
 local message = HorseHitch.click()
 check("a joint in view and a harnessed horse near it: hitched, with a message saying what and how to undo", message ~= nil and message:find("hitched to the drawbar eye of Small Trailer", 1, true) ~= nil and ride.hitch ~= nil)
 check("hitching puts the support leg up", support[#support] == true)
-check("the ropes: HOOK_SEGMENTS (6) steel pieces round the hook, then a trace from each harness trace end, in the harness's gear (leather), as thick as the traces", #pieces == 8
-    and pieces[1].diameter == HorseHitch.HOOK_DIAMETER and pieces[1].rfMaterialDone == true and pieces[1].options == nil
-    and pieces[7].diameter == 0.02 and pieces[7].rfMaterialDone == nil and pieces[7].options ~= nil and pieces[7].options.leather and (pieces[7].link == 2 or pieces[7].link == 3) and pieces[7].link ~= pieces[8].link)
-check("six points for the ring are made under the world root", #ride.hitch.nodes == 6 and #ride.hitch.ring == 6)
+check("a trailer's drawbar eye needs no pieces of its own (the hook ring and the traces are the harness's, always there): none, no tow bar", #pieces == 0 and ride.hitch.barLength == 0)
 
--- the pull: the pin is the middle of the trace ends, (0, 0.9, -1). The joint is at z -4, 3 m off: far away it is pulled in at the limited acceleration (mass 2 t * 10 m/s2)
-HorseHitch.update(ride, 16)
-local f = forces[#forces]
-check("far from the pin: pulled towards it (+z) at the most the pin accelerates (mass * MAX_ACCEL), at the joint, on the joint's body, in world coordinates", f ~= nil and f[1] == 100 and math.abs(f[2]) < 1e-9 and math.abs(f[4] - 2 * HorseHitch.MAX_ACCEL_MS2) < 1e-9 and f[5] == 0 and f[6] == 0.6 and f[7] == -4 and f[8] == false)
-check("... and the brake is let off (setBrakeOff(hitch, true): the joint is off the pin, the vehicle must roll)", brake[#brake] == true)
-
-do
-    local r = ride.hitch.ring
-    check("the hook ring hangs at the pin in the vertical plane along the horse: the point behind it (z -1.06), the point facing the horse (z -0.94), both at the pin's height",
-        math.abs(nodes[r[1]][1]) < 1e-9 and math.abs(nodes[r[1]][2] - 0.9) < 1e-9 and math.abs(nodes[r[1]][3] + 1.06) < 1e-9
-        and math.abs(nodes[r[4]][3] + 0.94) < 1e-9 and math.abs(nodes[r[4]][2] - 0.9) < 1e-9)
-    check("... the points between are above and below (y 0.9 +- 0.052)", math.abs(nodes[r[2]][2] - 0.952) < 1e-3 and math.abs(nodes[r[6]][2] - 0.848) < 1e-3)
-end
-
--- the whole vehicle's mass is moved: a drawbar of 0.06 t on a wagon of 0.66 t
+-- the wagon is DRIVEN, kinematically: a vehicle of two bodies, the drawbar (100, 0.06 t, at the eye) and the rear body (101, 0.3 t, 3 m behind it): the rear body is the reference, the eye is glued to the hook
+vehicle.components = { { node = 100 }, { node = 101 } }
+MASSES[100], MASSES[101] = 0.06, 0.3
 vehicle.total = 0.66
-forces = {}
+nodes[100], nodes[101] = { 0, 0.5, -1 }, { 0, 0.5, -4 }
+nodes[10] = { 0, 0.9, -1 }                       -- the eye on the hook (0, 0.9, -1)
+HorseHitch.release(ride)
+pickResult = target
+HorseHitch.click()
+check("the heavy body of the vehicle is found when hitching, the reference of the drive (the rear body 101, not the drawbar 100)", ride.hitch.body == 101)
+local function still(n) return math.abs(SETLIN[n][1]) < 1e-9 and math.abs(SETLIN[n][3]) < 1e-9 end
 HorseHitch.update(ride, 16)
-check("the force is for the vehicle's total mass (0.66 t * 10 m/s2), not for the joint's body (2 t here)", forces[#forces] ~= nil and math.abs(forces[#forces][4] - 0.66 * HorseHitch.MAX_ACCEL_MS2) < 1e-9)
-vehicle.total = nil
+check("the eye on the hook and the horse standing: every body is held (no horizontal speed), no turn", still(100) and still(101) and SETANG[101][2] == 0)
+check("... and the brake is let off while it is driven (it would only make the wheels skid)", brake[#brake] == true)
 
--- on the pin, at rest, the horse standing: nothing to do, and the brake is put back
-nodes[10] = { 0, 0.9, -1 }
-forces = {}
-for _ = 1, 40 do HorseHitch.update(ride, 16) end
-check("the eye on the pin and the horse standing: no horizontal force", noHorizontalForce(forces))
-check("... and the brake is put back (setBrakeOff(hitch, false)): it stays where it is", brake[#brake] == false)
-
--- a stiff spring and damper, both ways (a rope would not push): 5 cm behind the pin: pulled with 2 t * 12 * 4 * 0.05 = 4.8 kN, 5 cm in front of it: pushed back with as much
-nodes[10] = { 0, 0.9, -1.05 }
-forces = {}
+-- the horse walks forward (its smoothed speed 2 m/s: one frame of the 10 % filter leaves 1.8): the whole wagon moves with it, straight
+ride.hitch.vz = 2
 HorseHitch.update(ride, 16)
-check("5 cm behind the pin: pulled forward, 2 t * 12 * 4 * 0.05 = 4.8 kN", forces[#forces] ~= nil and math.abs(forces[#forces][4] - 2 * HorseHitch.VEL_GAIN * HorseHitch.POS_GAIN * 0.05) < 1e-9)
-nodes[10] = { 0, 0.9, -0.95 }
-forces = {}
-HorseHitch.update(ride, 16)
-check("5 cm in front of the pin: pushed back (the pin is no rope), 4.8 kN backwards", forces[#forces] ~= nil and math.abs(forces[#forces][4] + 4.8) < 1e-9)
--- sideways: 10 cm to the +x of the pin: pushed to -x (what a rope that pulls only when taut could not do: the S curves)
-nodes[10] = { 0.1, 0.9, -1 }
-forces = {}
-HorseHitch.update(ride, 16)
-check("10 cm off the pin sideways (+x): pushed back to it (-x), 2 t * 12 * 4 * 0.1 = 9.6 kN", forces[#forces] ~= nil and math.abs(forces[#forces][2] + 9.6) < 1e-9 and math.abs(forces[#forces][4]) < 1e-9)
--- the swing of the joint is damped: it moves to +x at 1 m/s while on the pin: pushed against its speed
-nodes[10] = { 0, 0.9, -1 }
-velocity = { 1, 0, 0 }
-forces = {}
-HorseHitch.update(ride, 16)
-check("on the pin but moving sideways at 1 m/s: the speed is damped (-x, 2 t * 12 * 1 = 24 kN, limited to 2 t * 10 = 20 kN)", forces[#forces] ~= nil and math.abs(forces[#forces][2] + 2 * HorseHitch.MAX_ACCEL_MS2) < 1e-9)
-velocity = { 0, 0, 0 }
-
--- the horse's own speed is the speed the joint should have: a joint on the pin at rest while the horse walks forward (its smoothed velocity 3 m/s) is accelerated along
-ride.hitch.vz = 3
-forces = {}
-HorseHitch.update(ride, 16)
-check("the horse is walking: a joint at rest on the pin is accelerated forward (+z)", forces[#forces] ~= nil and forces[#forces][4] > 0)
+check("the horse walks: every body of the wagon gets the horse's speed forward (1.8 m/s after the filter), no turn", math.abs(SETLIN[100][3] - 1.8) < 1e-9 and math.abs(SETLIN[101][3] - 1.8) < 1e-9 and math.abs(SETLIN[101][1]) < 1e-9 and SETANG[101][2] == 0)
 ride.hitch.vz = 0
 for _ = 1, 40 do HorseHitch.update(ride, 16) end
 
--- the hook turns with the horse: facing -x (its way back is +x) the ring's behind-point is at x +0.06
-rootBack = { 1, 0, 0 }
+-- the hook moves sideways (the horse turns: 1 m/s, 0.9 after the filter): the wagon turns about its rear body as a trailer does: rear speed along the line (zero), turn 0.9 / 3 m = 0.3 rad/s,
+-- the eye (at the drawbar, 3 m ahead of the rear body) moves 0.9 m/s sideways
+ride.hitch.vx = 1
 HorseHitch.update(ride, 16)
-check("the horse turned: the ring turned with it (the point behind at x +0.06, the point facing the horse at x -0.06, z at the pin)", math.abs(nodes[ride.hitch.ring[1]][1] - 0.06) < 1e-9 and math.abs(nodes[ride.hitch.ring[4]][1] + 0.06) < 1e-9 and math.abs(nodes[ride.hitch.ring[1]][3] + 1) < 1e-9)
-rootBack = { 0, 0, -1 }
-for _ = 1, 3 do HorseHitch.update(ride, 16) end
+check("the horse turns: the drawbar at the eye moves sideways with the hook (0.9 m/s), the rear body stays (it only moves along the line to the eye), the turn is 0.3 rad/s",
+    math.abs(SETLIN[100][1] - 0.9) < 1e-9 and math.abs(SETLIN[101][1]) < 1e-9 and math.abs(SETLIN[100][3]) < 1e-9 and math.abs(SETANG[101][2] - 0.3) < 1e-9 and math.abs(SETANG[100][2] - 0.3) < 1e-9)
+ride.hitch.vx = 0
+for _ = 1, 40 do HorseHitch.update(ride, 16) end
 
--- the height: the eye is carried at the height of the traces' ends (0.9): the drawbar's own weight plus a servo, at most LIFT_MAX_KN; the force is vertical only (fy, f[3])
-MASS = 0.06
-vehicle.total = 0.66                             -- (a drawbar of 60 kg on a wagon of 660: the lift is for such a drawbar)
+-- the eye is behind the hook: it is brought back at POS_GAIN per metre (0.5 m: 2 m/s), straight
+nodes[10] = { 0, 0.9, -1.5 }
+HorseHitch.update(ride, 16)
+check("the eye 0.5 m behind the hook: the wagon is driven forward at 4 * 0.5 = 2 m/s, straight", math.abs(SETLIN[100][3] - 2) < 1e-9 and math.abs(SETLIN[101][3] - 2) < 1e-9 and SETANG[101][2] == 0)
+-- far away and close to the rear body (no arm to turn on): pure movement, at most CATCH_SPEED_MS
+nodes[10] = { 0, 0.9, -3.8 }
+HorseHitch.update(ride, 16)
+check("the eye 2.8 m behind the hook (4 * 2.8 = 11 m/s wanted): at most CATCH_SPEED_MS (6), the rear body 0.2 m from the eye: no turn, everything moves alike", math.abs(SETLIN[101][3] - 6) < 1e-9 and math.abs(SETLIN[100][3] - 6) < 1e-9 and SETANG[101][2] == 0)
 nodes[10] = { 0, 0.9, -1 }
+
+-- the vertical speed and the pitch and roll are the physics' own
+VELS[100], ANGS[100] = { 0, -0.3, 0 }, { 0.1, 0, 0.2 }
+HorseHitch.update(ride, 16)
+check("the vertical speed of a body and its pitch and roll are left to the physics (only the horizontal speed and the yaw are set)", SETLIN[100][2] == -0.3 and SETANG[100][1] == 0.1 and SETANG[100][3] == 0.2)
+VELS[100], ANGS[100] = nil, nil
+
+-- the engine's sign of a yaw speed is checked against what the rear body really does: its heading turning the other way for 8 frames flips the sign
+do
+    log = {}
+    for i = 1, 12 do
+        ride.hitch.vx = 1
+        HEADING[101] = -0.005 * i
+        HorseHitch.update(ride, 16)
+    end
+    local flipped = false
+    for _, line in ipairs(log) do if line:find("the sign is flipped", 1, true) then flipped = true end end
+    check("a wagon that turns the other way from the yaw speed commanded: the sign is flipped (said once) and the turn is set the other way round", ride.hitch.omegaSign == -1 and flipped and SETANG[101][2] < 0)
+    ride.hitch.omegaSign, ride.hitch.lastHeading, ride.hitch.wrongTurns = 1, nil, 0
+    for i = 1, 12 do
+        ride.hitch.vx = 1
+        HEADING[101] = 0.005 * i
+        HorseHitch.update(ride, 16)
+    end
+    check("a wagon that turns the way commanded keeps the sign", ride.hitch.omegaSign == 1 and SETANG[101][2] > 0)
+    HEADING[101] = nil
+    ride.hitch.vx, ride.hitch.lastHeading = 0, nil
+    for _ = 1, 40 do HorseHitch.update(ride, 16) end
+end
+
+-- a vehicle that is ONE body (a machine, a rigid trailer): driven as it is
+do
+    vehicle.components = nil
+    local ride2 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
+    nodes[100] = { 0, 0.5, -1 }
+    nodes[10] = { 0, 0.9, -1.5 }
+    HorseHitch.hitch(ride2, target)
+    SETLIN[100] = nil
+    HorseHitch.update(ride2, 16)
+    check("a vehicle without a list of bodies: its joint's body is driven (0.5 m behind the hook: 2 m/s forward)", SETLIN[100] ~= nil and math.abs(SETLIN[100][3] - 2) < 1e-9)
+    HorseHitch.release(ride2)
+    vehicle.components = { { node = 100 }, { node = 101 } }
+    nodes[10] = { 0, 0.9, -1 }
+end
+
+-- the hook moves with the horse (it is a node rigid on the hip bone): the wagon is driven towards it
+nodes[2] = { 0.8, 0.9, -0.2 }
+HorseHitch.update(ride, 16)
+check("the hook moved (the horse turned): the eye on the old place is driven towards it (+x)", SETLIN[100][1] > 0)
+do
+    local ax, ay, az = HorseHitch.anchor(ride)
+    check("HorseHitch.anchor is the hook node's place", ax == 0.8 and ay == 0.9 and az == -0.2)
+end
+nodes[2] = { 0, 0.9, -1 }
+for _ = 1, 40 do HorseHitch.update(ride, 16) end
+do
+    local ax, ay, az = HorseHitch.anchor({ rig = { traceEnds = { [1] = 2, [-1] = 3 } } })
+    check("a rig without a hook node (an older harness): the middle of its two trace ends", ax == 0 and math.abs(az + 1.03) < 1e-9)
+    check("no harness: no anchor", HorseHitch.anchor({}) == nil)
+end
+
+-- the height: the eye is carried at the height of the hook (0.9): the drawbar's own weight (a force on the drawbar alone), at most LIFT_MAX_KN; the force is vertical only
+vehicle.total = 0.66                             -- (a drawbar of 60 kg on a wagon of 660: the lift is for such a drawbar)
 forces = {}
 HorseHitch.update(ride, 16)
-check("the eye at the height of the traces, at rest: the drawbar's weight is carried (0.06 t * 9.81 = 0.589 kN up)", forces[#forces] ~= nil and math.abs(forces[#forces][3] - 0.06 * HorseHitch.GRAVITY) < 1e-9)
+check("the eye at the height of the hook, at rest: the drawbar's weight is carried (0.06 t * 9.81 = 0.589 kN up, on the drawbar)", forces[#forces] ~= nil and forces[#forces][1] == 100 and math.abs(forces[#forces][3] - 0.06 * HorseHitch.GRAVITY) < 1e-9 and forces[#forces][2] == 0 and forces[#forces][4] == 0)
 nodes[10] = { 0, 0.6, -1 }
 forces = {}
 HorseHitch.update(ride, 16)
@@ -163,8 +229,8 @@ check("the eye 30 cm too low (on the ground): lifted harder (0.06 t * (9.81 + 12
 nodes[10] = { 0, 1.2, -1 }
 forces = {}
 HorseHitch.update(ride, 16)
-check("the eye 30 cm too high: nothing lifts it (gravity brings it down)", forces[#forces] == nil or forces[#forces][3] == 0)
-MASS = 2
+check("the eye 30 cm too high: nothing lifts it (gravity brings it down)", forces[#forces] == nil)
+MASSES[100] = 2
 vehicle.total = 8                                -- (2 t of 8: 25 %, still a drawbar body)
 nodes[10] = { 0, 0.6, -1 }
 forces = {}
@@ -173,67 +239,36 @@ check("a heavy body on the joint (2 t here): the lift is capped (LIFT_MAX_KN), t
 vehicle.total = 2.5                              -- (2 t of 2.5: the joint sits on the main body)
 forces = {}
 HorseHitch.update(ride, 16)
-check("the joint sits on the main body of the vehicle (2 t of 2.5 t): nothing lifts it, a rigid trailer or a machine is not tilted by its plate", forces[#forces] == nil or forces[#forces][3] == 0)
-vehicle.total = nil
+check("the joint sits on the main body of the vehicle (2 t of 2.5 t): nothing lifts it, a rigid trailer or a machine is not tilted by its plate", forces[#forces] == nil)
+MASSES[100] = 0.06
+vehicle.total = 0.66
 nodes[10] = { 0, 0.9, -1 }
 for _ = 1, 40 do HorseHitch.update(ride, 16) end
 
--- the swing of the heavy body round the pin is damped: the wagon's body (node 101) 2.7 m behind the eye, swinging to +x at 1 m/s: pushed back to -x (the force on the body, not on the drawbar)
-do
-    local ride2 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
-    vehicle.components = { { node = 100 }, { node = 101 } }
-    nodes[100], nodes[101] = { 0, 0.5, -1 }, { 0, 0.5, -3.7 }
-    HorseHitch.hitch(ride2, target)
-    check("the heavy body of the vehicle is found when hitching (a component of the vehicle)", ride2.hitch.body == 100 or ride2.hitch.body == 101)
-    HorseHitch.release(ride2)
-    vehicle.components = nil
-end
-ride.hitch.body = 101
-nodes[101] = { 0, 0.5, -3.7 }
-velocity = { 1, 0, 0 }
-forces = {}
-HorseHitch.update(ride, 16)
-do
-    local swingForce
-    for _, force in ipairs(forces) do if force[1] == 101 then swingForce = force end end
-    check("a body swinging sideways (+x at 1 m/s, 2.7 m behind the eye): damped, a force on the body against the swing: mass 2 t * 3 1/s * 1 m/s = -6 kN x, at the body", swingForce ~= nil and math.abs(swingForce[2] + 6) < 1e-9 and swingForce[5] == 0 and swingForce[7] == -3.7)
-end
-velocity = { 0, 0, 0 }
-forces = {}
-HorseHitch.update(ride, 16)
-check("not swinging: no force on the body", (function() for _, force in ipairs(forces) do if force[1] == 101 then return false end end return true end)())
-nodes[101] = { 0, 0.5, -1.3 }
-velocity = { 1, 0, 0 }
-forces = {}
-HorseHitch.update(ride, 16)
-check("a body less than SWING_MIN_ARM_M from the eye is left alone (no arm to swing on)", (function() for _, force in ipairs(forces) do if force[1] == 101 then return false end end return true end)())
-velocity = { 0, 0, 0 }
-ride.hitch.body = nil
-for _ = 1, 3 do HorseHitch.update(ride, 16) end
-
--- a horse is no tractor: the pull is at most MAX_PULL_KN, and a heavy load gets softer gains (the limit is reached with SATURATE_MS of speed error, the position loop a third of the speed loop): no bang-bang
-HorseHitch.MAX_PULL_KN = 4
+-- the speed limits are OFF by default (until the glue is stable): a load is given the speed it wants however heavy
 vehicle.total = 14
-do
-    local velGain = 4 / (14 * HorseHitch.SATURATE_MS)
-    local posGain = velGain / 3
-    nodes[10] = { 0, 0.9, -3.2 }                     -- 2.2 m behind the pin
-    forces = {}
-    HorseHitch.update(ride, 16)
-    check("a 14 t load: soft gains (velocity 0.57 /s, position 0.19 /s): the force is mass * gain * gain * error = 3.35 kN, under the 4 kN limit", forces[#forces] ~= nil and math.abs(forces[#forces][4] - 14 * velGain * posGain * 2.2) < 1e-9 and forces[#forces][4] < 4)
-    check("... and it is not strained yet (2.2 m: under STRAIN_STOP_M)", ride.hitch.strained ~= true)
-    nodes[10] = { 0, 0.9, -5.5 }                     -- 4.5 m behind the pin
-    forces = {}
-    HorseHitch.update(ride, 16)
-    check("4.5 m behind: the limit holds (MAX_PULL_KN: 4 kN along the way to the pin, +z)", forces[#forces] ~= nil and math.abs(forces[#forces][4] - 4) < 1e-9 and math.abs(forces[#forces][2]) < 1e-9)
-    check("... and now it is strained (4.5 m behind the pin: hitch.strained, only a message follows: the horse does not stand and wait)", ride.hitch.strained == true)
-    nodes[10] = { 0, 0.9, -2.5 }                     -- 1.5 m: caught up
-    HorseHitch.update(ride, 16)
-    check("... and not strained again when the load is within STRAIN_GO_M of the pin", ride.hitch.strained == false)
-    nodes[10] = { 0, 0.9, -4 }                       -- 3 m: between the two: the state stays (no stop and go at the edge)
-    HorseHitch.update(ride, 16)
-    check("between STRAIN_GO_M and STRAIN_STOP_M the state stays (hysteresis)", ride.hitch.strained == false)
-end
+HorseHitch.MAX_PULL_KN = 4
+nodes[10] = { 0, 0.9, -3.2 }
+SETLIN[101] = nil
+HorseHitch.update(ride, 16)
+check("SPEED_LIMITS off (the default): even 14 t at a pull limit of 4 kN is driven at the full speed wanted (4 * 2.2 = 8.8, at most 6 m/s)", HorseHitch.SPEED_LIMITS == false and SETLIN[101] ~= nil and math.abs(SETLIN[101][3] - 6) < 1e-9)
+-- a horse is no tractor (SPEED_LIMITS on): the wagon's speed changes by at most MAX_PULL_KN / mass per second; a load far behind the hook is strained (a message, nothing else)
+HorseHitch.SPEED_LIMITS = true
+vehicle.total = 14
+nodes[10] = { 0, 0.9, -3.2 }                     -- 2.2 m behind the hook, 0.8 m from the rear body
+SETLIN[101] = nil
+HorseHitch.update(ride, 16)
+check("a 14 t load: the speed the wagon is given changes by at most 4 kN / 14 t * 0.016 s = 0.0046 m/s in a frame (not the 6 m/s wanted)", SETLIN[101] ~= nil and math.abs(SETLIN[101][3] - 4 / 14 * 0.016) < 1e-9)
+check("... it is not strained yet (2.2 m: under STRAIN_STOP_M)", ride.hitch.strained ~= true)
+nodes[10] = { 0, 0.9, -5.5 }                     -- 4.5 m behind the hook
+HorseHitch.update(ride, 16)
+check("4.5 m behind the hook: strained (a message follows, the horse does not stand and wait)", ride.hitch.strained == true)
+nodes[10] = { 0, 0.9, -2.5 }                     -- 1.5 m: caught up
+HorseHitch.update(ride, 16)
+check("... and not strained again when the load is within STRAIN_GO_M of the hook", ride.hitch.strained == false)
+nodes[10] = { 0, 0.9, -4 }                       -- 3 m: between the two: the state stays (no stop and go at the edge)
+HorseHitch.update(ride, 16)
+check("between STRAIN_GO_M and STRAIN_STOP_M the state stays (hysteresis)", ride.hitch.strained == false)
 nodes[10] = { 0, 0.9, -5.5 }
 log = {}
 for _ = 1, 6 do HorseHitch.update(ride, 1000) end
@@ -242,47 +277,34 @@ do
     for _, line in ipairs(log) do if line:find("cannot move this load (14.0 t)", 1, true) then said = true end end
     check("a load that does not come after STUCK_S seconds: said once that the horse cannot move it", said and ride.hitch.reported == true)
 end
--- a light wagon keeps the full gains (0.66 t: 4 kN / (0.66 t * 0.5) is above VEL_GAIN)
+-- a light wagon is only limited by its own mass: 4 kN / 0.66 t = 6 m/s2: 0.1 m/s in a frame of 16 ms
 vehicle.total = 0.66
-nodes[10] = { 0, 0.9, -1.05 }
-forces = {}
+nodes[10] = { 0, 0.9, -3.8 }
+SETLIN[101] = nil
 HorseHitch.update(ride, 16)
-check("a 0.66 t wagon keeps the full gains (12 and 4): 5 cm behind the pin: 0.66 t * 12 * 4 * 0.05 = 1.58 kN", forces[#forces] ~= nil and math.abs(forces[#forces][4] - 0.66 * HorseHitch.VEL_GAIN * HorseHitch.POS_GAIN * 0.05) < 1e-9)
-vehicle.total = nil
+check("a 0.66 t wagon can change its speed by 4 / 0.66 * 0.016 = 0.097 m/s in a frame", SETLIN[101] ~= nil and math.abs(SETLIN[101][3] - 4 / 0.66 * 0.016) < 1e-9)
 HorseHitch.MAX_PULL_KN = 1000
+HorseHitch.SPEED_LIMITS = false
+vehicle.total = nil
 nodes[10] = { 0, 0.9, -1 }
 for _ = 1, 40 do HorseHitch.update(ride, 16) end
 
--- the brake: off when the horse walks
-nodes[1] = { 0, 0, 0.5 }                         -- 0.5 m in 16 ms: 31 m/s (a teleport, but a "moving" horse for the controller)
-HorseHitch.update(ride, 16)
-check("the horse moves: the brake is off", brake[#brake] == true)
-nodes[1] = { 0, 0, 0 }
-for _ = 1, 40 do HorseHitch.update(ride, 16) end
-
--- the ropes follow: tied once their shape has loaded, material applied (not on the steel ring), shown, updated
-pieces[1].referenceFrame, pieces[7].referenceFrame = 5, 5
-HorseHitch.update(ride, 16)
-HorseHitch.update(ride, 16)
-check("a loaded ring piece is tied to the next point of the ring, shown, and updated every frame after (and has no gear material: it is steel)", pieces[1].target == ride.hitch.ring[2] and pieces[1].visible and pieces[1].updates >= 1 and not pieces[1].materialDone)
-check("a loaded trace is tied to the ring's front point (the one facing the horse), has the gear's material, is shown and updated", pieces[7].target == ride.hitch.ring[4] and pieces[7].materialDone and pieces[7].visible and pieces[7].updates >= 1)
-
--- the harness rebuilt (new end nodes): the ropes are made again
-nodes[4], nodes[5] = { 0.4, 0.9, -1 }, { -0.4, 0.9, -1 }
-ride.rig = { traceEnds = { [1] = 4, [-1] = 5 } }
-local before, deletedBefore = #pieces, #deletedNodes
-HorseHitch.update(ride, 16)
-check("a harness that was rebuilt: the old ropes and points are deleted and eight new ropes follow the new end nodes", pieces[1].deleted and #pieces == before + 8 and #deletedNodes == deletedBefore + 6 and (pieces[before + 7].link == 4 or pieces[before + 7].link == 5))
+-- the log line of the first seconds says what the drive does
+log = {}
+for _ = 1, 70 do HorseHitch.update(ride, 16) end
+do
+    local line
+    for _, l in ipairs(log) do if l:find("eye off the hook by", 1, true) then line = l end end
+    check("for the first seconds the log says how far the eye is off the hook, the speeds, the turn and the mass", line ~= nil and line:find("turn", 1, true) ~= nil and line:find("strained", 1, true) ~= nil)
+end
 
 -- the ring gate for the harness tool
 check("ring gate: a harnessed horse is there and not hitched: no, it is hitched already", HorseHitch.ringFree() == false)
 
 -- unhitch: the same key
-local lastRopes = { pieces[#pieces], pieces[#pieces - 7] }
-deletedBefore = #deletedNodes
 message = HorseHitch.click()
 check("the click with a hitched horse unhitches (and says so)", message ~= nil and message:find("unhitched", 1, true) ~= nil and ride.hitch == nil)
-check("unhitching deletes the ropes and the ring's points, puts the brake back and the support leg down", lastRopes[1].deleted and lastRopes[2].deleted and #deletedNodes == deletedBefore + 6 and brake[#brake] == false and support[#support] == false)
+check("unhitching puts the brake back and the support leg down", brake[#brake] == false and support[#support] == false)
 check("ring gate: the horse is free again: the ring shows", HorseHitch.ringFree() == true)
 player = false
 check("ring gate: no player position, no ring", HorseHitch.ringFree() == false)
@@ -311,16 +333,19 @@ do
     local before3 = #pieces
     HorseHitch.hitch(ride3, { vehicle = vehicle, node = 10, component = 100, kind = "hitch" })
     local bar = pieces[#pieces]
-    check("a vehicle's own hitch gets a tow bar: nine pieces (six steel round the hook, two traces, the bar), the bar steel, TOW_BAR_DIAMETER thick, from the ring's rear point",
-        ride3.hitch.barLength == HorseHitch.TOW_BAR_M and #pieces == before3 + 9 and bar.diameter == HorseHitch.TOW_BAR_DIAMETER and bar.rfMaterialDone == true and bar.link == ride3.hitch.ring[1])
+    check("a vehicle's own hitch gets a tow bar: ONE piece, steel, TOW_BAR_DIAMETER thick, from the hook ring's rear point",
+        ride3.hitch.barLength == HorseHitch.TOW_BAR_M and #pieces == before3 + 1 and bar.diameter == HorseHitch.TOW_BAR_DIAMETER and bar.rfMaterialDone == true and bar.link == 3)
     nodes[10] = { 0, 0.4, -2.6 }                     -- the pin: 1.6 m behind the middle of the trace ends (z -1)
     forces = {}
     HorseHitch.update(ride3, 16)
-    check("pinned at the end of the bar: a joint there has no horizontal force, and the machine is not lifted by its plate (no vertical force)", noHorizontalForce(forces) and (#forces == 0 or forces[#forces][3] == 0))
-    nodes[10] = { 0, 0.4, -1 }                       -- the vehicle ran up to the hook
-    forces = {}
+    SETLIN[100] = nil
     HorseHitch.update(ride3, 16)
-    check("a vehicle that runs up to the horse is pushed back by the pin (the bar keeps it clear)", forces[#forces] ~= nil and forces[#forces][4] < 0)
+    check("glued at the end of the bar: a joint there is held (no horizontal speed), and the machine is not lifted by its plate (no force at all)", SETLIN[100] ~= nil and math.abs(SETLIN[100][1]) < 1e-9 and math.abs(SETLIN[100][3]) < 1e-9 and #forces == 0)
+    nodes[10] = { 0, 0.4, -1 }                       -- the vehicle ran up to the hook
+    nodes[100] = { 0, 0.4, -1 }
+    HorseHitch.update(ride3, 16)
+    check("a vehicle that runs up to the horse is driven back to the end of the bar (backwards: the bar keeps it clear, 1.6 m behind the hook)", SETLIN[100][3] < 0)
+
     bar.referenceFrame = 5
     HorseHitch.update(ride3, 16)
     check("the tow bar is tied to the vehicle's hitch once its shape has loaded", bar.target == 10)
@@ -329,11 +354,130 @@ do
     local ride4 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
     local before4 = #pieces
     HorseHitch.hitch(ride4, { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye" })
-    check("a trailer's drawbar eye gets no tow bar (its own drawbar is the clearance): eight pieces, no bar length", ride4.hitch.barLength == 0 and #pieces == before4 + 8)
+    check("a trailer's drawbar eye gets no tow bar (its own drawbar is the clearance): no pieces, no bar length", ride4.hitch.barLength == 0 and #pieces == before4)
     HorseHitch.release(ride4)
 end
 
+-- from the saddle, like a tractor: the game's attach key shows "Hitch" with a joint behind the hook within reach, "Unhitch" while something is hitched
+do
+    local horse = { rootNode = 1, isDeleted = false }
+    horse.addActionEvent = function(self, events, action, target, callback, a, b, c, d, e, f, g) events[action] = { actionEventId = 77 }; SADDLEEVENT = { action = action, target = target, callback = callback }; return true, 77 end
+    horse.clearActionEventsTable = function(self, events) for k, v in pairs(events) do g_inputBinding:removeActionEvent(v.actionEventId); events[k] = nil end end
+    horse.requestActionEventUpdate = function() SADDLEREQUESTS = (SADDLEREQUESTS or 0) + 1 end
+    local rideS = { vehicle = horse, harness = true, ridden = true, rig = ride.rig }
+    HorseLead.rides = { rideS }
+    nodes[1] = { 0, 0, 0 }
+    NEARESTJOINT = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye", x = 0, y = 0.4, z = -2.5 }
+    SADDLEREQUESTS = 0
+    HorseHitch.updateSaddle()
+    check("a ride that was just mounted: the horse is asked to register its events (once)", SADDLEREQUESTS == 1 and (function() HorseHitch.updateSaddle(); return SADDLEREQUESTS == 1 end)())
+    Rideable.onRegisterActionEvents(horse, true, true)
+    check("the appended Rideable:onRegisterActionEvents puts the game's attach key on the horse that is ridden in its harness, text priority very high, off for now",
+        SADDLEEVENT ~= nil and SADDLEEVENT.action == "ATTACH" and SADDLEEVENT.target == horse and HorseHitch.saddle[horse].id == 77 and SADDLE.priority[77] == 5 and SADDLE.active[77] == false)
+    HorseHitch.updateSaddle()
+    check("a joint behind the hook within reach: the key shows \"Hitch\" (the game's action_attach text)", SADDLE.active[77] == true and SADDLE.text[77] == "action_attach")
+    check("... the lookup is from the hook (the middle of the trace ends, z -1) with the reach, not for the horse itself", NEARESTARGS[1] == 0 and NEARESTARGS[2] == -1 and NEARESTARGS[3] == HorseHitch.SADDLE_REACH_M and NEARESTARGS[4] == horse)
+    NEARESTJOINT = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye", x = 0, y = 0.4, z = 2.5 }
+    HorseHitch.updateSaddle()
+    check("a joint in front of the horse is not offered", SADDLE.active[77] == false)
+    NEARESTJOINT = nil
+    HorseHitch.updateSaddle()
+    check("nothing near: the key is off", SADDLE.active[77] == false)
+    NEARESTJOINT = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye", x = 0, y = 0.4, z = -2.5 }
+    HorseHitch.onSaddleAttach(horse, "ATTACH", 1)
+    check("the key pressed: the horse is hitched to that joint", rideS.hitch ~= nil and rideS.hitch.node == 10)
+    HorseHitch.updateSaddle()
+    check("while something is hitched the key shows \"Unhitch\" (action_detach)", SADDLE.active[77] == true and SADDLE.text[77] == "action_detach")
+    HorseHitch.onSaddleAttach(horse, "ATTACH", 1)
+    check("pressed again: let go", rideS.hitch == nil)
+    rideS.ridden = nil
+    HorseHitch.updateSaddle()
+    check("the rider got off: the key is taken off the horse again", HorseHitch.saddle[horse] == nil and SADDLE.removed[#SADDLE.removed] == 77)
+    -- a horse in its harness that is not ridden / without a harness has no key
+    rideS.ridden = true
+    rideS.harness = nil
+    check("a ridden horse without a harness gets no key", HorseHitch.registerSaddle(horse, true) == false)
+    HorseLead.rides = { ride }
+end
+
+-- the keys of what the horse pulls, for the player on foot: the vehicle's own registration replayed in the PLAYER context
+do
+    local ride6 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
+    INPUTLOG = {}
+    HorseHitch.hitch(ride6, target)
+    check("hitched: the vehicle's registration of its keys is replayed in the PLAYER context (begin, pre-register and register as active for input, end)",
+        INPUTLOG[1] == "begin PLAYER" and INPUTLOG[2] == "onPreRegisterActionEvents true true" and INPUTLOG[3] == "onRegisterActionEvents true true" and INPUTLOG[4] == "end")
+    check("... and the vehicle is remembered as keyed", HorseHitch.keyed[vehicle] == true)
+    INPUTLOG = {}
+    Vehicle.registerActionEvents(vehicle)
+    check("the game registering the vehicle's events again (it cleared the player's): they are made again, after its own", INPUTLOG[1] == "game registers" and INPUTLOG[2] == "begin PLAYER" and INPUTLOG[4] == "onRegisterActionEvents true true" and INPUTLOG[5] == "end")
+    INPUTLOG = {}
+    Vehicle.registerActionEvents({})
+    check("... but for a vehicle nobody pulls it does nothing of its own", INPUTLOG[1] == "game registers" and #INPUTLOG == 1)
+    INPUTLOG = {}
+    HorseHitch.release(ride6)
+    check("unhitched: the game is asked to update the vehicle's events (not active for input: the specs clear the player's), nothing is registered for the player", INPUTLOG[1] == "vehicle update" and #INPUTLOG == 1 and HorseHitch.keyed[vehicle] == nil)
+    INPUTLOG = {}
+    Vehicle.registerActionEvents(vehicle)
+    check("... and the game's later registrations are no longer followed", #INPUTLOG == 1)
+    -- a spec that breaks: the modification is ended, nothing crashes, said once
+    SPECERROR = true
+    INPUTLOG = {}
+    log = {}
+    local ride7 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
+    HorseHitch.hitch(ride7, target)
+    check("a spec that breaks while registering: the modification is ended again (no stuck input context), the hitch works, said once", INPUTLOG[1] == "begin PLAYER" and INPUTLOG[#INPUTLOG] == "end" and ride7.hitch ~= nil)
+    SPECERROR = false
+    HorseHitch.release(ride7)
+    -- switched off
+    HorseHitch.INHERIT_KEYS = false
+    INPUTLOG = {}
+    local ride8 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
+    HorseHitch.hitch(ride8, target)
+    check("HorseHitch.INHERIT_KEYS = false: the player gets none of the vehicle's keys", #INPUTLOG == 0)
+    HorseHitch.release(ride8)
+    HorseHitch.INHERIT_KEYS = true
+end
+
+-- the keys follow the player's input context: PLAYER on foot, VEHICLE while he rides the horse (a vehicle's keys only work in VEHICLE)
+do
+    local ride9 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
+    CONTEXT = "PLAYER"
+    INPUTLOG = {}
+    HorseHitch.hitch(ride9, target)
+    check("on foot the hitched vehicle's keys are registered in the PLAYER context", INPUTLOG[1] == "begin PLAYER" and HorseHitch.keyContext[vehicle] == "PLAYER")
+    INPUTLOG = {}
+    HorseHitch.updateKeys()
+    check("nothing changed: nothing is registered again", #INPUTLOG == 0)
+    CONTEXT = "VEHICLE"
+    HorseHitch.updateKeys()
+    check("the player mounted the horse (context VEHICLE): the keys are registered again, there", INPUTLOG[1] == "begin VEHICLE" and INPUTLOG[3] == "onRegisterActionEvents true true" and HorseHitch.keyContext[vehicle] == "VEHICLE")
+    INPUTLOG = {}
+    HorseHitch.updateKeys()
+    check("... once", #INPUTLOG == 0)
+    CONTEXT = "MENU"
+    HorseHitch.updateKeys()
+    check("in another context (a menu) nothing is done", #INPUTLOG == 0)
+    CONTEXT = "PLAYER"
+    HorseHitch.updateKeys()
+    check("back on foot: registered in PLAYER again", INPUTLOG[1] == "begin PLAYER")
+    INPUTLOG = {}
+    CONTEXT = "VEHICLE"
+    Vehicle.registerActionEvents(vehicle)
+    check("the game registering the vehicle's events again while riding: made again in VEHICLE, after its own", INPUTLOG[1] == "game registers" and INPUTLOG[2] == "begin VEHICLE")
+    HorseHitch.release(ride9)
+    CONTEXT = "PLAYER"
+end
+
 -- the gait of a horse that pulls: never a gallop, a trot at the most (the game's gait numbers are not in the order of the speeds: walk, canter, trot, gallop), whatever the load
+do
+    local G0 = Rideable.GAITTYPES
+    pickResult = target
+    HorseHitch.click()
+    check("SPEED_LIMITS off (the default): a pulling horse keeps the gait its steering chose, a gallop included", HorseHitch.limitGait(ride, G0.GALLOP) == G0.GALLOP and HorseHitch.limitGait(ride, G0.TROT) == G0.TROT)
+    HorseHitch.click()
+end
+HorseHitch.SPEED_LIMITS = true
 do
     local G = Rideable.GAITTYPES
     pickResult = target
@@ -343,12 +487,26 @@ do
     check("... standing and backing up are none of its business", HorseHitch.limitGait(ride, G.STILL) == G.STILL and HorseHitch.limitGait(ride, G.BACKWARDS) == G.BACKWARDS)
     vehicle.total = 3.5
     check("a 3.5 t load (a skid steer): the same, it may trot (the player is slowed instead)", HorseHitch.limitGait(ride, G.TROT) == G.TROT and HorseHitch.limitGait(ride, G.CANTER) == G.CANTER and HorseHitch.limitGait(ride, G.GALLOP) == G.TROT)
+    ride.ridden = true
+    check("a RIDDEN horse that pulls: a gallop is a canter (the gait below it in the key order: walk, trot, canter, gallop), the others as they are", HorseHitch.limitGait(ride, G.GALLOP) == G.CANTER and HorseHitch.limitGait(ride, G.TROT) == G.TROT and HorseHitch.limitGait(ride, G.CANTER) == G.CANTER)
+    ride.ridden = nil
     HorseHitch.click()
     check("nothing hitched: the gait is the steering's own", ride.hitch == nil and HorseHitch.limitGait(ride, G.GALLOP) == G.GALLOP)
     vehicle.total = nil
 end
+HorseHitch.SPEED_LIMITS = false
 
 -- the player's speed is capped by what the horse pulls (FS25_WinchTow's cap on the walk state: walking and running)
+do
+    pickResult = target
+    HorseHitch.click()
+    vehicle.total = 0.66
+    HorseHitch.updatePlayer()
+    check("SPEED_LIMITS off (the default): the player is not capped by what the horse pulls", HITCHCAPS.horsehitch == nil)
+    HorseHitch.click()
+    vehicle.total = nil
+end
+HorseHitch.SPEED_LIMITS = true
 do
     HorseHitch.updatePlayer()
     check("nothing hitched: no cap (the source is told nil)", HITCHCAPS.horsehitch == nil)
@@ -370,6 +528,7 @@ do
     check("with a winch mod that has no speed cap: nothing breaks", true)
     g_currentMission.winchTow = winchApi
 end
+HorseHitch.SPEED_LIMITS = false
 
 -- release is quiet and safe on a ride without a hitch (HorseHarness.destroy calls it for every ride)
 check("release without a hitch: false, nothing happens", HorseHitch.release({}) == false)

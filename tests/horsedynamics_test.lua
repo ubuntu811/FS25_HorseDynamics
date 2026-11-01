@@ -161,7 +161,7 @@ nodes[900].pos = { 10, 0, 20 }
 for _ = 1, 3 do L.updateRide(50) end
 check("... and when it is not staying any more it follows again", horse.spec_rideable.inputValues.currentGait ~= Rideable.GAITTYPES.STILL)
 -- a hitched horse whose load cannot keep up waits for it (HorseHitch sets hitch.waiting), and goes on when the load has caught up
-HorseHitch = { update = function() end, updatePlayer = function() end, limitGait = function(ride, gait) return Rideable.GAITTYPES.WALK end }
+HorseHitch = { update = function() end, updatePlayer = function() end, updateSaddle = function() end, limitGait = function(ride, gait) return Rideable.GAITTYPES.WALK end }
 L.rides[1].hitch = {}
 L.updateRide(50)
 check("a horse that pulls has the gait HorseHitch.limitGait gives it (here: walk), whatever its steering chose, even with the player far away", horse.spec_rideable.inputValues.currentGait == Rideable.GAITTYPES.WALK)
@@ -866,9 +866,9 @@ local piecesBefore2 = #ropes
 HorseHarness.sync(harnessRide)
 local rig = harnessRide.rig
 check("the harness is built on a horse with the four body bones", rig ~= nil)
-check("pieces: collar 12, 2 collar rings of 6, girth 18, 2 tug rings, pad 2, loin 4, hip straps 2 x 6, 2 breeching rings, breeching 2 x 5, traces 2 x 6, the false martingale 6, the back band 16, the neck strap 3 = 131 pieces on 121 points",
-    #rig.pieces == 131 and #rig.nodes == 121 and #ropes == piecesBefore2 + 131)
-check("the harness keeps the node at the end of each trace (the hitch ties its ropes there): one each side, both among its points", rig.traceEnds[1] ~= nil and rig.traceEnds[-1] ~= nil and rig.traceEnds[1] ~= rig.traceEnds[-1] and nodes[rig.traceEnds[1]].parent == 1)
+check("pieces: collar 12, 2 collar rings of 6, girth 18, 2 tug rings, pad 2, loin 4, hip straps 2 x 6, 2 breeching rings, breeching 2 x 5, traces 2 x 6 (they end on the hook ring), the hook ring 6, the false martingale 6, the back band 16, the neck strap 3 = 137 pieces on 126 points (the two trace ends are gone, the ring's 6 points and its middle are new)",
+    #rig.pieces == 137 and #rig.nodes == 126 and #ropes == piecesBefore2 + 137)
+check("the harness has ONE fixed hook: a middle node and the ring's rear point (a tow bar starts there), both among its points, hanging under the world root", rig.hookNode ~= nil and rig.hookRear ~= nil and rig.hookNode ~= rig.hookRear and nodes[rig.hookNode].parent == 1 and nodes[rig.hookRear].parent == 1 and rig.traceEnds == nil)
 check("the points hang under the world root", nodes[rig.nodes[1]].parent == 1)
 -- round trip: a bone at its rest pose puts every point where the model measured it
 local padMiddle
@@ -928,18 +928,21 @@ check("the back band is a closed loop round the barrel behind the girth: its top
     and pieceBetween(nodeAt(0, bb.bottom, bb.z), nodeAt(bb.profile[1][1], bb.profile[1][2], bb.z)) ~= nil and pieceBetween(nodeAt(0, bb.bottom, bb.z), nodeAt(-bb.profile[1][1], bb.profile[1][2], bb.z)) ~= nil)
 local steel = 0
 for _, rope in ipairs(rig.pieces) do steel = steel + (rope.rfMaterialDone and 1 or 0) end
-check("the six rings (collar, tugs, breeching) of six pieces are steel, the straps are hemp", steel == 36)
--- the free ends of the traces hang: 0.30 below where the model puts them, the breeching sags in the middle
-local freeEnd = HorseHarness.spec.trace.after[3]
-local endFound, hangs = 0, 0
-for _, node in ipairs(rig.nodes) do
-    local p = nodes[node].pos
-    if math.abs(math.abs(p[1]) - freeEnd[2]) < 1e-3 and math.abs(p[3] - freeEnd[4]) < 1e-3 then
-        endFound = endFound + 1
-        if math.abs(p[2] - (freeEnd[3] - 0.30)) < 1e-3 then hangs = hangs + 1 end
+check("the seven rings (collar 2, tugs 2, breeching 2, the hook) of six pieces are steel, the straps are hemp", steel == 42)
+-- the hitch hook: ONE fixed point on the hip bone at its model place, no slack (it does not hang); both traces end on the same point of its ring (a V that meets at the hook)
+local hk = HorseHarness.spec.hook
+local hp = nodes[rig.hookNode].pos
+check("the hook is one fixed point at its model place, not hanging (no slack)", math.abs(hp[1] - hk.at[1]) < 1e-3 and math.abs(hp[2] - hk.at[2]) < 1e-3 and math.abs(hp[3] - hk.at[3]) < 1e-3)
+local tally = {}
+for i = 1, #rig.pieces do tally[rig.targets[i]] = (tally[rig.targets[i]] or 0) + 1 end
+local meets = 0
+for node, count in pairs(tally) do
+    local q = nodes[node].pos
+    if count == 3 and math.sqrt((q[1] - hp[1]) ^ 2 + (q[2] - hp[2]) ^ 2 + (q[3] - hp[3]) ^ 2) < hk.radius * 1.2 then
+        meets = meets + 1
     end
 end
-check("the free end of each trace (one each side) hangs 0.30 below its place", endFound == 2 and hangs == 2)
+check("both traces end on the same point of the hook ring (that point is the target of the ring's own piece and of two traces)", meets == 1)
 -- sync ties the pieces once they have loaded
 check("nothing is tied before the shapes have loaded", rig.tied[1] == nil)
 loadAll()
@@ -985,7 +988,7 @@ do
         elseif rope.rfMaterialDone then steelPieces = steelPieces + 1
         else plain = plain + 1 end
     end
-    check("leather gear: 81 flat straps, the collar and the pad (14 pieces) round leather, the six rings (36 pieces) steel, nothing plain rope", flat == 81 and roundLeather == 14 and steelPieces == 36 and plain == 0)
+    check("leather gear: 81 flat straps, the collar and the pad (14 pieces) round leather, the seven rings (42 pieces) steel, nothing plain rope", flat == 81 and roundLeather == 14 and steelPieces == 42 and plain == 0)
     check("... every strap has a unit skin normal in its bone's space, a bone, the strap update, a shader size equal to its width (the shader's size is a diameter), and a thickness of at most a fifth of the width", normalsOk and widthsOk)
     local girthStrap
     for _, rope in ipairs(lrig.pieces) do
@@ -1040,18 +1043,29 @@ check("... taking the harness off leaves it led", HorseLead.harness() == "harnes
 -- the leash takes a horse that stays in its harness
 HorseLead.rides = { { vehicle = harnessVehicle, stay = true, harness = true } }
 check("the leash tool takes the horse that stays in its harness: it gets the halter and follows, and keeps the harness", HorseLead.leash():find("leashed", 1, true) ~= nil and HorseLead.rides[1].leash == true and HorseLead.rides[1].stay == nil and HorseLead.rides[1].harness == true)
--- a horse somebody mounts while it wears the harness: the ride is dropped and the harness goes with it, no new one is built for the dropped ride (it was: orphaned ropes across the yard)
-do
-    local mountedHorse = { rootNode = 860, getIsEntered = function() return true end }
-    local mountedRide = { vehicle = mountedHorse, leash = true, harness = true }
-    HorseLead.rides = { mountedRide }
-    local ropesBeforeMount = #ropes
-    HorseHarness.sync(mountedRide)
-    local built = #ropes - ropesBeforeMount
-    HorseLead.updateRide(50)
-    check("(the harness was on the horse before it was mounted)", built > 100 and mountedRide.rig == nil)
-    check("a horse somebody mounts: the ride is dropped, the harness is deleted, and no new harness is built for the dropped ride", #HorseLead.rides == 0 and mountedRide.rig == nil and #ropes == ropesBeforeMount + built)
-end
+-- a horse that wears the harness and is mounted: the ride stays, the harness stays (it is not rebuilt, not deleted), only the halter and the lead go; when the rider gets off it stands in its harness again
+MOUNTENTERED = true
+MOUNTHORSE = { rootNode = 860, getIsEntered = function() return MOUNTENTERED end, getIsControlled = function() return MOUNTENTERED end, spec_rideable = { inputValues = {}, currentTurnAngle = 0 } }
+MOUNTRIDE = { vehicle = MOUNTHORSE, leash = true, harness = true, halter = { pieces = {}, nodes = {}, tied = {} } }
+HorseLead.rides = { MOUNTRIDE }
+MOUNTBEFORE = #ropes
+HorseHarness.sync(MOUNTRIDE)
+MOUNTRIG, MOUNTBUILT = MOUNTRIDE.rig, #ropes - MOUNTBEFORE
+HorseLead.updateRide(50)
+check("(the harness was on the horse before it was mounted)", MOUNTBUILT > 100 and MOUNTRIG ~= nil)
+check("a harnessed horse somebody mounts: the ride stays, the harness is neither rebuilt nor deleted", #HorseLead.rides == 1 and MOUNTRIDE.rig == MOUNTRIG and #ropes == MOUNTBEFORE + MOUNTBUILT)
+check("... it is ridden: no leash, no halter (the saddle has the reins), no virtual rider", MOUNTRIDE.ridden == true and MOUNTRIDE.leash == nil and MOUNTRIDE.halter == nil and MOUNTHORSE.rfVirtualRider == nil)
+HorseLead.updateRide(50)
+check("... and stays so while the rider sits there", #HorseLead.rides == 1 and MOUNTRIDE.ridden == true and MOUNTRIDE.rig == MOUNTRIG)
+MOUNTENTERED = false
+HorseLead.updateRide(50)
+check("the rider gets off: the horse stands where it is, in its harness, with the virtual rider again", MOUNTRIDE.ridden == nil and MOUNTRIDE.stay == true and MOUNTHORSE.rfVirtualRider == true and #HorseLead.rides == 1 and MOUNTRIDE.rig == MOUNTRIG)
+-- a horse WITHOUT a harness that is mounted is given up as before (nothing to keep)
+MOUNTENTERED = true
+HorseLead.rides = { { vehicle = MOUNTHORSE, leash = true } }
+HorseLead.updateRide(50)
+check("a horse without a harness that somebody mounts: the ride is dropped, as before", #HorseLead.rides == 0)
+MOUNTENTERED = false
 -- letting go of the leash does not give a harnessed horse back
 HorseLead.rides = { { vehicle = harnessVehicle, leash = true, harness = true }, { vehicle = { rootNode = 860 }, leash = true } }
 local letGo = HorseLead.releaseFlagged("leash")
@@ -1587,10 +1601,14 @@ do
     -- a horse in its harness is not mounted
     G.harnessed, G.plain = { name = "harnessed" }, { name = "plain" }
     HorseLead.rides = { { vehicle = G.harnessed, harness = true }, { vehicle = G.plain } }
-    check("the mount key on a horse in its harness does nothing", Player.requestToEnterVehicle({}, G.harnessed) == nil and G.entered == nil)
+    check("by default a horse in its harness can be mounted (the ride keeps the harness): the key goes through", HorseDynamics.BLOCK_MOUNT_HARNESSED == false and Player.requestToEnterVehicle({}, G.harnessed) ~= nil and G.entered == G.harnessed)
+    G.entered = nil
+    HorseDynamics.BLOCK_MOUNT_HARNESSED = true
+    check("with BLOCK_MOUNT_HARNESSED the mount key on a horse in its harness does nothing", Player.requestToEnterVehicle({}, G.harnessed) == nil and G.entered == nil)
     check("a horse without a harness (a led one, a loose one) is mounted as ever, the arguments passed on", Player.requestToEnterVehicle({}, G.plain, true) == "sent" and G.entered == G.plain)
     check("a vehicle that is no horse of a ride is none of its business", Player.requestToEnterVehicle({}, { name = "tractor" }) == "sent")
     check("HorseLead.isHarnessed: only a ride with the harness on", HorseLead.isHarnessed(G.harnessed) and not HorseLead.isHarnessed(G.plain) and not HorseLead.isHarnessed({}))
+    HorseDynamics.BLOCK_MOUNT_HARNESSED = false
     HorseLead.rides = {}
     check("nothing owned: the shop sells both tiers", ShopController.canBeBought({}, G.rope, 25) == true and ShopController.canBeBought({}, G.leather, 90) == true)
     G.system.handTools[1] = G.tool("leash/leash.xml", 20)

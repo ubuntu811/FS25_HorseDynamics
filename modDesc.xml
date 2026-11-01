@@ -58,17 +58,7 @@ Single player only for now.
         <action name="HORSEDYN_FREEZE" axisType="HALF"/>
     </actions>
 
-    <inputBinding>
-        <actionBinding action="HORSEDYN_CALL">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_c" index="1" />
-        </actionBinding>
-        <actionBinding action="HORSEDYN_RELEASE">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_v" index="1" />
-        </actionBinding>
-        <actionBinding action="HORSEDYN_FREEZE">
-            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_f" index="1" />
-        </actionBinding>
-    </inputBinding>
+    <!-- no default keys: the tools are used with the mouse (their own action), the actions below can be bound in the settings; while a horse pulls something its keys are the pulled vehicle's (HorseHitch.keys) -->
 
     <l10n>
         <text name="warning_horseDynamicsHandToolOwned">

@@ -154,6 +154,13 @@ function HorseRope.pieceNodesAlive(piece)
     return true
 end
 
+-- Shows or hides a piece: not when its nodes are gone (the engine prints an "Unknown entity id" error for every such call, even when it is caught, every frame, until the cleanup runs).
+function HorseRope.setShown(piece, visible)
+    if HorseRope.pieceNodesAlive(piece) then
+        pcall(piece.setVisibility, piece, visible)
+    end
+end
+
 function HorseRope.guardedUpdate(piece, dt)
     if not HorseRope.pieceNodesAlive(piece) then
         return
@@ -653,7 +660,7 @@ function HorseRope.halterSync(ride)
     pcall(HorseRope.halterPlace, halter)
     for i, rope in ipairs(halter.pieces) do
         HorseRope.applyMaterial(rope)
-        pcall(rope.setVisibility, rope, true)
+        HorseRope.setShown(rope, true)
         if halter.tied[i] then
             pcall(rope.update, rope, 0)           -- (the points moved just now: the piece follows them this frame)
         end
@@ -752,7 +759,7 @@ function HorseRope.sync(ride, sourceNode)
     end
     for i, rope in ipairs(chain.ropes) do
         HorseRope.applyMaterial(rope)
-        pcall(rope.setVisibility, rope, true)
+        HorseRope.setShown(rope, true)
         -- (tied only after its shape has loaded: the game's update would fail on a missing frame; the points are in place before that)
         if rope.referenceFrame ~= nil and not chain.tied[i] then
             local tied, tieError = pcall(rope.setTargetNode, rope, chain.mids[i] or target, true)
@@ -773,7 +780,7 @@ end
 
 function HorseRope.hide(ride)
     for _, rope in ipairs(ride.rope ~= nil and ride.rope.ropes or {}) do
-        pcall(rope.setVisibility, rope, false)
+        HorseRope.setShown(rope, false)
     end
 end
 
@@ -865,7 +872,7 @@ function HorseRope.syncStub(sourceNode)
     end
     if sourceNode == nil then
         for _, rope in ipairs(stub.pieces) do
-            pcall(rope.setVisibility, rope, false)
+            HorseRope.setShown(rope, false)
         end
         return
     end
@@ -902,7 +909,7 @@ function HorseRope.syncStub(sourceNode)
     end
     for i, rope in ipairs(stub.pieces) do
         HorseRope.applyMaterial(rope)
-        pcall(rope.setVisibility, rope, true)
+        HorseRope.setShown(rope, true)
         if rope.referenceFrame ~= nil and not stub.tied[i] then
             local ok = pcall(rope.setTargetNode, rope, stub.nodes[i + 1], true)
             stub.tied[i] = ok or nil
@@ -961,7 +968,7 @@ function HorseRope.syncCollar(sourceNode, gear)
     end
     if sourceNode == nil then
         for _, rope in ipairs(collar.pieces) do
-            pcall(rope.setVisibility, rope, false)
+            HorseRope.setShown(rope, false)
         end
         return
     end
@@ -1006,7 +1013,7 @@ function HorseRope.syncCollar(sourceNode, gear)
     end
     for i, rope in ipairs(collar.pieces) do
         HorseRope.applyMaterial(rope)
-        pcall(rope.setVisibility, rope, true)
+        HorseRope.setShown(rope, true)
         if rope.referenceFrame ~= nil and not collar.tied[i] then
             local ok = pcall(rope.setTargetNode, rope, collar.nodes[i % n + 1], true)
             collar.tied[i] = ok or nil

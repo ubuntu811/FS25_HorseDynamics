@@ -77,11 +77,13 @@ if ShopController ~= nil and ShopController.canBeBought ~= nil and Utils ~= nil 
     end)
 end
 
--- A horse in its harness is a work horse: the mount key (Player:requestToEnterVehicle, a plain class method) says so and does nothing (the harness comes off with the harness tool first).
+-- A horse in its harness can be ridden (HorseLead.stepRide keeps the harness and the hitch; the player drives with the game's own controls, a stopgap until there is a wagon with a seat). With
+-- HorseDynamics.BLOCK_MOUNT_HARNESSED the mount key (Player:requestToEnterVehicle, a plain class method) says it is a work horse and does nothing (the harness comes off with the harness tool first).
+HorseDynamics.BLOCK_MOUNT_HARNESSED = false
 if Player ~= nil and Player.requestToEnterVehicle ~= nil and Utils ~= nil and not HorseDynamics.mountHooked then
     HorseDynamics.mountHooked = true
     Player.requestToEnterVehicle = Utils.overwrittenFunction(Player.requestToEnterVehicle, function(self, superFunc, vehicle, ...)
-        if HorseLead ~= nil and HorseLead.isHarnessed(vehicle) then
+        if HorseDynamics.BLOCK_MOUNT_HARNESSED and HorseLead ~= nil and HorseLead.isHarnessed(vehicle) then
             HorseDynamics.notify(g_i18n:getText("warning_horseDynamicsHarnessed"))
             return
         end
