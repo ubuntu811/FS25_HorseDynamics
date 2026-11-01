@@ -20,6 +20,8 @@ Single player only for now.
     <extraSourceFiles>
         <sourceFile filename="scripts/HorseGate.lua" />
         <sourceFile filename="scripts/HorseRope.lua" />
+        <sourceFile filename="scripts/HorseHarness.lua" />
+        <sourceFile filename="scripts/HorseHitch.lua" />
         <sourceFile filename="scripts/HorseLead.lua" />
         <sourceFile filename="scripts/HorseDynamics.lua" />
     </extraSourceFiles>
@@ -28,10 +30,14 @@ Single player only for now.
     <storeItems>
         <storeItem xmlFilename="handTools/carrot/carrot.xml"/>
         <storeItem xmlFilename="handTools/leash/leash.xml"/>
+        <storeItem xmlFilename="handTools/leash/leash_leather.xml"/>
+        <storeItem xmlFilename="handTools/harness/harness.xml"/>
+        <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
     </storeItems>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
         <specialization name="horseLeash" filename="scripts/HandToolHorseLeash.lua" className="HandToolHorseLeash"/>
+        <specialization name="horseHarness" filename="scripts/HandToolHorseHarness.lua" className="HandToolHorseHarness"/>
     </handToolSpecializations>
     <handToolTypes>
         <type name="horseCarrot" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
@@ -40,12 +46,16 @@ Single player only for now.
         <type name="horseLeash" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
             <specialization name="horseLeash"/>
         </type>
+        <type name="horseHarness" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseHarness"/>
+        </type>
     </handToolTypes>
 
     <actions>
         <!-- no category: these have to work from a vehicle's seat as well (leading horses while driving to the new stable) -->
         <action name="HORSEDYN_CALL" axisType="HALF"/>
         <action name="HORSEDYN_RELEASE" axisType="HALF"/>
+        <action name="HORSEDYN_FREEZE" axisType="HALF"/>
     </actions>
 
     <inputBinding>
@@ -55,9 +65,24 @@ Single player only for now.
         <actionBinding action="HORSEDYN_RELEASE">
             <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_v" index="1" />
         </actionBinding>
+        <actionBinding action="HORSEDYN_FREEZE">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_rctrl KEY_f" index="1" />
+        </actionBinding>
     </inputBinding>
 
     <l10n>
+        <text name="warning_horseDynamicsHandToolOwned">
+            <en>You already own this tool.</en>
+            <de>Dieses Werkzeug besitzt du bereits.</de>
+        </text>
+        <text name="warning_horseDynamicsBetterOwned">
+            <en>You already own the leather version of this tool.</en>
+            <de>Du besitzt bereits die Lederversion dieses Werkzeugs.</de>
+        </text>
+        <text name="warning_horseDynamicsHarnessed">
+            <en>This horse wears a harness: take it off with the harness tool before you ride it.</en>
+            <de>Dieses Pferd traegt ein Geschirr: nimm es mit dem Geschirr-Werkzeug ab, bevor du es reitest.</de>
+        </text>
         <text name="action_horseCarrot">
             <en>Call the horses of the pasture / let them go</en>
             <de>Pferde der Weide rufen / freilassen</de>
@@ -66,9 +91,17 @@ Single player only for now.
             <en>Leash the nearest horse / let it go</en>
             <de>Nächstes Pferd anleinen / freilassen</de>
         </text>
+        <text name="action_horseHarness">
+            <en>Put the harness on the horse / take it off</en>
+            <de>Geschirr anlegen / abnehmen</de>
+        </text>
         <text name="input_HORSEDYN_CALL">
             <en>Call the nearest horse</en>
             <de>Nächstes Pferd rufen</de>
+        </text>
+        <text name="input_HORSEDYN_FREEZE">
+            <en>Freeze the led horses / let them go on</en>
+            <de>Gefuehrte Pferde anhalten / weitergehen lassen</de>
         </text>
         <text name="input_HORSEDYN_RELEASE">
             <en>Give the horses back</en>

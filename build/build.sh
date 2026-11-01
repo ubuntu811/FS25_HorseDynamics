@@ -25,9 +25,11 @@ mkdir -p $BUILD_DIR
 
 echo "--> Copying production files to staging area..."
 # Copy the core runtime logic and metadata
-for i in icon.dds store/ handTools/ scripts/ modDesc.xml; do
+for i in icon.dds store/ handTools/ scripts/ textures/ modDesc.xml; do
   cp -r "$i" "$BUILD_DIR/$i"
 done
+# only the .dds files are needed (the .png sources of the two tiny solid-colour rope textures stay in the repo)
+rm -f "$BUILD_DIR"/textures/*.png
 
 # 3. Compile the production archive
 echo "--> Compiling optimized production zip archive..."

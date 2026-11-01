@@ -2,8 +2,8 @@
 <handTool type="horseLeash" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/handTool.xsd">
     <storeData>
         <name>
-            <en>Leash</en>
-            <de>Führstrick</de>
+            <en>Leash (rope)</en>
+            <de>Führstrick (Seil)</de>
         </name>
         <functions>
             <function>Takes the nearest horse on the leash; use again to let it go.</function>

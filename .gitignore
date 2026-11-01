@@ -3,3 +3,7 @@ assets/*.mp4
 build/.build_staging/
 build/*.zip
 assets/*.zip
+# GIANTS geometry exported for looking and measuring only, never committed
+assets/*.obj
+assets/*.mtl
+assets/wagon_split/

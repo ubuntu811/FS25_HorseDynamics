@@ -64,6 +64,11 @@ function HorseGate.toggleNearest(px, pz)
     if leaves == nil then
         return nil
     end
+    return HorseGate.toggle(leaves)
+end
+
+-- Toggles the given gate (its leaves). Returns a message.
+function HorseGate.toggle(leaves)
     local moved, opening = 0, false
     for _, leaf in ipairs(leaves) do
         if leaf.getCanBeTriggered == nil or leaf:getCanBeTriggered() then

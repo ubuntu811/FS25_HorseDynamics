@@ -1,6 +1,6 @@
 --[[
     HandToolHorseLeash.lua -- the leash: held in the hand, the primary action takes the nearest horse (a horse of a pasture, or one that stands loose) on the leash: it follows you; the same
-    action again lets the leashed horses go. (HorseLead.leash)
+    action again lets the leashed horses go. (HorseLead.leash; with no horse in reach it hooks the attacher joint you look at, the winch of FS25_WinchTow, as an easter egg)
 ]]
 HandToolHorseLeash = {}
 HandToolHorseLeash.SPEC_TABLE_NAME = "spec_" .. g_currentModName .. ".horseLeash"
@@ -48,6 +48,9 @@ end
 
 function HandToolHorseLeash:onLoad(_)
     self[HandToolHorseLeash.SPEC_TABLE_NAME] = { actionEventId = nil }
+    if HorseDynamics.gearOfTool(self) == "leather" and HorseRope ~= nil then
+        HorseRope.leatherProp(self.rootNode)                    -- (the leather tool looks like leather in the hand)
+    end
     local removed = HandToolHorseLeash.stripCollision(self.rootNode)
     if removed > 0 then
         print(string.format("[HorseDynamics] leash: removed %d collision shape(s) of the rope prop", removed))
@@ -73,6 +76,11 @@ function HandToolHorseLeash:onHeldStart()
     if HorseLead ~= nil then
         HorseLead.leashSource = self.rootNode                 -- the leashed horses' ropes start at the leash in the hand
     end
+    local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
+    if winch ~= nil then
+        winch.hold(self.rootNode)                             -- (the winch easter egg: its rope starts at the leash in the hand)
+        winch.gate = HorseLead ~= nil and HorseLead.winchFree or nil     -- (and its green ring only shows where a click would hook, not when a horse is in reach)
+    end
 end
 
 function HandToolHorseLeash:onHeldEnd()
@@ -83,10 +91,14 @@ function HandToolHorseLeash:onHeldEnd()
     if HorseLead ~= nil and HorseLead.leashSource == self.rootNode then
         HorseLead.leashSource = nil                           -- (the ropes are hidden while the leash is put away; the horses stay led)
     end
+    local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
+    if winch ~= nil then
+        winch.putAway(self.rootNode)                          -- (a vehicle on the winch is let go when the tool is put away)
+    end
 end
 
 function HandToolHorseLeash:onAction(_, inputValue)
     if inputValue > 0.5 and HorseLead ~= nil then
-        HorseDynamics.notify(HorseLead.leash())
+        HorseDynamics.notify(HorseLead.leash(HorseDynamics.gearOfTool(self)))
     end
 end

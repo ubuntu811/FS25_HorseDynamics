@@ -87,13 +87,29 @@ end
 -- loaded at the animal's position with the horse's ridable xml, and keeps a copy of the cluster); a Rideable near a pasture goes back into it by itself (doHusbandryCheck). On the server a
 -- rideable that is not "controlled" is held still every frame and its steering zeroed; the gait and the steer are plain setters. So: startRiding with no player, then claim the horse is
 -- controlled (a per-instance getIsControlled) and set gait and steer ourselves each frame, towards the player.
-HorseLead.RIDE_ARRIVE_M = 3.5               -- stops this close to the player
+HorseLead.RIDE_ARRIVE_M = 5                 -- stops this close to the player (the carrot's herd: at 3.5 m the first one stood with its mane in the camera, the rest queued behind it)
+HorseLead.RIDE_ARRIVE_SPREAD_M = 2.5        -- ... plus a distance of its own for each horse (0 to this, chosen once), so the herd stands scattered round the player and not in a ring
 HorseLead.RIDE_ARRIVE_MOUNTED_M = 2.4       -- ... this close to the horse (or vehicle) the player sits on: about a horse's length behind it
+-- On the leash a rope is as long as it is (HorseRope.LENGTH_M): the horse does not wander off and pause, it stays within the rope, stops when you stop and starts again only when the rope is nearly taut.
+-- All distances are from the horse's ROOT NODE, which is the middle of its body: facing you, its nose is about 1.5 m ahead of that (the head bone sits 1.14 m ahead, the nose about 1.6 m). So a stop at 3.4 m
+-- is a nose 1.9 m from you; the first version stopped at 2.0 m and put the horse's face in the player's.
+HorseLead.HEAD_REACH_M = 1.5
+HorseLead.LEASH_REACH_M = 4              -- the leash only takes a horse this close to the player (the rope is 3 m: you walk up to a horse, you do not summon it; the carrot is the one that calls)
+HorseLead.RIDE_ARRIVE_LEASH_M = 3.4         -- stops this close to the player (the nose is about 1.9 m from him, the rope hangs slack)
+HorseLead.RIDE_LEASH_RESUME_M = 0.4         -- ... and walks on again only when it is this much further than that (no stop and go at the edge)
+HorseLead.RIDE_GAITS_LEASH = { { "WALK", 3.4 }, { "CANTER", 4.0 }, { "TROT", 4.6 }, { "GALLOP", 9.4 } }   -- by rank, slowest first (see rideGait): a horse that has to stay on a 3 m rope is at the fastest useful gait at 3.2 m
+HorseLead.RIDE_GAIT_MARGIN_LEASH_M = 0.4
+-- A player who walks up to a horse (any horse that is led, not a mounted player): it steps back, while he is in front of it and closer than RIDE_BACKOFF_M, until he is RIDE_BACKOFF_END_M away
+-- (root distances: its nose is then 1.2 m from him, and 1.6 m when it stops).
+HorseLead.RIDE_BACKOFF_M = 2.7
+HorseLead.RIDE_BACKOFF_END_M = 3.1
+HorseLead.RIDE_BACKOFF_CONE = 1.0           -- radians: "in front of it" is within this angle of the way it faces
 HorseLead.RIDE_KEEP_UP_MOUNTED_M = 6        -- a riding player does not wait for a pausing horse: the pause ends when it is this far behind
 HorseLead.RIDE_WALK_M = 6                   -- starts to walk when further away than this
 HorseLead.RIDE_TROT_M = 20                  -- (kept for the trot step below)
 -- The gait steps up with the distance and eases back down as the horse closes in: { game gait name, from this far away }. A step is left only when the horse is RIDE_GAIT_MARGIN_M
--- inside its distance (no flicker between two gaits at the edge). The game's speeds for a horse: walk 2.5, canter 3.5, trot 5, gallop 10 m/s (the xml may differ).
+-- inside its distance (no flicker between two gaits at the edge). The steps are by rank (slowest gait first, ordered by the horse's own top speeds, see rideGait). The horse's xml (character/animals/domesticated/horse/horse.xml):
+-- walk 1.08, trot 2.5, canter 5.0, gallop 10 m/s, backwards 1.45, turnSpeed 40 degrees a second, minTurnRadius 3.5 m.
 HorseLead.RIDE_GAITS = { { "WALK", 6 }, { "CANTER", 12 }, { "TROT", 20 }, { "GALLOP", 45 } }
 HorseLead.RIDE_GAIT_MARGIN_M = 3
 HorseLead.RIDE_FIND_MS = 5000               -- how long to wait for the vehicle to be loaded
@@ -105,10 +121,12 @@ HorseLead.RIDE_KEEP_UP_M = 14
 HorseLead.RIDE_STEER_GAIN = 1.2             -- steer (-1..1) per radian of heading error: gentle, it does not slam to full lock
 HorseLead.RIDE_STEER_DEADBAND = 0.08        -- radians: no steering for a smaller error (no twitching on a straight run)
 HorseLead.RIDE_STEER_RATE = 2.0             -- the steer moves at most this far per second (the horse eases into a turn and out of it)
+HorseLead.RIDE_TURN_RATE_STILL_DEFAULT = 3.5
 HorseLead.RIDE_TURN_RATE_STILL = 3.5        -- rad/s: a horse that stands (paused, arrived) turns to face the player at this rate, in place (0: it turns only while it walks)
 HorseLead.RIDE_FACE_MIN_M = 2.0             -- ... but not when the player is closer than this (it would spin around him)
 HorseLead.RIDE_TURN_RATE = 7.0              -- rad/s (about 400 degrees a second): while it moves, the horse's heading is turned towards the player this fast (the game's own turning is 45 degrees a second: a gentle arc into the wall next to a gate). 0: only the steer is set
 HorseLead.random = function(range) return range[1] + math.random() * (range[2] - range[1]) end
+HorseLead.harnessSource = nil              -- the node of the harness tool while it is in the hand (it shows a collar), set by HandToolHorseHarness
 HorseLead.leashSource = nil                -- the node of the leash tool while it is in the hand (the rope starts there), set by HandToolHorseLeash
 HorseLead.rides = {}                        -- the horses being led: { vehicle, known, from, waited, phase, phaseMs, stableMs }
 HorseLead.RIDE_CLAIM_FALLBACK_MS = 1500    -- a vehicle that does not appear within 10 m of its horse is looked for further away after this long (nearest new one within RIDE_CLAIM_FAR_M)
@@ -309,17 +327,56 @@ function HorseLead.callPasture()
 end
 
 -- Lets go of every led horse that carries `flag` (ride.leash, ride.carrot): returns how many.
+-- Is the horse in the range of a pasture (the game takes a rideable there into it by itself)? true / false, nil when the game cannot say.
+function HorseLead.inPastureRange(vehicle)
+    local system = g_currentMission ~= nil and g_currentMission.husbandrySystem or nil
+    if system == nil or system.getHusbandryInRideableRange == nil or vehicle == nil then
+        return nil
+    end
+    local ok, inRange = pcall(system.getHusbandryInRideableRange, system, vehicle)
+    if not ok then
+        return nil
+    end
+    return inRange == true
+end
+
+-- Lets the horses with this flag go. Returns how many, and how many of them keep their halter. A horse that wears the harness is not given back: it stays where it is, wearing it. The halter: inside a pasture it
+-- goes off (the horse goes back in), outside it stays on (a horse standing in the middle of nowhere does not lose its halter because the player let go of the lead): only the rope is gone, the horse stands there
+-- as a ride that stays (the leash tool takes it again, a pasture takes it in).
 function HorseLead.releaseFlagged(flag)
-    local released = 0
+    local released, haltered = 0, 0
     for i = #HorseLead.rides, 1, -1 do
         local ride = HorseLead.rides[i]
         if ride[flag] then
-            HorseLead.releaseRide(ride)
-            table.remove(HorseLead.rides, i)
+            local keepHalter = flag == "leash" and ride.vehicle ~= nil and ride.halter ~= nil and HorseLead.inPastureRange(ride.vehicle) == false
+            if (ride.harness or keepHalter) and ride.vehicle ~= nil then
+                ride[flag] = nil
+                ride.stay = ride.leash == nil and ride.carrot == nil or nil
+                ride.halterOn = keepHalter or nil
+                if keepHalter then
+                    haltered = haltered + 1
+                end
+                if HorseRope ~= nil then
+                    HorseRope.remove(ride, true, keepHalter)      -- (the halter and the rope go; with keepHalter only the rope: the harness and its trailer stay too)
+                end
+            else
+                HorseLead.releaseRide(ride)
+                table.remove(HorseLead.rides, i)
+            end
             released = released + 1
         end
     end
-    return released
+    return released, haltered
+end
+
+-- Does this vehicle (a horse) wear the harness? (a work horse: the mount key does not take it, HorseDynamics hooks Player:requestToEnterVehicle)
+function HorseLead.isHarnessed(vehicle)
+    for _, ride in ipairs(HorseLead.rides) do
+        if ride.harness and ride.vehicle == vehicle then
+            return true
+        end
+    end
+    return false
 end
 
 function HorseLead.hasFlagged(flag)
@@ -339,6 +396,71 @@ function HorseLead.carrot()
     return HorseLead.callPasture()
 end
 
+-- ===== the tack probe: what the horse model has for a bridle, to see whether a halter alone can be shown =====
+-- The game shows the saddle and the bridle as ONE node (Rideable spec.equipmentNode, switched by setEquipmentVisibility together with spec.reinsNode, the reins, which it links to the rider's hands).
+-- Whether that node has separate children (saddle, bridle) is in the model, not in the scripts: hdTack lists them and switches any node of the horse on or off by name.
+local function nodeLine(node, depth, out)
+    local visible = getVisibility ~= nil and getVisibility(node) or nil
+    out[#out + 1] = string.format("%s%s%s", string.rep("  ", depth), getName(node), visible == nil and "" or (visible and "" or "  (hidden)"))
+    if depth < 4 then
+        for i = 0, getNumOfChildren(node) - 1 do
+            nodeLine(getChildAt(node, i), depth + 1, out)
+        end
+    end
+end
+
+local function findNode(node, name)
+    if getName(node) == name then
+        return node
+    end
+    for i = 0, getNumOfChildren(node) - 1 do
+        local found = findNode(getChildAt(node, i), name)
+        if found ~= nil then
+            return found
+        end
+    end
+    return nil
+end
+
+-- hdTack [list | show | hide | <node name> on|off]: the nearest horse vehicle. Returns a message.
+function HorseLead.tack(argument, state)
+    local px, _, pz = playerPosition()
+    local vehicle, best = nil, math.huge
+    for _, candidate in ipairs(HorseLead.rideables()) do
+        local x, _, z = getWorldTranslation(candidate.rootNode)
+        local d = distance(x, z, px or x, pz or z)
+        if d < best then
+            vehicle, best = candidate, d
+        end
+    end
+    if vehicle == nil then
+        return "no horse vehicle: lead a horse first (the leash), it is one then"
+    end
+    local spec = vehicle.spec_rideable
+    if argument == "show" or argument == "hide" then
+        local ok, err = pcall(vehicle.setEquipmentVisibility, vehicle, argument == "show")
+        return ok and ("equipment (saddle, bridle, reins) " .. (argument == "show" and "shown" or "hidden")) or ("failed: " .. tostring(err))
+    elseif argument ~= nil and argument ~= "list" then
+        local node = findNode(vehicle.rootNode, argument)
+        if node == nil then
+            return "no node called " .. argument .. " on this horse (hdTack list shows the tack nodes)"
+        end
+        pcall(setVisibility, node, state ~= "off")
+        return string.format("%s %s", argument, state == "off" and "hidden" or "shown")
+    end
+    for _, key in ipairs({ "equipmentNode", "reinsNode", "leftReinNode" }) do
+        local node = spec[key]
+        if node == nil then
+            say("tack: %s: none", key)
+        else
+            local lines = {}
+            pcall(nodeLine, node, 0, lines)
+            say("tack: %s:\n%s", key, table.concat(lines, "\n"))
+        end
+    end
+    return "the tack nodes of the nearest horse are in the log"
+end
+
 -- A fence gate within reach of the player is opened or closed (HorseGate). Returns a message, nil when there is none.
 function HorseLead.gateAtPlayer()
     if HorseGate == nil then
@@ -351,21 +473,185 @@ function HorseLead.gateAtPlayer()
     return HorseGate.toggleNearest(px, pz)
 end
 
--- The leash, as a switch: takes the nearest horse (a pasture horse, or one that stands loose), or lets the leashed ones go when there are some. Returns a message.
--- Near a fence gate the click is for the gate first: with horses on the rope it opens or closes the gate instead of letting them go (the release key still does), and with no horse to take it does the
--- same, so a gate can be dealt with without putting the tool away and finding the gate's own trigger.
-function HorseLead.leash()
+-- How far the horse is that "start" would take: a loose horse vehicle or a horse of a pasture, whichever is nearer. nil when there is none.
+function HorseLead.nearestHorseDistance(px, pz)
+    local best = math.huge
+    local _, looseDistance = HorseLead.nearestLooseHorse(px, pz)
+    if looseDistance ~= nil then
+        best = looseDistance
+    end
+    for _, entry in ipairs(HorseLead.husbandries()) do
+        if entry.husbandry.animalTypeName == "HORSE" and entry.placeable.startRiding ~= nil then
+            for _, item in ipairs(HorseLead.animals(entry)) do
+                best = math.min(best, distance(px, pz, item.x, item.z))
+            end
+        end
+    end
+    return best < math.huge and best or nil
+end
+
+-- Freezes the led horses: they stand completely still (see stepRide) until this is called again, or until no horse is led any more. Returns a message.
+HorseLead.frozen = false
+function HorseLead.toggleFreeze()
+    HorseLead.frozen = not HorseLead.frozen
+    if HorseLead.frozen and #HorseLead.rides == 0 then
+        HorseLead.frozen = false
+        return "no horse is led: nothing to freeze"
+    end
+    return HorseLead.frozen and "the led horses are frozen: they stand still (the same key lets them go on)" or "the led horses follow you again"
+end
+
+-- A horse that stands turns to face the player (HorseLead.RIDE_TURN_RATE_STILL); off, it stays as it stands, so you can walk round it and look at its gear. A switch for the face key. Returns a message.
+function HorseLead.toggleFace()
+    local on = HorseLead.RIDE_TURN_RATE_STILL > 0
+    HorseLead.RIDE_TURN_RATE_STILL = on and 0 or HorseLead.RIDE_TURN_RATE_STILL_DEFAULT
+    return on and "standing horses stay as they stand: walk round them (the same key: they face you again)" or "standing horses turn to face you"
+end
+
+-- The led horse nearest to the player within `reach` metres: ride, distance. nil when there is none.
+function HorseLead.nearestRide(px, pz, reach, filter)
+    local best, bestDistance = nil, reach
+    for _, ride in ipairs(HorseLead.rides) do
+        if ride.vehicle ~= nil and ride.vehicle.rootNode ~= nil and (filter == nil or filter(ride)) then
+            local x, _, z = getWorldTranslation(ride.vehicle.rootNode)
+            local d = math.sqrt((x - px) ^ 2 + (z - pz) ^ 2)
+            if d <= bestDistance then
+                best, bestDistance = ride, d
+            end
+        end
+    end
+    return best, bestDistance
+end
+
+-- The harness tool, as a switch: the harness goes on the horse within reach, or comes off it when it has one. The halter and the harness are independent: a horse that is led on the leash (it wears the halter)
+-- gets the harness on top, a horse that is not led is taken as a horse that STAYS (ride.stay: it is a vehicle so that it can wear things, it stands where it is, no halter, no rope) and wears only the harness.
+-- Taking the harness off a horse that only stays gives it back to its pasture; a led horse stays led.
+-- and harnessed. Taking the harness off leaves the horse on its leash (the leash tool lets it go). Returns a message.
+function HorseLead.harness(gear)
+    local px, _, pz = playerPosition()
+    if px == nil then
+        return "no player"
+    end
+    -- a trailer's joint in view and a harnessed horse near it: the click hitches (a hitched horse: unhitches), see HorseHitch
+    local hitched = HorseHitch ~= nil and HorseHitch.click() or nil
+    if hitched ~= nil then
+        return hitched
+    end
+    local ride = HorseLead.nearestRide(px, pz, HorseLead.LEASH_REACH_M)
+    if ride == nil then
+        local horseDistance = HorseLead.nearestHorseDistance(px, pz)
+        if horseDistance ~= nil and horseDistance > HorseLead.LEASH_REACH_M then
+            return string.format("no horse within %d m: walk up to one", HorseLead.LEASH_REACH_M)
+        end
+        local before = #HorseLead.rides
+        local message = HorseLead.command(nil, "start")
+        ride = HorseLead.rides[#HorseLead.rides]
+        if #HorseLead.rides <= before or ride == nil then
+            return message
+        end
+        ride.stay = true
+    end
+    ride.harness = not ride.harness
+    if ride.harness then
+        ride.harnessGear = gear                              -- (rope or leather: the tool in the hand says)
+        if ride.leash then
+            return "harness on (the horse is on the leash: it wears the halter too, and follows you)"
+        end
+        return "harness on: the horse stands where it is, without a halter (the leash tool takes it along)"
+    end
+    if ride.stay and not ride.leash and not ride.carrot and not ride.halterOn then
+        HorseLead.releaseRide(ride)
+        for i = #HorseLead.rides, 1, -1 do
+            if HorseLead.rides[i] == ride then
+                table.remove(HorseLead.rides, i)
+            end
+        end
+        return "harness off: the horse goes back to its pasture"
+    end
+    return "harness off"
+end
+
+HorseLead.playerPosition = playerPosition          -- (for HorseHitch: on foot the player, on a horse the horse)
+
+-- Whether a click of the leash would go to the winch: no horse on the rope, none in reach, no gate nearer (the green ring of the winch shows only then).
+function HorseLead.winchFree()
     if HorseLead.hasFlagged("leash") then
-        return HorseLead.gateAtPlayer() or string.format("%d horse(s) let go", HorseLead.releaseFlagged("leash"))
+        return false
+    end
+    local px, _, pz = playerPosition()
+    if px == nil then
+        return false
+    end
+    local horseDistance = HorseLead.nearestHorseDistance(px, pz)
+    if HorseGate ~= nil then
+        local leaves, gateDistance = HorseGate.nearest(px, pz)
+        if leaves ~= nil and (horseDistance == nil or gateDistance < horseDistance) then
+            return false
+        end
+    end
+    return horseDistance == nil or horseDistance > HorseLead.LEASH_REACH_M
+end
+
+-- The leash, as a switch: takes the nearest horse (a pasture horse, or one that stands loose), or lets the leashed ones go when there are some. Returns a message.
+-- A fence gate in reach is for the gate: with horses on the rope the click opens or closes it instead of letting them go (walk on a few metres to let a horse go), and with no horse on the rope it does the
+-- same when the gate is nearer than the horse the click would take (a horse right beside you still wins), so a gate can be dealt with without putting the tool away and finding its own trigger.
+function HorseLead.leash(gear)
+    -- an easter egg: the winch of FS25_WinchTow (published on g_currentMission.winchTow, mod globals are invisible between mods). A hooked vehicle is let go first (the same key); with no horse in reach
+    -- the leash hooks the attacher joint you look at, a vehicle that then creeps after you at 2 km/h
+    local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
+    if winch ~= nil and winch.target ~= nil then
+        return winch.toggle()
+    end
+    if HorseLead.hasFlagged("leash") then
+        local gate = HorseLead.gateAtPlayer()
+        if gate ~= nil then
+            return gate
+        end
+        local released, haltered = HorseLead.releaseFlagged("leash")
+        if haltered > 0 then
+            return string.format("%d horse(s) let go: the halter stays on outside a pasture (the leash takes it again, in a pasture it comes off)", released)
+        end
+        return string.format("%d horse(s) let go", released)
+    end
+    local px, _, pz = playerPosition()
+    if px ~= nil then
+        -- a horse that stands there in its harness (ride.stay) within reach is the one the leash takes: the halter and the rope go on, it follows
+        local staying = HorseLead.nearestRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.stay end)
+        if staying ~= nil then
+            staying.stay, staying.leash, staying.halterOn = nil, true, nil
+            staying.halterGear = staying.halter ~= nil and staying.halterGear or gear      -- (a halter that is on keeps its gear)
+            return "leashed: the horse wears the halter and follows you (it keeps the harness)"
+        end
+    end
+    if HorseGate ~= nil and px ~= nil then
+        local leaves, gateDistance = HorseGate.nearest(px, pz)
+        if leaves ~= nil then
+            local horseDistance = HorseLead.nearestHorseDistance(px, pz)
+            if horseDistance == nil or gateDistance < horseDistance then
+                return HorseGate.toggle(leaves)
+            end
+        end
+    end
+    if px ~= nil then
+        local horseDistance = HorseLead.nearestHorseDistance(px, pz)
+        if horseDistance == nil or horseDistance > HorseLead.LEASH_REACH_M then
+            -- no horse in reach: a joint in view is for the winch, else the leash says to walk up to a horse
+            if winch ~= nil and winch.pick() ~= nil then
+                winch.hold(HorseLead.leashSource)
+                return winch.toggle()
+            end
+            if horseDistance ~= nil then
+                return string.format("no horse within %d m: walk up to one (the carrot calls the whole pasture)", HorseLead.LEASH_REACH_M)
+            end
+        end
     end
     local before = #HorseLead.rides
     local message = HorseLead.command(nil, "start")
     local ride = HorseLead.rides[#HorseLead.rides]
     if #HorseLead.rides > before and ride ~= nil then
-        ride.leash = true
-        return message
+        ride.leash, ride.halterGear = true, gear
     end
-    return HorseLead.gateAtPlayer() or message
+    return message
 end
 
 function HorseLead.command(_, argument)
@@ -434,12 +720,23 @@ function HorseLead.command(_, argument)
 end
 
 -- The gait for the distance d, from the current one: up to the highest step whose distance d is beyond, down one step at a time once d is RIDE_GAIT_MARGIN_M inside the current step.
-function HorseLead.rideGait(current, d)
+function HorseLead.rideGait(current, d, ladder, margin, topSpeeds)
     local gaits = Rideable.GAITTYPES
-    local steps = {}
-    for _, step in ipairs(HorseLead.RIDE_GAITS) do
+    local list = ladder or HorseLead.RIDE_GAITS
+    -- the steps are by RANK: the gaits slowest first by the horse's own top speeds (its xml says walk 1.08, trot 2.5, canter 5.0, gallop 10 m/s: the game's enum puts canter before trot)
+    local order = {}
+    for _, step in ipairs(list) do
         if gaits[step[1]] ~= nil then
-            steps[#steps + 1] = { gait = gaits[step[1]], from = step[2] }
+            order[#order + 1] = gaits[step[1]]
+        end
+    end
+    if topSpeeds ~= nil then
+        table.sort(order, function(a, b) return (topSpeeds[a] or 0) < (topSpeeds[b] or 0) end)
+    end
+    local steps = {}
+    for _, step in ipairs(list) do
+        if gaits[step[1]] ~= nil then
+            steps[#steps + 1] = { gait = order[#steps + 1], from = step[2] }
         end
     end
     local level = 0
@@ -456,7 +753,7 @@ function HorseLead.rideGait(current, d)
     end
     if wanted > level then
         level = wanted
-    elseif level > 0 and d < steps[level].from - HorseLead.RIDE_GAIT_MARGIN_M then
+    elseif level > 0 and d < steps[level].from - (margin or HorseLead.RIDE_GAIT_MARGIN_M) then
         level = level - 1
     end
     return level == 0 and gaits.WALK or steps[level].gait
@@ -584,9 +881,24 @@ function HorseLead.stepRide(ride, dt)
     end
     local x, _, z = getWorldTranslation(vehicle.rootNode)
     local d = distance(px, pz, x, z)
-    -- at a stable with the player: given back (the game's own check then puts it into that stable, a different one from its own too, and deletes the vehicle)
+    -- a horse that stays (it wears the harness and nothing leads it): it stands where it is
+    if ride.stay then
+        spec.inputValues.currentGait = Rideable.GAITTYPES.STILL
+        spec.inputValues.axisSteer = 0
+        ride.backingMs, ride.backingOff, ride.markX, ride.stuckMs = 0, false, nil, 0
+        return false
+    end
+    -- frozen: the led horses stand completely still, whatever the rest would do (no following, no backing away from you, no turning): to look at a harness, to walk round a horse
+    if HorseLead.frozen then
+        spec.inputValues.currentGait = Rideable.GAITTYPES.STILL
+        spec.inputValues.axisSteer = 0
+        ride.backingMs, ride.backingOff, ride.markX, ride.stuckMs = 0, false, nil, 0
+        return false
+    end
+    -- at a stable with the player: given back (the game's own check then puts it into that stable, a different one from its own too, and deletes the vehicle). Only for the carrot's horses: a horse on
+    -- the leash is held by the player until he lets go (walking it through a pasture's gate must not take it away from him).
     ride.stableMs = (ride.stableMs or 0) + dt
-    if ride.stableMs >= HorseLead.RIDE_STABLE_CHECK_MS then
+    if ride.stableMs >= HorseLead.RIDE_STABLE_CHECK_MS and not ride.leash then
         ride.stableMs = 0
         local system = g_currentMission ~= nil and g_currentMission.husbandrySystem or nil
         if system ~= nil and system.getHusbandryInRideableRange ~= nil then
@@ -604,6 +916,13 @@ function HorseLead.stepRide(ride, dt)
     local mounted = playerVehicle() ~= nil
     local arriveM = mounted and HorseLead.RIDE_ARRIVE_MOUNTED_M or HorseLead.RIDE_ARRIVE_M
     local keepUpM = mounted and HorseLead.RIDE_KEEP_UP_MOUNTED_M or HorseLead.RIDE_KEEP_UP_M
+    local leash = ride.leash == true
+    if leash and not mounted then
+        arriveM = HorseLead.RIDE_ARRIVE_LEASH_M
+    elseif not mounted then
+        ride.arriveExtra = ride.arriveExtra or HorseLead.random({ 0, HorseLead.RIDE_ARRIVE_SPREAD_M })
+        arriveM = arriveM + ride.arriveExtra
+    end
     local gaits = Rideable.GAITTYPES
     local gait = spec.inputValues.currentGait
     -- backing out of whatever it is stuck in: reverse and turn for a moment, then try again
@@ -614,9 +933,24 @@ function HorseLead.stepRide(ride, dt)
         ride.markX, ride.stuckMs = nil, 0
         return false
     end
+    -- walked into: a player who comes up to the horse (in front of it) makes it step back
+    if not mounted then
+        local inFront = math.abs(diff) < HorseLead.RIDE_BACKOFF_CONE
+        if inFront and (d < HorseLead.RIDE_BACKOFF_M or (ride.backingOff and d < HorseLead.RIDE_BACKOFF_END_M)) then
+            ride.backingOff = true
+            spec.inputValues.currentGait = gaits.BACKWARDS or gaits.STILL
+            HorseLead.easeSteer(spec, 0, dt)
+            ride.markX, ride.stuckMs = nil, 0
+            return false
+        end
+        ride.backingOff = false
+    end
     -- the phase: following for a burst, then standing a while
     if ride.phase == nil then
         ride.phase, ride.phaseMs = "follow", HorseLead.random(HorseLead.RIDE_BURST_MS)
+    end
+    if leash then
+        ride.phase, ride.phaseMs = "follow", math.huge          -- (a rope does not let a horse stop and wander: no bursts and pauses on the leash)
     end
     if ride.phase == "pause" then
         ride.phaseMs = ride.phaseMs - dt
@@ -630,10 +964,11 @@ function HorseLead.stepRide(ride, dt)
         end
     end
     local steerTarget = 0
-    if ride.phase == "pause" or d < arriveM then
+    local resumeM = arriveM + (leash and HorseLead.RIDE_LEASH_RESUME_M or 0)
+    if ride.phase == "pause" or d < arriveM or (gait == gaits.STILL and d < resumeM) then
         gait = gaits.STILL
     else
-        gait = HorseLead.rideGait(gait, d)
+        gait = HorseLead.rideGait(gait, d, leash and HorseLead.RIDE_GAITS_LEASH or nil, leash and HorseLead.RIDE_GAIT_MARGIN_LEASH_M or nil, spec.topSpeeds)
         if math.abs(diff) > HorseLead.RIDE_STEER_DEADBAND then
             steerTarget = math.max(-1, math.min(1, diff * HorseLead.RIDE_STEER_GAIN))
         end
@@ -688,6 +1023,32 @@ end
 -- each frame: every horse that is being led
 -- The node a leashed horse's rope starts at: the leash in the hand, else the saddle of the horse (or the vehicle) the player sits on, else the player's chest. The horse is still led when the tool is put away
 -- or the player mounts, so the rope stays.
+-- Where the rope of a rider who leads another horse starts: at the SIDE of the horse he sits on, at hand height by the saddle (y 1.15 was at his boot) (x: sideways in the horse's own space, + is its left, flip the sign for the other side; y: up;
+-- z: forward). It started on the horse's back, in the middle, and looked as if it came out of the rider's seat.
+HorseLead.MOUNTED_ANCHOR = { 0.36, 1.5, 0.30 }
+
+-- The hand of the rider: the node the game links the horse's reins to (Rideable:onVehicleCharacterChanged: vehicle:getVehicleCharacter().playerModel.thirdPersonRightHandNode / LeftHandNode). The lead
+-- rope starts there while the player rides; nil when the character is not loaded or has no such node (then the anchor at the horse's side above is used). The right hand first: the left is for the reins.
+HorseLead.RIDER_HANDS = { "thirdPersonRightHandNode", "thirdPersonLeftHandNode" }
+
+function HorseLead.riderHand(vehicle)
+    if vehicle == nil or vehicle.getVehicleCharacter == nil then
+        return nil
+    end
+    local ok, character = pcall(vehicle.getVehicleCharacter, vehicle)
+    local model = ok and character ~= nil and character.playerModel or nil
+    if model == nil then
+        return nil
+    end
+    for _, name in ipairs(HorseLead.RIDER_HANDS) do
+        local node = model[name]
+        if node ~= nil and (entityExists == nil or entityExists(node)) then
+            return node
+        end
+    end
+    return nil
+end
+
 function HorseLead.ropeSource()
     if HorseLead.leashSource ~= nil then
         return HorseLead.leashSource
@@ -697,13 +1058,21 @@ function HorseLead.ropeSource()
     end
     local vehicle = playerVehicle()
     if vehicle ~= nil then
-        return HorseRope.anchorOn(vehicle.rootNode, 0, 1.3, 0.2)
+        local hand = HorseLead.riderHand(vehicle)
+        if hand ~= nil then
+            return hand
+        end
+        local a = HorseLead.MOUNTED_ANCHOR
+        return HorseRope.anchorOn(vehicle.rootNode, a[1], a[2], a[3])
     end
     return HorseRope.anchorOn(g_localPlayer.rootNode, 0, 1.1, 0)
 end
 
 function HorseLead.updateRide(dt)
     HorseLead.watchRidden(dt)
+    if #HorseLead.rides == 0 then
+        HorseLead.frozen = false                    -- (a horse led later is not born frozen)
+    end
     if HorseRope ~= nil then
         -- the leash in the hand shows a short end of rope while no horse is on it (the tool itself has no model)
         local led = false
@@ -711,6 +1080,10 @@ function HorseLead.updateRide(dt)
             led = led or (ride.leash and ride.vehicle ~= nil)
         end
         HorseRope.syncStub(not led and HorseLead.leashSource or nil)
+        HorseRope.syncCollar(HorseLead.harnessSource, HorseLead.harnessSourceGear)             -- (the harness tool in the hand shows a collar)
+    end
+    if HorseHitch ~= nil then
+        HorseHitch.updatePlayer()                                              -- (the player is slowed by what the horses pull)
     end
     for i = #HorseLead.rides, 1, -1 do
         local ride = HorseLead.rides[i]
@@ -719,8 +1092,25 @@ function HorseLead.updateRide(dt)
                 HorseRope.remove(ride)
             end
             table.remove(HorseLead.rides, i)
-        elseif HorseRope ~= nil and ride.leash and ride.vehicle ~= nil then
-            HorseRope.sync(ride, HorseLead.ropeSource())
+        else
+            -- (only for a ride that is still there: syncing the harness of a ride that was just dropped, a horse somebody mounted, built a new harness for it that nothing ever updated or deleted again:
+            -- a mass of orphaned ropes stretching across the yard)
+            if HorseRope ~= nil and ride.leash and ride.vehicle ~= nil then
+                HorseRope.sync(ride, HorseLead.ropeSource())
+            elseif HorseRope ~= nil and ride.halterOn and ride.vehicle ~= nil then
+                HorseRope.halterSync(ride)                                  -- (let go outside a pasture: the halter stays on, no rope)
+            end
+            if HorseHarness ~= nil and ride.vehicle ~= nil then
+                HorseHarness.sync(ride)
+            end
+            if HorseHitch ~= nil and ride.hitch ~= nil then
+                HorseHitch.update(ride, dt)
+                -- a horse that pulls does not gallop, and walks with a heavy load (the player is slowed to match: HorseHitch.updatePlayer)
+                local spec = ride.vehicle.spec_rideable
+                if ride.hitch ~= nil and spec ~= nil and spec.inputValues ~= nil then
+                    spec.inputValues.currentGait = HorseHitch.limitGait(ride, spec.inputValues.currentGait)
+                end
+            end
         end
     end
 end
