@@ -101,3 +101,6 @@ Not yet: steering by a driver (the horse follows the leash, the trailer follows 
 ### Letting go of the leash
 
 Inside a pasture the halter comes off and the horse goes back in, as ever. Outside, it stays: the lead rope goes (your hands let go) and the horse stands there in its halter (and its harness, and the trailer behind it). The leash tool takes it again; walk it into a pasture and let go there to take the halter off. (A savegame reload forgets the halter: the horse stands loose again.)
+
+## The annoying bits are settings
+Fun once, annoying later, so the options that make horses a pain have switches on the real settings page (ESC, Settings, General, section "Horse Dynamics"; saved in `modSettings/FS25_HorseDynamics/config.xml`, `HorseSettings.lua`, the pattern of Immersive Weathering's page): **a pulling horse never gallops** (on), **loads slow you down** (on: your walk and run are capped by what the horse pulls, 2 km/h for a tractor), **a horse is no tractor** (off: the horse's pull is limited to about 4 kN, so only a small plough or cultivator gets going). The punishment for cheaping out on the tractor early is the game's own: no AI helper and no steering assist behind a horse.
