@@ -593,13 +593,6 @@ function HorseLead.toggleFreeze()
     return HorseLead.frozen and "the led horses are frozen: they stand still (the same key lets them go on)" or "the led horses follow you again"
 end
 
--- A horse that stands turns to face the player (HorseLead.RIDE_TURN_RATE_STILL); off, it stays as it stands, so you can walk round it and look at its gear. A switch for the face key. Returns a message.
-function HorseLead.toggleFace()
-    local on = HorseLead.RIDE_TURN_RATE_STILL > 0
-    HorseLead.RIDE_TURN_RATE_STILL = on and 0 or HorseLead.RIDE_TURN_RATE_STILL_DEFAULT
-    return on and "standing horses stay as they stand: walk round them (the same key: they face you again)" or "standing horses turn to face you"
-end
-
 -- The led horse nearest to the player within `reach` metres: ride, distance. nil when there is none.
 function HorseLead.nearestRide(px, pz, reach, filter)
     local best, bestDistance = nil, reach
