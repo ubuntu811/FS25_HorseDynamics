@@ -15,6 +15,8 @@ HorseHitch.HANDOVER_GAP_M = 0.12        -- the rope hands a drawbar eye over to 
 HorseHitch.HANDOVER_HEIGHT_M = 0.1      -- ... and this close in height (the tongue is up all the way) ...
 HorseHitch.HANDOVER_HOLD_S = 0.2        -- ... for this long
 HorseHitch.SPEED_LIMITS = false     -- OFF until the glue is stable: the player's walk cap while a horse pulls (updatePlayer), no gallop for a pulling horse (limitGait), and the horse's pull limit (MAX_PULL_KN: how fast the wagon's speed may change)
+HorseHitch.GALLOP_LIMIT = true      -- a pulling horse never gallops (limitGait: a trot, a canter under a rider): on whatever SPEED_LIMITS says. The pull limit above stays off on purpose: the smallest plows and cultivators are meant to be possible
+HorseHitch.PLAYER_CAP = true        -- the player's walk and run are capped by what the horse pulls (updatePlayer): the heavier the load the slower, and so the whole string. On whatever SPEED_LIMITS says
 HorseHitch.REACH_M = 12               -- the harnessed horse this near the joint you look at is the one that is hitched
 HorseHitch.POS_GAIN = 4               -- 1/s: speed wanted per metre the eye is off the hook
 HorseHitch.CATCH_SPEED_MS = 6         -- ... at most this (a wagon hitched from 10 m away is pulled in at this speed)
@@ -205,8 +207,25 @@ if Vehicle ~= nil and Vehicle.registerActionEvents ~= nil and Utils ~= nil and U
     end)
 end
 
+-- Where the vehicle's joint node is, in the vehicle's own space (x right, y up, z forward), and what it hangs on: the tow bar ends exactly on this node, so when the wire ends in the air the node is there.
+function HorseHitch.logJointPlace(target)
+    pcall(function()
+        local vehicle = target.vehicle
+        if vehicle == nil or vehicle.rootNode == nil or target.node == nil or worldToLocal == nil or getWorldTranslation == nil then
+            return
+        end
+        local wx, wy, wz = getWorldTranslation(target.node)
+        local lx, ly, lz = worldToLocal(vehicle.rootNode, wx, wy, wz)
+        local parent = getParent ~= nil and getParent(target.node) or nil
+        local name = parent ~= nil and getName ~= nil and getName(parent) or "?"
+        print(string.format("[HorseDynamics] hitch: the %s node of %s is %.2f m right, %.2f m up, %.2f m forward of its root node (on '%s', %s the vehicle's own body)",
+            tostring(target.kind), vehicleName(vehicle), lx, ly, lz, tostring(name), parent == vehicle.rootNode and "directly on" or "not directly on"))
+    end)
+end
+
 function HorseHitch.hitch(ride, target)
     local winch = winchApi()
+    HorseHitch.logJointPlace(target)
     ride.hitch = { vehicle = target.vehicle, node = target.node, component = target.component, kind = target.kind, pieces = {}, tied = {}, speed = 0 }
     ride.hitch.barLength = target.kind == "hitch" and HorseHitch.TOW_BAR_M or 0
     -- a trailer's drawbar eye is not lifted to the hook: the horse comes to the height the trailer is made to be pulled at (the game moves a tractor's hitch to it, AttacherJoints attacherHeight)
@@ -349,6 +368,13 @@ HorseHitch.HANDOVER_LIFT_DONE_M = 0.05   -- lifted when the eye is this close to
 HorseHitch.HANDOVER_LIFT_MAX_S = 3       -- and not tried longer than this (a hinge at its stop does not get further; the pull-in goes on lifting)
 HorseHitch.APPROACH_MS = 3             -- the pull-in of a wagon that is handed over: its speed and acceleration at most
 HorseHitch.APPROACH_ACCEL_MS2 = 8
+HorseHitch.TOW_APPROACH_MS = 1.5       -- animal welfare: a vehicle's own hitch (a tractor on the tow bar) is walked in to the pin at this speed at most, and never snatched ...
+HorseHitch.TOW_APPROACH_ACCEL_MS2 = 2  -- ... at this acceleration, until it has come to the pin once (TOW_DOCKED_M): an 11 t tractor pulled in at 6 m/s ran into the horse's rump
+HorseHitch.TOW_DOCKED_M = 0.3
+HorseHitch.ROD = true                  -- false: the tow bar is pulled as springily as a wagon's pin
+HorseHitch.ROD_POS_GAIN = 12           -- a docked tow bar is a steel rod, not a rubber band: the speed wanted per metre off the pin is this (3 times the wagon's), no integral to wind up (it was 0.1 to 0.5 m off at a trot) ...
+HorseHitch.ROD_FILTER = 0.4            -- ... the horse's speed is followed with this share per frame (the wagon's 0.1 lagged a tenth of a second behind every change of gait) ...
+HorseHitch.ROD_ACCEL_MS2 = 20          -- ... and the speed may change this fast
 
 -- The wagon stands while its tongue is lifted: the brake stays ON (it is let off for the walk-in only) and every body of it is held at no horizontal speed, turning not at all. The tongue (the eye's body) is
 -- driven up at liftV m/s when that is given. (A parked wagon on a slope rolled off while the tongue was lifted: two horse lengths backwards.)
@@ -425,7 +451,9 @@ function HorseHitch.update(ride, dt)
     local speed = math.sqrt(hvx * hvx + hvz * hvz)
     hitch.lastX, hitch.lastZ = px, pz
     hitch.speed = hitch.speed + (speed - hitch.speed) * 0.1
-    hitch.vx, hitch.vz = (hitch.vx or 0) + (hvx - (hitch.vx or 0)) * 0.1, (hitch.vz or 0) + (hvz - (hitch.vz or 0)) * 0.1      -- (the horse's velocity, smoothed: its position is a little noisy, and the servo multiplies that by the mass)
+    local rod = (hitch.barLength or 0) > 0 and hitch.docked == true and HorseHitch.ROD
+    local filter = rod and HorseHitch.ROD_FILTER or 0.1
+    hitch.vx, hitch.vz = (hitch.vx or 0) + (hvx - (hitch.vx or 0)) * filter, (hitch.vz or 0) + (hvz - (hitch.vz or 0)) * filter      -- (the horse's velocity, smoothed: its position is a little noisy, and the servo multiplies that by the mass)
     local winch = winchApi()
     -- step one of a hitch that hands over to the game's joint: only the tongue is lifted, the wagon stays where it is (HorseHitch.liftTongue); the pull-in starts when it is up
     if hitch.handover and not hitch.lifted then
@@ -466,15 +494,20 @@ function HorseHitch.update(ride, dt)
         end
         local mass = winch ~= nil and winch.pullMass ~= nil and winch.pullMass(hitch.vehicle, hitch.component) or getMass(hitch.component)
         -- the speed the eye should have: the horse's own, plus the way back to the hook (limited)
-        local catchX, catchZ = ex * HorseHitch.POS_GAIN, ez * HorseHitch.POS_GAIN
+        local gain = rod and HorseHitch.ROD_POS_GAIN or HorseHitch.POS_GAIN
+        local catchX, catchZ = ex * gain, ez * gain
         local catchLength = math.sqrt(catchX * catchX + catchZ * catchZ)
-        local catchMax = hitch.handover and HorseHitch.APPROACH_MS or HorseHitch.CATCH_SPEED_MS            -- (a wagon that is to be handed over is walked to the hook, not snatched)
+        if (hitch.barLength or 0) > 0 and not hitch.docked and dist < HorseHitch.TOW_DOCKED_M then
+            hitch.docked = true
+        end
+        local towWalkIn = (hitch.barLength or 0) > 0 and not hitch.docked
+        local catchMax = hitch.handover and HorseHitch.APPROACH_MS or towWalkIn and HorseHitch.TOW_APPROACH_MS or HorseHitch.CATCH_SPEED_MS            -- (a wagon that is to be handed over is walked to the hook, not snatched; nor is a tractor on the tow bar)
         if catchLength > catchMax then
             catchX, catchZ = catchX * catchMax / catchLength, catchZ * catchMax / catchLength
         end
         -- the integral of the gap (steady-state error): added speed while the wagon is within INTEGRAL_RANGE_M of the hook, reset when it is far away
         -- (not for a wagon that is walked to the hook for the handover: the integral wound up to its limit in a second and pushed the eye 0.2 to 0.5 m past the hook; the walk-in stops where the eye meets it)
-        if dist < HorseHitch.INTEGRAL_RANGE_M and not hitch.handover then
+        if dist < HorseHitch.INTEGRAL_RANGE_M and not hitch.handover and not rod then
             local limit = HorseHitch.INTEGRAL_MAX_MS
             hitch.ix = math.max(-limit, math.min(limit, (hitch.ix or 0) + ex * HorseHitch.INTEGRAL_GAIN * seconds))
             hitch.iz = math.max(-limit, math.min(limit, (hitch.iz or 0) + ez * HorseHitch.INTEGRAL_GAIN * seconds))
@@ -507,7 +540,7 @@ function HorseHitch.update(ride, dt)
         local cvx, _, cvz = getLinearVelocity(ref)
         local dvx, dvz = vRx - cvx, vRz - cvz
         local dv = math.sqrt(dvx * dvx + dvz * dvz)
-        local maxDv = (hitch.handover and HorseHitch.APPROACH_ACCEL_MS2 or HorseHitch.MAX_ACCEL_MS2) * seconds
+        local maxDv = (hitch.handover and HorseHitch.APPROACH_ACCEL_MS2 or towWalkIn and HorseHitch.TOW_APPROACH_ACCEL_MS2 or rod and HorseHitch.ROD_ACCEL_MS2 or HorseHitch.MAX_ACCEL_MS2) * seconds
         if HorseHitch.SPEED_LIMITS then
             maxDv = math.min(maxDv, HorseHitch.MAX_PULL_KN / mass * seconds)
         end
@@ -910,7 +943,7 @@ function HorseHitch.updatePlayer()
         return
     end
     local cap = nil
-    if HorseHitch.SPEED_LIMITS and winch.pullSpeed ~= nil and winch.pullMass ~= nil then
+    if (HorseHitch.PLAYER_CAP or HorseHitch.SPEED_LIMITS) and winch.pullSpeed ~= nil and winch.pullMass ~= nil then
         for _, ride in ipairs(HorseLead.rides) do
             local hitch = ride.hitch
             if hitch ~= nil and not hitch.vehicle.isDeleted then
@@ -927,7 +960,7 @@ end
 -- its gallop is a canter, the gait below it in that order, so the key never wraps round to a trot.
 function HorseHitch.limitGait(ride, gait)
     local hitch = ride.hitch
-    if not HorseHitch.SPEED_LIMITS or hitch == nil or hitch.vehicle == nil or hitch.vehicle.isDeleted then
+    if not (HorseHitch.GALLOP_LIMIT or HorseHitch.SPEED_LIMITS) or hitch == nil or hitch.vehicle == nil or hitch.vehicle.isDeleted then
         return gait
     end
     local gaits = Rideable.GAITTYPES

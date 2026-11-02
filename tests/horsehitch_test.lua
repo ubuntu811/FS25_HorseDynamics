@@ -403,6 +403,35 @@ do
     HorseHitch.update(ride3, 16)
     check("the tow bar is tied to the vehicle's hitch once its shape has loaded", bar.target == 10)
     HorseHitch.release(ride3)
+    -- animal welfare: a tractor on the tow bar that is far from the pin is walked in gently (not snatched into the horse's rump), until it has come to the pin once
+    local ride5 = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "rope", rig = ride.rig }
+    HorseHitch.hitch(ride5, { vehicle = vehicle, node = 10, component = 100, kind = "hitch" })
+    nodes[10], nodes[100] = { 0, 0.4, -12 }, { 0, 0.4, -12 }
+    SETLIN[100] = nil
+    HorseHitch.update(ride5, 16)
+    local walkIn = math.abs(SETLIN[100][3])
+    check("a tractor on the tow bar far from the pin: its speed grows by at most TOW_APPROACH_ACCEL_MS2 (not the snatch of MAX_ACCEL_MS2)", walkIn > 0 and walkIn <= HorseHitch.TOW_APPROACH_ACCEL_MS2 * 0.016 + 1e-9 and ride5.hitch.docked ~= true)
+    nodes[10], nodes[100] = { 0, 0.4, -2.6 }, { 0, 0.4, -2.6 }
+    HorseHitch.update(ride5, 16)
+    check("... once it has come to the pin it is docked and pulled normally", ride5.hitch.docked == true)
+    HorseHitch.release(ride5)
+    -- a docked tow bar is a steel rod: it follows a gap about three times as hard as the wagon's pin (no rubber band)
+    local function gapSpeed(rod)
+        HorseHitch.ROD = rod
+        local r = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "rope", rig = ride.rig }
+        HorseHitch.hitch(r, { vehicle = vehicle, node = 10, component = 100, kind = "hitch" })
+        r.hitch.docked = true
+        nodes[10], nodes[100] = { 0, 0.4, -2.6 }, { 0, 0.4, -2.6 }
+        HorseHitch.update(r, 16)
+        nodes[10], nodes[100] = { 0, 0.4, -2.8 }, { 0, 0.4, -2.8 }        -- 0.2 m behind the pin
+        SETLIN[100] = nil
+        HorseHitch.update(r, 1000)
+        HorseHitch.release(r)
+        return SETLIN[100] ~= nil and math.abs(SETLIN[100][3]) or 0
+    end
+    local rodSpeed, springSpeed = gapSpeed(true), gapSpeed(false)
+    HorseHitch.ROD = true
+    check("a docked tow bar follows a gap harder than a wagon's pin: 0.2 m off gives more speed (ROD) than before", rodSpeed > springSpeed * 1.5 and rodSpeed > 0)
     nodes[10] = { 0, 0.9, -1 }
     local ride4 = { vehicle = { rootNode = 1 }, harness = true, rig = ride.rig }
     local before4 = #pieces
@@ -616,7 +645,10 @@ do
     local G0 = Rideable.GAITTYPES
     pickResult = target
     HorseHitch.click()
-    check("SPEED_LIMITS off (the default): a pulling horse keeps the gait its steering chose, a gallop included", HorseHitch.limitGait(ride, G0.GALLOP) == G0.GALLOP and HorseHitch.limitGait(ride, G0.TROT) == G0.TROT)
+    check("GALLOP_LIMIT on (the default), SPEED_LIMITS off: a pulling horse never gallops, the other gaits are its steering's own", HorseHitch.SPEED_LIMITS == false and HorseHitch.limitGait(ride, G0.GALLOP) == G0.TROT and HorseHitch.limitGait(ride, G0.TROT) == G0.TROT and HorseHitch.limitGait(ride, G0.WALK) == G0.WALK)
+    HorseHitch.GALLOP_LIMIT = false
+    check("GALLOP_LIMIT off and SPEED_LIMITS off: it keeps the gait its steering chose, a gallop included", HorseHitch.limitGait(ride, G0.GALLOP) == G0.GALLOP)
+    HorseHitch.GALLOP_LIMIT = true
     HorseHitch.click()
 end
 HorseHitch.SPEED_LIMITS = true
@@ -644,7 +676,14 @@ do
     HorseHitch.click()
     vehicle.total = 0.66
     HorseHitch.updatePlayer()
-    check("SPEED_LIMITS off (the default): the player is not capped by what the horse pulls", HITCHCAPS.horsehitch == nil)
+    check("PLAYER_CAP on (the default), SPEED_LIMITS off: the player is capped by what the horse pulls (a light wagon: 3.5 m/s)", HorseHitch.SPEED_LIMITS == false and HITCHCAPS.horsehitch == 3.5)
+    vehicle.total = 14
+    HorseHitch.updatePlayer()
+    check("... a 14 t load (a tractor): 2 km/h", math.abs(HITCHCAPS.horsehitch - 2 / 3.6) < 1e-9)
+    HorseHitch.PLAYER_CAP = false
+    HorseHitch.updatePlayer()
+    check("PLAYER_CAP off and SPEED_LIMITS off: no cap", HITCHCAPS.horsehitch == nil)
+    HorseHitch.PLAYER_CAP = true
     HorseHitch.click()
     vehicle.total = nil
 end
