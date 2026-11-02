@@ -1124,6 +1124,9 @@ function HorseLead.updateRide(dt)
             if HorseHarness ~= nil and ride.vehicle ~= nil then
                 HorseHarness.sync(ride)
             end
+            if HorseHitch ~= nil and ride.joined ~= nil then
+                HorseHitch.keepJoined(ride)                                 -- (the brake of what hangs on the horse's real joint)
+            end
             if HorseHitch ~= nil and ride.hitch ~= nil then
                 HorseHitch.update(ride, dt)
                 -- a horse that pulls does not gallop, and walks with a heavy load (the player is slowed to match: HorseHitch.updatePlayer)

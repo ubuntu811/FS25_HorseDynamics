@@ -22,6 +22,7 @@ Single player only for now.
         <sourceFile filename="scripts/HorseRope.lua" />
         <sourceFile filename="scripts/HorseHarness.lua" />
         <sourceFile filename="scripts/HorseHitch.lua" />
+        <sourceFile filename="scripts/HorseJoint.lua" />
         <sourceFile filename="scripts/HorseLead.lua" />
         <sourceFile filename="scripts/HorseDynamics.lua" />
     </extraSourceFiles>

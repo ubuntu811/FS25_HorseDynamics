@@ -303,9 +303,12 @@ function HorseHarness.build(vehicle, gear)
     -- the traces: collar ring, two points along the shoulder, the tug ring, three points behind (the last hangs free)
     local t = s.trace
     local hk = s.hook
+    rig.hookFrom = #rig.nodes + 1
     local hookRing = ringAt(hk.bone, hk.at[1], hk.at[2], hk.at[3], hk.radius, 0, hk.diameter)
     hookRing.close()
     rig.hookNode = point(hk.bone, hk.at[1], hk.at[2], hk.at[3], 0)                       -- (the middle of the ring, rigid on the bone: HorseHitch pins the drawbar eye here)
+    rig.hookTo = #rig.nodes                                                              -- (the ring's points and its middle are nodes hookFrom to hookTo: they go down together, hookDrop)
+    rig.hookDrop, rig.hookDropTarget = 0, 0
     rig.hookRear = hookRing.near(hk.at[2], hk.at[3] - 1)                                 -- (the ring's point furthest behind: a tow bar starts there)
     for _, sign in ipairs({ 1, -1 }) do
         local nodes = {}
@@ -330,13 +333,47 @@ function HorseHarness.build(vehicle, gear)
 end
 
 -- Every point at its bone's place (world coordinates, the points hang under the world root), then down by its slack.
+-- rig.hookFollow: a node (a drawbar's eye) the hook ring rides on, EXACTLY: the whole ring moves by the way from where it would be (rigid on the hip bone) to that node, so the traces end on the eye whatever the
+-- wagon does (a hitched wagon trails the hook by a little that grows with the gait; the ring stays on the eye). rig.hookBlend eases it in when it is set and out when it is cleared (the offset of the last
+-- frame is kept for that).
+HorseHarness.FOLLOW_EASE = 0.25
 function HorseHarness.place(rig)
+    -- the hook ring is let down to where a joint holds a drawbar eye (hookDropTarget), a little each frame, and back up when it lets go
+    local drop = rig.hookDrop or 0
+    if rig.hookDropTarget ~= nil and math.abs(rig.hookDropTarget - drop) > 0.002 then
+        drop = drop + (rig.hookDropTarget - drop) * 0.15
+        rig.hookDrop = drop
+    end
+    local blend = rig.hookBlend or 0
+    local blendTarget = rig.hookFollow ~= nil and 1 or 0
+    if blend ~= blendTarget then
+        blend = blend + (blendTarget - blend) * HorseHarness.FOLLOW_EASE
+        if math.abs(blendTarget - blend) < 0.005 then
+            blend = blendTarget
+        end
+        rig.hookBlend = blend
+    end
+    if rig.hookFollow ~= nil and rig.hookTo ~= nil and (entityExists == nil or entityExists(rig.hookFollow)) then
+        local bone = rig.bone[rig.hookTo]
+        if bone ~= nil and (entityExists == nil or entityExists(bone)) then
+            local l = rig.locals[rig.hookTo]
+            local hx, hy, hz = localToWorld(bone, l[1], l[2], l[3])
+            local ex, ey, ez = getWorldTranslation(rig.hookFollow)
+            rig.hookOffset = { ex - hx, ey - hy, ez - hz }
+        end
+    end
+    local offset = blend > 0 and rig.hookOffset or nil
     for i, node in ipairs(rig.nodes) do
         local bone = rig.bone[i]
         if bone ~= nil and (entityExists == nil or entityExists(bone)) then
             local l = rig.locals[i]
             local x, y, z = localToWorld(bone, l[1], l[2], l[3])
-            setTranslation(node, x, y - (rig.slack[i] or 0), z)
+            local inRing = rig.hookFrom ~= nil and i >= rig.hookFrom and i <= rig.hookTo
+            local down = inRing and drop * (1 - blend) or 0
+            if inRing and offset ~= nil then
+                x, y, z = x + offset[1] * blend, y + offset[2] * blend, z + offset[3] * blend
+            end
+            setTranslation(node, x, y - (rig.slack[i] or 0) - down, z)
         end
     end
 end

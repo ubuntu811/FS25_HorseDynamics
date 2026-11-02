@@ -933,6 +933,20 @@ check("the seven rings (collar 2, tugs 2, breeching 2, the hook) of six pieces a
 local hk = HorseHarness.spec.hook
 local hp = nodes[rig.hookNode].pos
 check("the hook is one fixed point at its model place, not hanging (no slack)", math.abs(hp[1] - hk.at[1]) < 1e-3 and math.abs(hp[2] - hk.at[2]) < 1e-3 and math.abs(hp[3] - hk.at[3]) < 1e-3)
+-- the ring rides on a drawbar eye that a wagon holds (hookFollow): exactly on it, whatever the offset, and back on the bone when it lets go
+nodes[9001] = { name = "eye", pos = { hp[1] + 0.3, hp[2] - 0.2, hp[3] - 0.5 }, children = {} }
+local hearRearBefore = nodes[rig.hookRear].pos
+rig.hookFollow = 9001
+for _ = 1, 60 do HorseHarness.place(rig) end
+local hf, hr = nodes[rig.hookNode].pos, nodes[rig.hookRear].pos
+check("the hook ring follows the eye it is given: its middle is exactly on it", math.abs(hf[1] - (hp[1] + 0.3)) < 1e-3 and math.abs(hf[2] - (hp[2] - 0.2)) < 1e-3 and math.abs(hf[3] - (hp[3] - 0.5)) < 1e-3)
+check("... and the whole ring moved with it (its rear point by the same way)", math.abs(hr[1] - hearRearBefore[1] - 0.3) < 1e-3 and math.abs(hr[3] - hearRearBefore[3] + 0.5) < 1e-3)
+nodes[9001].pos = { hp[1] - 0.4, hp[2], hp[3] - 1 }
+HorseHarness.place(rig)
+check("the eye moves: the ring is on it in the very next frame (no lag)", math.abs(nodes[rig.hookNode].pos[1] - (hp[1] - 0.4)) < 1e-3 and math.abs(nodes[rig.hookNode].pos[3] - (hp[3] - 1)) < 1e-3)
+rig.hookFollow = nil
+for _ = 1, 80 do HorseHarness.place(rig) end
+check("let go: the ring is back on the hip bone", math.abs(nodes[rig.hookNode].pos[1] - hp[1]) < 1e-3 and math.abs(nodes[rig.hookNode].pos[3] - hp[3]) < 1e-3)
 local tally = {}
 for i = 1, #rig.pieces do tally[rig.targets[i]] = (tally[rig.targets[i]] or 0) + 1 end
 local meets = 0
