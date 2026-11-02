@@ -207,6 +207,24 @@ if Vehicle ~= nil and Vehicle.registerActionEvents ~= nil and Utils ~= nil and U
     end)
 end
 
+-- Belts first (HorseHitch.AUTO_BELTS): a trailer with tension belts that are not fastened has them thrown before it is hitched (TensionBelts:setAllTensionBeltsActive, what the key does): the loose
+-- logs on it became part of the frame, as the belted ones are, and are not thrown about when the nose comes up. Returns true when belts were thrown (the masses need a moment to settle).
+HorseHitch.AUTO_BELTS = true
+HorseHitch.BELT_SETTLE_S = 0.8
+function HorseHitch.throwBelts(vehicle)
+    local belts = vehicle ~= nil and vehicle.spec_tensionBelts or nil
+    if not HorseHitch.AUTO_BELTS or belts == nil or not belts.hasTensionBelts or belts.areAllBeltsFastened or vehicle.setAllTensionBeltsActive == nil then
+        return false
+    end
+    local ok, err = pcall(vehicle.setAllTensionBeltsActive, vehicle, true)
+    if not ok then
+        print("[HorseDynamics] hitch: the tension belts could not be thrown: " .. tostring(err))
+        return false
+    end
+    print("[HorseDynamics] hitch: the tension belts were not fastened: thrown before the hitch")
+    return true
+end
+
 -- Where the vehicle's joint node is, in the vehicle's own space (x right, y up, z forward), and what it hangs on: the tow bar ends exactly on this node, so when the wire ends in the air the node is there.
 function HorseHitch.logJointPlace(target)
     pcall(function()
@@ -223,9 +241,64 @@ function HorseHitch.logJointPlace(target)
     end)
 end
 
+-- What the wagon is made of when it is hitched, for the puzzle "the tongue lifts with loose logs and not with belted ones": the bodies with their mass and height, which one the eye sits on, the mass the game
+-- counts for the vehicle, the belts (how many objects are belted: spec_tensionBelts) and the component joints with their limits.
+function HorseHitch.logLoad(target)
+    pcall(function()
+        local vehicle = target.vehicle
+        local parts = {}
+        for i, component in ipairs(vehicle.components or {}) do
+            local _, y = getWorldTranslation(component.node)
+            parts[#parts + 1] = string.format("body %d%s %.0f kg y %.2f", i, component.node == target.component and " (the eye's)" or "", getMass(component.node) * 1000, y)
+        end
+        local belts = vehicle.spec_tensionBelts
+        local belted = 0
+        for _ in pairs(belts ~= nil and belts.objectsToJoint or {}) do
+            belted = belted + 1
+        end
+        local joints = {}
+        for i, joint in ipairs(vehicle.componentJoints or {}) do
+            joints[#joints + 1] = string.format("joint %d: bodies %s-%s, rot limit %s, trans limit %s", i, tostring(joint.componentIndices and joint.componentIndices[1]), tostring(joint.componentIndices and joint.componentIndices[2]),
+                joint.rotLimit ~= nil and string.format("%.2f %.2f %.2f", joint.rotLimit[1], joint.rotLimit[2], joint.rotLimit[3]) or "nil", joint.transLimit ~= nil and string.format("%.2f %.2f %.2f", joint.transLimit[1], joint.transLimit[2], joint.transLimit[3]) or "nil")
+        end
+        local total = vehicle.getTotalMass ~= nil and vehicle:getTotalMass() or nil
+        print(string.format("[HorseDynamics] hitch: %s is made of %d body(ies): %s | total mass %s t, %d object(s) belted (%s) | %s",
+            vehicleName(vehicle), #(vehicle.components or {}), table.concat(parts, "; "), total ~= nil and string.format("%.2f", total) or "?", belted, belts ~= nil and "tension belts" or "no belts spec", #joints > 0 and table.concat(joints, "; ") or "no component joints"))
+    end)
+end
+
+-- A wagon with tension belts that are not fastened (and could not be thrown: AUTO_BELTS off, or nothing to throw them with) may carry loose cargo that a jerk shoves about.
+function HorseHitch.hasLooseLoad(vehicle)
+    local belts = vehicle ~= nil and vehicle.spec_tensionBelts or nil
+    return belts ~= nil and belts.hasTensionBelts == true and belts.areAllBeltsFastened ~= true
+end
+
+-- Is the eye on the wagon's own frame (then it is tilted about the axle, within TILT_MAX_DEG) or on a tongue (lifted)? Decided when the belts have settled: they put the logs' mass on the frame.
+function HorseHitch.decideRigid(hitch)
+    local target = { vehicle = hitch.vehicle, node = hitch.node, component = hitch.component, kind = hitch.kind }
+    local now = hitch.restHeight
+    if now == nil or hitch.goalHeight == nil or not HorseHitch.rigidEye(target) then
+        return
+    end
+    local ex, ey, ez = getWorldTranslation(target.node)
+    now = ey - HorseHitch.groundY(ex, ez)
+    local tilt = HorseHitch.tiltOf({ vehicle = target.vehicle }, 1, ex, ez)
+    hitch.rigid = true
+    if tilt ~= nil then
+        local rise = tilt.length * math.sin(math.rad(HorseHitch.TILT_MAX_DEG))
+        hitch.goalHeight = math.min(hitch.goalHeight, now + rise)
+        hitch.tilting = true
+        print(string.format("[HorseDynamics] hitch: the eye is on the wagon's own frame (no tongue): it is tilted about its axle (%.1f m behind the eye), at most %d degrees: the eye goes from %.2f to %.2f m above the ground", tilt.length, HorseHitch.TILT_MAX_DEG, now, hitch.goalHeight))
+    else
+        hitch.goalHeight, hitch.lifted = now, true
+        print(string.format("[HorseDynamics] hitch: the eye is on the wagon's own frame and the wagon shows no wheels to tilt it about: it stays where it rests, %.2f m above the ground", now))
+    end
+end
+
 function HorseHitch.hitch(ride, target)
     local winch = winchApi()
     HorseHitch.logJointPlace(target)
+    HorseHitch.logLoad(target)
     ride.hitch = { vehicle = target.vehicle, node = target.node, component = target.component, kind = target.kind, pieces = {}, tied = {}, speed = 0 }
     ride.hitch.barLength = target.kind == "hitch" and HorseHitch.TOW_BAR_M or 0
     -- a trailer's drawbar eye is not lifted to the hook: the horse comes to the height the trailer is made to be pulled at (the game moves a tractor's hitch to it, AttacherJoints attacherHeight)
@@ -234,6 +307,12 @@ function HorseHitch.hitch(ride, target)
         local now, reach = nil, nil
         ride.hitch.goalHeight, now, reach = HorseHitch.eyeHeight(target, ax ~= nil and ay - HorseHitch.groundY(ax, az) or nil)
         print(string.format("[HorseDynamics] hitch: the eye is held %.2f m above the ground (it is at %.2f m now, its hinge lifts it %.2f m at most)", ride.hitch.goalHeight, now, reach))
+        ride.hitch.restHeight = now
+        ride.hitch.beltWaitS = HorseHitch.throwBelts(target.vehicle) and HorseHitch.BELT_SETTLE_S or 0
+        ride.hitch.gentle = HorseHitch.hasLooseLoad(target.vehicle)
+        if ride.hitch.beltWaitS <= 0 then
+            HorseHitch.decideRigid(ride.hitch)
+        end
     end
     -- the heavy body of the vehicle (the wagon, not its drawbar): the swing round the pin is damped on it
     local heaviest, heaviestMass = nil, 0
@@ -365,9 +444,20 @@ end
 HorseHitch.HANDOVER_LIFT_MS = 1.0        -- the tongue is lifted at this speed at most ...
 HorseHitch.HANDOVER_LIFT_ACCEL_MS2 = 4   -- ... getting there this smoothly
 HorseHitch.HANDOVER_LIFT_DONE_M = 0.05   -- lifted when the eye is this close to the height it is to have
+HorseHitch.TILT_MAX_DEG = 12             -- a wagon with no tongue (the eye on its own frame) is TILTED about its axle to bring the eye up to the hook, not lifted: at most this far (the eye then hangs lower than the hook, and the hook ring follows it)
+HorseHitch.LIFT_FORCE_SHARE = 0        -- OFF (0): a tongue that does not come up gets an upward FORCE (it threw the loose logs of the log trailer off: the frame is only 100 kg and the logs rest on it). A tongue that does not come up gets an upward FORCE on top of the speed it is driven at, growing while it stays stuck, at most this share of the whole vehicle's weight
+HorseHitch.LIFT_FORCE_RAMP_S = 1.5       -- ... from nothing to the most in this long
+HorseHitch.LIFT_STUCK_M = 0.1            -- stuck: further than this from its height and it has come up less than LIFT_PROGRESS_M in the last half second
+HorseHitch.LIFT_PROGRESS_M = 0.02
+HorseHitch.LIFT_STALL_S = 1             -- the tongue has reached its stop (a hinge limit) when it has come up less than LIFT_STALL_M in this long while it is driven: the eye is held where it is (driving on lifted the whole frame, and the loose logs on it off)
+HorseHitch.LIFT_STALL_M = 0.04
+HorseHitch.HANDOVER_TILT_MAX_RAD = 0.07  -- the lift is given up when the wagon's heavy body tilts more than this (4 degrees) from where it stood: the eye does not sit on a small hinged tongue (a locked hinge, a drawbar that is part of the body), driving it up lifted the whole loaded forest trailer's nose into the air
 HorseHitch.HANDOVER_LIFT_MAX_S = 3       -- and not tried longer than this (a hinge at its stop does not get further; the pull-in goes on lifting)
 HorseHitch.APPROACH_MS = 3             -- the pull-in of a wagon that is handed over: its speed and acceleration at most
 HorseHitch.APPROACH_ACCEL_MS2 = 8
+HorseHitch.GENTLE_LIFT_MS = 0.5          -- a wagon whose belts are NOT fastened (loose logs shoved about by every jerk: they were thrown off the trailer) is lifted and walked in gently: this fast ...
+HorseHitch.GENTLE_LIFT_ACCEL_MS2 = 1
+HorseHitch.GENTLE_APPROACH_ACCEL_MS2 = 2 -- ... and this smoothly. With the belts fastened (thrown first, HorseHitch.throwBelts) it is as quick as any other wagon
 HorseHitch.TOW_APPROACH_MS = 1.5       -- animal welfare: a vehicle's own hitch (a tractor on the tow bar) is walked in to the pin at this speed at most, and never snatched ...
 HorseHitch.TOW_APPROACH_ACCEL_MS2 = 2  -- ... at this acceleration, until it has come to the pin once (TOW_DOCKED_M): an 11 t tractor pulled in at 6 m/s ran into the horse's rump
 HorseHitch.TOW_DOCKED_M = 0.3
@@ -378,26 +468,63 @@ HorseHitch.ROD_ACCEL_MS2 = 20          -- ... and the speed may change this fast
 
 -- The wagon stands while its tongue is lifted: the brake stays ON (it is let off for the walk-in only) and every body of it is held at no horizontal speed, turning not at all. The tongue (the eye's body) is
 -- driven up at liftV m/s when that is given. (A parked wagon on a slope rolled off while the tongue was lifted: two horse lengths backwards.)
-function HorseHitch.holdStill(hitch, winch, liftV)
+function HorseHitch.holdStill(hitch, winch, liftV, tilt)
     if winch ~= nil and winch.setBrakeOff ~= nil then
         winch.setBrakeOff(hitch, false)
     end
     for _, component in ipairs(hitch.vehicle.components or { { node = hitch.component } }) do
         local node = component.node
         if node ~= nil and (entityExists == nil or entityExists(node)) then
-            local _, vy, _ = getLinearVelocity(node)
-            if node == hitch.component and liftV ~= nil then
-                vy = liftV
+            if tilt ~= nil then
+                -- (a wagon with no tongue: turned about its axle, nothing else moves)
+                local cx, cy, cz = getWorldTranslation(node)
+                local vx, vy, vz, wx, wz = HorseHitch.tiltVelocity(tilt, cx, cy, cz, hitch.tiltSign)
+                setLinearVelocity(node, vx, vy, vz)
+                setAngularVelocity(node, wx, 0, wz)
+            else
+                local _, vy, _ = getLinearVelocity(node)
+                if node == hitch.component and liftV ~= nil then
+                    vy = liftV
+                end
+                setLinearVelocity(node, 0, vy, 0)
+                setAngularVelocity(node, 0, 0, 0)
             end
-            setLinearVelocity(node, 0, vy, 0)
-            setAngularVelocity(node, 0, 0, 0)
         end
+    end
+end
+
+-- The engine's sign of an angular velocity about a horizontal axis is not taken on trust (the yaw one was the other way round on some bodies): when the eye is commanded up and moves down for a few
+-- frames in a row (or the other way round), the sign is flipped.
+function HorseHitch.checkTiltSign(hitch, jy, eyeSpeed, seconds)
+    local last = hitch.tiltLastY
+    hitch.tiltLastY = jy
+    if last == nil or math.abs(eyeSpeed) < 0.15 then
+        hitch.tiltWrong = 0
+        return
+    end
+    if (jy - last) * eyeSpeed < -0.0004 then
+        hitch.tiltWrong = (hitch.tiltWrong or 0) + 1
+        if hitch.tiltWrong >= 8 then
+            hitch.tiltSign, hitch.tiltWrong = -(hitch.tiltSign or 1), 0
+            print("[HorseDynamics] hitch: the wagon tilts the other way from what the angular speed says: the sign is flipped")
+        end
+    else
+        hitch.tiltWrong = 0
     end
 end
 
 -- Step one of a hitch that is handed over to the game's joint: the eye's body (the tongue) is lifted on its hinge to the height the eye is to be held at, slowly, and nothing else of the wagon is touched. The
 -- wagon is not moved until this is done: pulled in with the tongue on the ground it was dragged through the road. Done when the eye is there, or after HANDOVER_LIFT_MAX_S.
 function HorseHitch.liftTongue(ride, hitch, seconds, winch)
+    -- the belts were just thrown: the wagon stands still until the logs' mass has settled on the frame, then it is decided what the eye sits on
+    if (hitch.beltWaitS or 0) > 0 then
+        hitch.beltWaitS = hitch.beltWaitS - seconds
+        HorseHitch.holdStill(hitch, winch, nil)
+        if hitch.beltWaitS <= 0 then
+            HorseHitch.decideRigid(hitch)
+        end
+        return
+    end
     -- the support animation (the leg, and on some trailers the tongue's hinge: it is locked until the animation frees it) has to be done first; waited for 3 s at most
     local attachable = hitch.vehicle.spec_attachable
     if attachable ~= nil and hitch.vehicle.getIsAnimationPlaying ~= nil and (hitch.supportWaitS or 0) < 3 then
@@ -410,7 +537,18 @@ function HorseHitch.liftTongue(ride, hitch, seconds, winch)
         end
     end
     local ax, ay, az = HorseHitch.anchor(ride)
-    local _, jy = getWorldTranslation(hitch.node)
+    local jx, jy, jz = getWorldTranslation(hitch.node)
+    -- the wagon's heavy body must stay where it is: if it tilts, the eye is not on a free tongue, and the lift is given up: the eye goes back to where it rests, and is held THERE (the joint takes the height the eye has)
+    local body = hitch.body or hitch.component
+    local _, upY = localDirectionToWorld(body, 0, 1, 0)
+    local tilt = math.acos(math.max(-1, math.min(1, upY)))
+    if hitch.liftTilt0 == nil then
+        hitch.liftTilt0, hitch.liftEye0 = tilt, jy - HorseHitch.groundY(jx, jz)
+    elseif not hitch.rigid and not hitch.liftAborted and tilt - hitch.liftTilt0 > HorseHitch.HANDOVER_TILT_MAX_RAD then
+        hitch.liftAborted = true
+        hitch.goalHeight = hitch.liftEye0
+        print(string.format("[HorseDynamics] hitch: the wagon's body tilted %.1f degrees while the tongue was lifted: the eye is not on a free tongue, the lift is given up, the eye stays at %.2f m above the ground", math.deg(tilt - hitch.liftTilt0), hitch.liftEye0))
+    end
     local goal = jy
     if ax ~= nil then
         goal = hitch.goalHeight ~= nil and HorseHitch.groundY(ax, az) + hitch.goalHeight or ay
@@ -419,16 +557,53 @@ function HorseHitch.liftTongue(ride, hitch, seconds, winch)
     hitch.liftS = (hitch.liftS or 0) + seconds
     -- the speed the tongue is DRIVEN at ramps up on its own (liftV, not what the physics reports: it takes the speed a step off every frame, a ramp built on it never got going: the tongue stayed on the ground
     -- for 10 s), and the wagon is held where it is meanwhile (HorseHitch.holdStill): with its brake off it rolled away downhill
-    local want = math.max(-HorseHitch.HANDOVER_LIFT_MS, math.min(HorseHitch.HANDOVER_LIFT_MS, err * HorseHitch.LIFT_GAIN))
-    local step = HorseHitch.HANDOVER_LIFT_ACCEL_MS2 * seconds
+    -- a stuck tongue gets a force: the speed written to its body is only what the physics lets it keep, against a loaded wagon's nose weight it was not enough (the eye stayed 0.7 m low for the 3 s). The
+    -- tilt check above stops it as soon as the heavy body comes up with it.
+    hitch.liftCheckS = (hitch.liftCheckS or 0) + seconds
+    if hitch.liftCheckS >= 0.5 then
+        local rose = jy - (hitch.liftCheckY or jy)
+        local stuck = not hitch.liftAborted and not hitch.rigid and err > HorseHitch.LIFT_STUCK_M and rose < HorseHitch.LIFT_PROGRESS_M
+        hitch.liftBoost = stuck and math.min(1, (hitch.liftBoost or 0) + hitch.liftCheckS / HorseHitch.LIFT_FORCE_RAMP_S) or math.max(0, (hitch.liftBoost or 0) - hitch.liftCheckS / HorseHitch.LIFT_FORCE_RAMP_S)
+        hitch.liftCheckS, hitch.liftCheckY = 0, jy
+    end
+    if (hitch.liftBoost or 0) > 0 and not hitch.liftAborted and not hitch.rigid and addForce ~= nil then
+        local mass = winch ~= nil and winch.pullMass ~= nil and winch.pullMass(hitch.vehicle, hitch.component) or getMass(hitch.component)
+        addForce(hitch.component, 0, hitch.liftBoost * HorseHitch.LIFT_FORCE_SHARE * mass * 9.81, 0, jx, jy, jz, false)        -- (tonnes * m/s2 = kN)
+    end
+    -- the stop: driven for LIFT_STALL_S and not come up by LIFT_STALL_M: it is as high as it goes, the eye is held there (the hook ring follows it)
+    hitch.stallS = (hitch.stallS or 0) + seconds
+    if hitch.stallS >= HorseHitch.LIFT_STALL_S then
+        local rose = jy - (hitch.stallY or jy)
+        if not hitch.rigid and not hitch.liftAborted and (hitch.liftV or 0) >= 0.3 and err > HorseHitch.HANDOVER_LIFT_DONE_M and rose < HorseHitch.LIFT_STALL_M and hitch.stallY ~= nil then
+            hitch.goalHeight = jy - HorseHitch.groundY(jx, jz)
+            hitch.lifted = true
+            print(string.format("[HorseDynamics] hitch: the tongue has reached its stop (%.2f m short of the hook): the eye is held where it is, %.2f m above the ground", err, hitch.goalHeight))
+            return
+        end
+        hitch.stallS, hitch.stallY = 0, jy
+    elseif hitch.stallY == nil then
+        hitch.stallY = jy
+    end
+    local liftMs = hitch.gentle and HorseHitch.GENTLE_LIFT_MS or HorseHitch.HANDOVER_LIFT_MS
+    local want = math.max(-liftMs, math.min(liftMs, err * HorseHitch.LIFT_GAIN))
+    local step = (hitch.gentle and HorseHitch.GENTLE_LIFT_ACCEL_MS2 or HorseHitch.HANDOVER_LIFT_ACCEL_MS2) * seconds
     hitch.liftV = (hitch.liftV or 0) + math.max(-step, math.min(step, want - (hitch.liftV or 0)))
-    HorseHitch.holdStill(hitch, winch, hitch.liftV)
+    local tilt = hitch.tilting and HorseHitch.tiltOf(hitch, hitch.liftV, jx, jz) or nil
+    if tilt ~= nil then
+        HorseHitch.checkTiltSign(hitch, jy, hitch.liftV, seconds)
+    end
+    HorseHitch.holdStill(hitch, winch, hitch.liftV, tilt)
     hitch.liftLogS = (hitch.liftLogS or 1) + seconds
     if hitch.liftLogS >= 0.5 then
         hitch.liftLogS = 0
         print(string.format("[HorseDynamics] hitch: lifting the tongue: the eye is %.2f m below the height it is to have (%.2f m above the ground), driven at %.2f m/s", err, hitch.goalHeight or 0, hitch.liftV))
     end
     if math.abs(err) < HorseHitch.HANDOVER_LIFT_DONE_M or hitch.liftS > HorseHitch.HANDOVER_LIFT_MAX_S then
+        if err > HorseHitch.LIFT_STUCK_M * 3 and not hitch.liftAborted and (hitch.liftBoost or 0) >= 1 then
+            -- it never came up, even with the force: driving it up while the wagon is walked in would lift the whole wagon instead. The eye is held where it is.
+            hitch.goalHeight = jy - HorseHitch.groundY(jx, jz)
+            print(string.format("[HorseDynamics] hitch: the tongue would not come up (%.2f m short, even with the force): the eye is held where it is, %.2f m above the ground", err, hitch.goalHeight))
+        end
         hitch.lifted = true
         print(string.format("[HorseDynamics] hitch: the tongue is up (%.2f m short, %.1f s): the wagon is walked to the hook now", err, hitch.liftS))
     end
@@ -540,7 +715,7 @@ function HorseHitch.update(ride, dt)
         local cvx, _, cvz = getLinearVelocity(ref)
         local dvx, dvz = vRx - cvx, vRz - cvz
         local dv = math.sqrt(dvx * dvx + dvz * dvz)
-        local maxDv = (hitch.handover and HorseHitch.APPROACH_ACCEL_MS2 or towWalkIn and HorseHitch.TOW_APPROACH_ACCEL_MS2 or rod and HorseHitch.ROD_ACCEL_MS2 or HorseHitch.MAX_ACCEL_MS2) * seconds
+        local maxDv = (hitch.handover and (hitch.gentle and HorseHitch.GENTLE_APPROACH_ACCEL_MS2 or HorseHitch.APPROACH_ACCEL_MS2) or towWalkIn and HorseHitch.TOW_APPROACH_ACCEL_MS2 or rod and HorseHitch.ROD_ACCEL_MS2 or HorseHitch.MAX_ACCEL_MS2) * seconds
         if HorseHitch.SPEED_LIMITS then
             maxDv = math.min(maxDv, HorseHitch.MAX_PULL_KN / mass * seconds)
         end
@@ -568,18 +743,28 @@ function HorseHitch.update(ride, dt)
         local sign = hitch.omegaSign or 1
         -- the drawbar (the joint's body, when it is a body of its own: a small share of the vehicle) is DRIVEN up or down to the height of the hook, 1 m/s at most: it holds the eye there whatever the load on it
         local ownMass = getMass(hitch.component)
-        local driveHeight = (hitch.barLength or 0) == 0 and (hitch.handover or ownMass <= HorseHitch.LIFT_MAX_SHARE * mass)
+        local driveHeight = (hitch.barLength or 0) == 0 and not hitch.rigid and (hitch.handover or ownMass <= HorseHitch.LIFT_MAX_SHARE * mass)
         local heightSpeed = math.max(-HorseHitch.LIFT_SPEED_MS, math.min(HorseHitch.LIFT_SPEED_MS, (ay - jy) * HorseHitch.LIFT_GAIN))
+        local tilt = hitch.tilting and HorseHitch.tiltOf(hitch, heightSpeed, jx, jz) or nil
+        if tilt ~= nil then
+            HorseHitch.checkTiltSign(hitch, jy, heightSpeed, seconds)
+        end
         for _, component in ipairs(hitch.vehicle.components or { { node = hitch.component } }) do
             local node = component.node
             if node ~= nil and (entityExists == nil or entityExists(node)) then
-                local cx, _, cz = getWorldTranslation(node)
+                local cx, cy, cz = getWorldTranslation(node)
                 local _, vy, _ = getLinearVelocity(node)
                 if driveHeight and node == hitch.component then
                     vy = heightSpeed
                 end
-                setLinearVelocity(node, vRx + omega * (cz - rz), vy, vRz - omega * (cx - rx))
                 local wx, _, wz = getAngularVelocity(node)
+                local lvx, lvz = vRx + omega * (cz - rz), vRz - omega * (cx - rx)
+                if tilt ~= nil then
+                    -- the eye is brought to (and held at) its height by turning the wagon about its axle, on top of the planar motion
+                    local tvx, tvy, tvz, twx, twz = HorseHitch.tiltVelocity(tilt, cx, cy, cz, hitch.tiltSign)
+                    lvx, lvz, vy, wx, wz = lvx + tvx, lvz + tvz, tvy, twx, twz
+                end
+                setLinearVelocity(node, lvx, vy, lvz)
                 setAngularVelocity(node, wx, omega * sign, wz)
             end
         end
@@ -793,6 +978,63 @@ function HorseHitch.keepJoined(ride)
 end
 
 -- Can the game's attach take this joint: the real joint is on, and it is an input attacher joint of an attachable vehicle.
+-- The wagon's axle: the middle of its wheels in the world (x, y, z), nil when the vehicle shows none.
+function HorseHitch.axleOf(vehicle)
+    local wheels = vehicle ~= nil and vehicle.spec_wheels ~= nil and vehicle.spec_wheels.wheels or nil
+    local sx, sy, sz, n = 0, 0, 0, 0
+    for _, wheel in ipairs(wheels or {}) do
+        local node = wheel.node or wheel.driveNode or wheel.repr
+        if node ~= nil and (entityExists == nil or entityExists(node)) then
+            local x, y, z = getWorldTranslation(node)
+            sx, sy, sz, n = sx + x, sy + y, sz + z, n + 1
+        end
+    end
+    if n == 0 then
+        return nil
+    end
+    return sx / n, sy / n, sz / n
+end
+
+-- Tilting about the axle, not lifting: the eye (jx, jy, jz) is to rise at eyeSpeed while the wheels stay on the ground. The angular velocity is horizontal, across the way from the axle to the eye, eyeSpeed over
+-- the distance (nose up for a positive speed); every body then moves as a point of a body turning about the axle (v = w x r). hitch.tiltSign is the engine's sign of an angular velocity (checked below).
+-- Returns { wx, wz, ax, ay, az } or nil (no wheels, or the eye is above the axle).
+function HorseHitch.tiltOf(hitch, eyeSpeed, jx, jz)
+    local ax, ay, az = HorseHitch.axleOf(hitch.vehicle)
+    if ax == nil then
+        return nil
+    end
+    local dx, dz = jx - ax, jz - az
+    local length = math.sqrt(dx * dx + dz * dz)
+    if length < 0.5 then
+        return nil
+    end
+    local omega = eyeSpeed / length
+    return { wx = -dz / length * omega, wz = dx / length * omega, ax = ax, ay = ay, az = az, length = length }
+end
+
+-- The velocity of a body at (cx, cy, cz) in a turn about the axle: linear (v = w x r) and the angular velocity to give it (with the engine's sign).
+function HorseHitch.tiltVelocity(tilt, cx, cy, cz, sign)
+    local rx, ry, rz = cx - tilt.ax, cy - tilt.ay, cz - tilt.az
+    local wx, wz = tilt.wx, tilt.wz
+    return -wz * ry, wz * rx - wx * rz, wx * ry, wx * (sign or 1), wz * (sign or 1)
+end
+
+-- Is the eye on the wagon's own main body, with no tongue of its own to lift (a forest trailer whose drawbar is welded to the frame)? The share of the eye's body among the wagon's OWN bodies, not the mass the
+-- game counts for the vehicle: belted logs add to that mass, which made the eye's body look like a small tongue exactly when the logs were belted (and only then was it lifted: the whole trailer's nose with it).
+function HorseHitch.rigidEye(target)
+    local components = target.vehicle ~= nil and target.vehicle.components or nil
+    if components == nil or target.component == nil then
+        return false
+    end
+    local own = 0
+    for _, component in ipairs(components) do
+        if component.node ~= nil then
+            own = own + getMass(component.node)
+        end
+    end
+    return own > 0 and getMass(target.component) > HorseHitch.LIFT_MAX_SHARE * own
+end
+
 function HorseHitch.canJoin(target)
     if not HorseHitch.REAL_JOINT or HorseJoint == nil then
         return false

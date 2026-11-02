@@ -380,6 +380,69 @@ HorseHitch.update(ride, 16)
 check("the vehicle is deleted: let go (no error, no brake call on a dead vehicle)", ride.hitch == nil)
 vehicle.isDeleted = false
 
+-- the eye on the wagon's own main body (no tongue): the eye is NOT lifted, the lift would be the whole trailer's; belted logs add to the mass the game counts and must not change that
+do
+    local savedMasses, savedMass = MASSES, MASS
+    MASSES = { [100] = 0.06, [101] = 0.6 }
+    local small = HorseHitch.rigidEye({ vehicle = { components = { { node = 100 }, { node = 101 } } }, component = 100 })
+    MASSES = { [100] = 0.7, [101] = 0.1 }
+    local frame = HorseHitch.rigidEye({ vehicle = { components = { { node = 100 }, { node = 101 } } }, component = 100 })
+    MASSES = { [100] = 0.7 }
+    local single = HorseHitch.rigidEye({ vehicle = { components = { { node = 100 } }, getTotalMass = function() return 9 end }, component = 100 })
+    check("a small tongue body (60 kg of 660) is no rigid eye: it is lifted as before", small == false)
+    check("an eye on the main frame (700 of 800 kg) is rigid: no tongue to lift", frame == true)
+    check("a single body is rigid whatever the game counts for the vehicle (9 t with belted logs)", single == true)
+    MASSES, MASS = savedMasses, savedMass
+end
+
+-- belts first: unfastened tension belts are thrown before the hitch, so the loose logs are part of the frame and not shoved about
+do
+    local thrown = 0
+    local function belted(fastened, has)
+        return { spec_tensionBelts = { hasTensionBelts = has ~= false, areAllBeltsFastened = fastened }, setAllTensionBeltsActive = function(self, active) thrown = thrown + (active and 1 or 0) end }
+    end
+    check("a trailer with unfastened tension belts: they are thrown (setAllTensionBeltsActive(true))", HorseHitch.throwBelts(belted(false)) == true and thrown == 1)
+    check("belts that are fastened already: nothing is done", HorseHitch.throwBelts(belted(true)) == false and thrown == 1)
+    check("a vehicle without belts (or no belts spec): nothing is done", HorseHitch.throwBelts(belted(false, false)) == false and HorseHitch.throwBelts({}) == false and thrown == 1)
+    HorseHitch.AUTO_BELTS = false
+    check("AUTO_BELTS = false: the belts are left alone", HorseHitch.throwBelts(belted(false)) == false and thrown == 1)
+    HorseHitch.AUTO_BELTS = true
+    check("a belt call that fails does not break the hitch", HorseHitch.throwBelts({ spec_tensionBelts = { hasTensionBelts = true, areAllBeltsFastened = false }, setAllTensionBeltsActive = function() error("boom") end }) == false)
+end
+
+-- gentle only for loose cargo: a wagon whose belts are fastened (thrown first) is as quick as any other
+do
+    check("belts fastened (or none): not a loose load, no gentle lift and walk-in", HorseHitch.hasLooseLoad({ spec_tensionBelts = { hasTensionBelts = true, areAllBeltsFastened = true } }) == false and HorseHitch.hasLooseLoad({}) == false)
+    check("belts that are not fastened (AUTO_BELTS off, or they could not be thrown): a loose load: gentle", HorseHitch.hasLooseLoad({ spec_tensionBelts = { hasTensionBelts = true, areAllBeltsFastened = false } }) == true)
+    check("the quick values are the old ones and the gentle ones are slower", HorseHitch.HANDOVER_LIFT_MS == 1 and HorseHitch.APPROACH_ACCEL_MS2 == 8 and HorseHitch.GENTLE_LIFT_MS < HorseHitch.HANDOVER_LIFT_MS and HorseHitch.GENTLE_APPROACH_ACCEL_MS2 < HorseHitch.APPROACH_ACCEL_MS2)
+end
+
+-- a wagon with no tongue is TILTED about its axle to bring the eye up, not lifted: the speed of a point of a body turning about the axle
+do
+    nodes[701], nodes[702], nodes[703] = { -0.8, 0.5, 0 }, { 0.8, 0.5, 0 }, { 0, 0.4, 3 }          -- two wheels (the axle at z 0) and the eye 3 m ahead of it
+    local frame = { components = { { node = 704 } }, spec_wheels = { wheels = { { node = 701 }, { node = 702 } } } }
+    local ax, ay, az = HorseHitch.axleOf(frame)
+    check("the axle is the middle of the wheels", math.abs(ax) < 1e-9 and math.abs(ay - 0.5) < 1e-9 and math.abs(az) < 1e-9)
+    check("a vehicle without wheels shows no axle", HorseHitch.axleOf({ components = {} }) == nil)
+    local tilt = HorseHitch.tiltOf({ vehicle = frame }, 1, 0, 3)
+    check("tilting the eye up at 1 m/s 3 m ahead of the axle: 1/3 rad/s about the horizontal axis across the wagon (nose up)", tilt ~= nil and math.abs(tilt.wx + 1 / 3) < 1e-9 and math.abs(tilt.wz) < 1e-9 and math.abs(tilt.length - 3) < 1e-9)
+    local vx, vy, vz, wx, wz = HorseHitch.tiltVelocity(tilt, 0, 0.4, 3, 1)
+    check("the eye itself rises at that 1 m/s (v = w x r)", math.abs(vy - 1) < 1e-9 and math.abs(vx) < 1e-9)
+    vx, vy, vz = HorseHitch.tiltVelocity(tilt, 0, 0.5, 0, 1)
+    check("a point on the axle does not move: the wheels stay on the ground", math.abs(vx) < 1e-9 and math.abs(vy) < 1e-9 and math.abs(vz) < 1e-9)
+    vx, vy, vz, wx, wz = HorseHitch.tiltVelocity(tilt, 0, 0.5, 1.5, -1)
+    check("half way to the eye: half the speed up, and the engine's sign flips only the angular velocity given", math.abs(vy - 0.5) < 1e-9 and math.abs(wx - 1 / 3) < 1e-9)
+    check("the eye right above the axle has no lever: no tilt", HorseHitch.tiltOf({ vehicle = frame }, 1, 0, 0.2) == nil)
+    local h = {}
+    HorseHitch.checkTiltSign(h, 0.5, 1, 0.016)
+    for i = 1, 9 do HorseHitch.checkTiltSign(h, 0.5 - 0.001 * i, 1, 0.016) end
+    check("commanded up and moving down frame after frame: the engine's sign is flipped", h.tiltSign == -1)
+    h = {}
+    HorseHitch.checkTiltSign(h, 0.5, 1, 0.016)
+    for i = 1, 9 do HorseHitch.checkTiltSign(h, 0.5 + 0.001 * i, 1, 0.016) end
+    check("moving the way it is told: the sign stays", h.tiltSign == nil)
+end
+
 -- a vehicle's own hitch (kind "hitch": the body is right behind the plate) gets a rigid tow bar: the pin is TOW_BAR_M behind the hook, the bar is drawn straight from the hook to the plate
 do
     local ride3 = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "rope", rig = ride.rig }
@@ -499,7 +562,39 @@ do
     check("step one is only the tongue's lift: the eye is 0.5 m below its height, so it is not lifted yet and the wagon is not pulled in (no horizontal speed written)", rideS.hitch.lifted ~= true and SETLIN[100] ~= nil and SETLIN[100][1] == SETLIN[100][1] and rideS.hitch.settledS == nil)
     check("... the wagon is held still meanwhile: no horizontal speed on its body, its brake stays on", SETLIN[100][1] == 0 and SETLIN[100][3] == 0 and brake[#brake] == false)
     check("... and the tongue is driven up at its own ramp (the accel times the step), not at what the physics reports", math.abs(SETLIN[100][2] - HorseHitch.HANDOVER_LIFT_ACCEL_MS2 * 0.25) < 1e-9)
+    -- a wagon whose eye is not on a free tongue: driving it up tilts the heavy body, so the lift is given up and the eye stays where it rests
+    local bodyNode = rideS.hitch.body or rideS.hitch.component
+    local savedTilt = TILT[bodyNode]
+    TILT[bodyNode] = 0
+    rideS.hitch.liftTilt0, rideS.hitch.liftEye0, rideS.hitch.liftAborted = nil, nil, nil
+    local goalBefore = rideS.hitch.goalHeight
+    HorseHitch.update(rideS, 250)
+    check("the lift starts from the wagon's tilt as it stands (no abort while it stays level)", rideS.hitch.liftAborted ~= true and rideS.hitch.liftTilt0 ~= nil)
+    TILT[bodyNode] = 6                                                               -- degrees: the nose came up
+    HorseHitch.update(rideS, 250)
+    check("a heavy body that tilts more than HANDOVER_TILT_MAX_RAD (4 degrees) during the lift: the lift is given up", rideS.hitch.liftAborted == true)
+    check("... and the eye is to stay where it rests (the height it had before the lift, not the 0.81 m of a tractor's joint)", rideS.hitch.goalHeight == rideS.hitch.liftEye0 and rideS.hitch.goalHeight ~= goalBefore)
+    TILT[bodyNode] = savedTilt
+    rideS.hitch.goalHeight, rideS.hitch.liftAborted, rideS.hitch.liftBoost = goalBefore, nil, nil
+    -- a tongue that stays stuck: a growing upward force on its body (at most LIFT_FORCE_SHARE of the weight), and after the time is up it is held where it is
+    forces = {}
+    local savedShare, savedStall = HorseHitch.LIFT_FORCE_SHARE, HorseHitch.LIFT_STALL_S
+    HorseHitch.LIFT_FORCE_SHARE, HorseHitch.LIFT_STALL_S = 0.4, 100                    -- (the force is off by default, and the stop is looked at below)
+    rideS.hitch.lifted, rideS.hitch.liftS, rideS.hitch.liftCheckS, rideS.hitch.liftCheckY = nil, 0, nil, nil
+    rideS.hitch.stallS, rideS.hitch.stallY = nil, nil
+    for _ = 1, 8 do HorseHitch.update(rideS, 250) end                                  -- (the eye does not move: 2 s)
+    local upForce = forces[#forces]
+    check("a stuck tongue gets an upward force on its body, growing", upForce ~= nil and upForce[1] == 100 and upForce[3] > 0 and (rideS.hitch.liftBoost or 0) > 0)
+    check("... at most LIFT_FORCE_SHARE of the vehicle's weight", upForce[3] <= HorseHitch.LIFT_FORCE_SHARE * (vehicle.total or 0.66) * 9.81 * 1.5 + 1e-6)
+    HorseHitch.LIFT_FORCE_SHARE, HorseHitch.LIFT_STALL_S = savedShare, savedStall
     HorseHitch.update(rideS, 11000)
+    check("a tongue that never came up (the force did not help either): the eye is held where it is, not driven on while the wagon is walked in", rideS.hitch.goalHeight < goalBefore - 0.2)
+    -- the tongue reaches its stop (a hinge limit): not come up for LIFT_STALL_S while driven: the eye is held where it is, not driven on
+    rideS.hitch.goalHeight, rideS.hitch.lifted, rideS.hitch.liftS, rideS.hitch.liftV, rideS.hitch.stallS, rideS.hitch.stallY, rideS.hitch.liftAborted = goalBefore, nil, 0, 0, nil, nil, nil
+    for _ = 1, 8 do HorseHitch.update(rideS, 250) end
+    check("a tongue that does not come up while driven (its stop): after LIFT_STALL_S it is as high as it goes: the eye is held where it is", rideS.hitch.lifted == true and rideS.hitch.goalHeight < goalBefore - 0.2)
+    rideS.hitch.goalHeight = goalBefore
+    forces = {}
     check("... and after HANDOVER_LIFT_MAX_S it goes on to the pull-in (a hinge at its stop does not get further)", rideS.hitch.lifted == true)
     check("the eye is not at the hook yet: no handover", rideS.hitch ~= nil and JOINTED == nil)
     check("the walk-in has no integral of the gap (it wound up to its limit and pushed the eye past the hook)", (rideS.hitch.ix or 0) == 0 and (rideS.hitch.iz or 0) == 0)

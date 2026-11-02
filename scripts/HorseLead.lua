@@ -474,8 +474,100 @@ function HorseLead.gateAtPlayer()
 end
 
 -- How far the horse is that "start" would take: a loose horse vehicle or a horse of a pasture, whichever is nearer. nil when there is none.
+-- The tools act on the horse you LOOK at, not on the nearest one: standing next to a log with a horse's rump behind it, the click went to the horse. The view ray of the camera passes within LOOK_RADIUS_M
+-- of the middle of a horse's body (LOOK_HEIGHT_M above its root), at most `reach` metres along the ray. LOOK = false: the nearest horse, as before.
+HorseLead.LOOK = true
+HorseLead.LOOK_RADIUS_M = 1.1
+HorseLead.LOOK_HEIGHT_M = 1.0
+
+function HorseLead.viewRay()
+    local player = g_localPlayer
+    local camera = player ~= nil and player.getCurrentCameraNode ~= nil and player:getCurrentCameraNode() or nil
+    if not HorseLead.LOOK or camera == nil then
+        return nil
+    end
+    local ox, oy, oz = getWorldTranslation(camera)
+    local dx, dy, dz = localDirectionToWorld(camera, 0, 0, -1)
+    return { ox, oy, oz, dx, dy, dz }
+end
+
+-- How far along the ray a horse at (x, y, z) is, when the ray passes close enough to it: t, how far the ray misses its middle by; else nil.
+function HorseLead.lookT(ray, x, y, z, reach)
+    local vx, vy, vz = x - ray[1], y + HorseLead.LOOK_HEIGHT_M - ray[2], z - ray[3]
+    local t = vx * ray[4] + vy * ray[5] + vz * ray[6]
+    if t < 0 or t > reach then
+        return nil
+    end
+    local qx, qy, qz = vx - ray[4] * t, vy - ray[5] * t, vz - ray[6] * t
+    local miss = math.sqrt(qx * qx + qy * qy + qz * qz)
+    if miss > HorseLead.LOOK_RADIUS_M then
+        return nil
+    end
+    return t, miss
+end
+
+-- Several horses near each other: the one the ray points at, not the one that is nearest. A miss costs LOOK_MISS_WEIGHT metres of distance, so a horse dead ahead 3 m away beats one 1.5 m away that the ray
+-- only grazes, while of two horses in a line the front one (the one you see) is the one.
+HorseLead.LOOK_MISS_WEIGHT = 3
+function HorseLead.lookScore(t, miss)
+    return t + HorseLead.LOOK_MISS_WEIGHT * miss
+end
+
+-- The led horse the player looks at (see lookScore), within `reach`: ride, t. nil when none.
+function HorseLead.lookedRide(ray, reach, filter)
+    local best, bestScore, bestT = nil, math.huge, nil
+    for _, ride in ipairs(HorseLead.rides) do
+        if ride.vehicle ~= nil and ride.vehicle.rootNode ~= nil and (filter == nil or filter(ride)) then
+            local x, y, z = getWorldTranslation(ride.vehicle.rootNode)
+            local t, miss = HorseLead.lookT(ray, x, y, z, reach)
+            if t ~= nil and HorseLead.lookScore(t, miss) < bestScore then
+                best, bestScore, bestT = ride, HorseLead.lookScore(t, miss), t
+            end
+        end
+    end
+    return best, bestT
+end
+
+-- The led horse a tool acts on: the one looked at, or (LOOK off, or no camera) the nearest.
+function HorseLead.pickRide(px, pz, reach, filter)
+    local ray = HorseLead.viewRay()
+    if ray ~= nil then
+        return HorseLead.lookedRide(ray, reach, filter)
+    end
+    return HorseLead.nearestRide(px, pz, reach, filter)
+end
+
 function HorseLead.nearestHorseDistance(px, pz)
+    local ray = HorseLead.viewRay()
     local best = math.huge
+    if ray ~= nil then
+        -- the horse looked at (a led one, a loose one, one of a pasture): how far along the ray it is; nil when there is none
+        local bestScore = math.huge
+        local function consider(x, y, z)
+            local t, miss = HorseLead.lookT(ray, x, y, z, HorseLead.LEASH_REACH_M)
+            if t ~= nil and HorseLead.lookScore(t, miss) < bestScore then
+                bestScore, best = HorseLead.lookScore(t, miss), t
+            end
+        end
+        for _, ride in ipairs(HorseLead.rides) do
+            if ride.vehicle ~= nil and ride.vehicle.rootNode ~= nil then
+                consider(getWorldTranslation(ride.vehicle.rootNode))
+            end
+        end
+        for _, vehicle in ipairs(HorseLead.rideables()) do
+            if not vehicle.isDeleted and vehicle.rootNode ~= nil then
+                consider(getWorldTranslation(vehicle.rootNode))
+            end
+        end
+        for _, entry in ipairs(HorseLead.husbandries()) do
+            if entry.husbandry.animalTypeName == "HORSE" and entry.placeable.startRiding ~= nil then
+                for _, item in ipairs(HorseLead.animals(entry)) do
+                    consider(item.x, item.y or 0, item.z)
+                end
+            end
+        end
+        return best < math.huge and best or nil
+    end
     local _, looseDistance = HorseLead.nearestLooseHorse(px, pz)
     if looseDistance ~= nil then
         best = looseDistance
@@ -537,14 +629,17 @@ function HorseLead.harness(gear)
     if hitched ~= nil then
         return hitched
     end
-    local ride = HorseLead.nearestRide(px, pz, HorseLead.LEASH_REACH_M)
+    local ride = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M)
     if ride == nil then
         local horseDistance = HorseLead.nearestHorseDistance(px, pz)
         if horseDistance ~= nil and horseDistance > HorseLead.LEASH_REACH_M then
             return string.format("no horse within %d m: walk up to one", HorseLead.LEASH_REACH_M)
         end
+        if horseDistance == nil and HorseLead.viewRay() ~= nil then
+            return string.format("look at the horse you mean (within %d m)", HorseLead.LEASH_REACH_M)
+        end
         local before = #HorseLead.rides
-        local message = HorseLead.command(nil, "start")
+        local message = HorseLead.command(nil, "start", true)
         ride = HorseLead.rides[#HorseLead.rides]
         if #HorseLead.rides <= before or ride == nil then
             return message
@@ -616,7 +711,7 @@ function HorseLead.leash(gear)
     local px, _, pz = playerPosition()
     if px ~= nil then
         -- a horse that stands there in its harness (ride.stay) within reach is the one the leash takes: the halter and the rope go on, it follows
-        local staying = HorseLead.nearestRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.stay end)
+        local staying = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.stay end)
         if staying ~= nil then
             staying.stay, staying.leash, staying.halterOn = nil, true, nil
             staying.halterGear = staying.halter ~= nil and staying.halterGear or gear      -- (a halter that is on keeps its gear)
@@ -646,7 +741,7 @@ function HorseLead.leash(gear)
         end
     end
     local before = #HorseLead.rides
-    local message = HorseLead.command(nil, "start")
+    local message = HorseLead.command(nil, "start", true)
     local ride = HorseLead.rides[#HorseLead.rides]
     if #HorseLead.rides > before and ride ~= nil then
         ride.leash, ride.halterGear = true, gear
@@ -654,7 +749,7 @@ function HorseLead.leash(gear)
     return message
 end
 
-function HorseLead.command(_, argument)
+function HorseLead.command(_, argument, look)
     if argument == "free" then
         return HorseLead.freeNearest()
     elseif argument == "stop" then
@@ -689,20 +784,38 @@ function HorseLead.command(_, argument)
     if px == nil then
         return "no player position"
     end
-    -- a horse that is already a vehicle and stands about loose (left out in a savegame, ridden out earlier): taken over when it is nearer than any horse of a pasture
-    local loose, looseDistance = HorseLead.nearestLooseHorse(px, pz)
-    local best, bestEntry, bestDistance = nil, nil, math.huge
+    -- the horse that is taken: with `look` (the tools) the one the player looks at (lookScore), else (the console) the nearest. A horse that is already a vehicle and stands about loose (left out in a
+    -- savegame, ridden out earlier) competes with the horses of the pastures on the same terms.
+    local ray = look and HorseLead.viewRay() or nil
+    local function metric(x, y, z)
+        if ray ~= nil then
+            local t, miss = HorseLead.lookT(ray, x, y, z, HorseLead.LEASH_REACH_M)
+            return t ~= nil and HorseLead.lookScore(t, miss) or nil, t
+        end
+        return distance(px, pz, x, z), distance(px, pz, x, z)
+    end
+    local loose, looseDistance, looseScore = nil, nil, math.huge
+    for _, vehicle in ipairs(HorseLead.rideables()) do
+        if not HorseLead.isClaimed(vehicle) and not vehicle.isDeleted and vehicle.rootNode ~= nil and not (vehicle.getIsControlled ~= nil and vehicle:getIsControlled()) and not (vehicle.getIsEntered ~= nil and vehicle:getIsEntered()) then
+            local x, y, z = getWorldTranslation(vehicle.rootNode)
+            local score, d = metric(x, y, z)
+            if score ~= nil and score < looseScore then
+                loose, looseDistance, looseScore = vehicle, d, score
+            end
+        end
+    end
+    local best, bestEntry, bestDistance, bestScore = nil, nil, math.huge, math.huge
     for _, entry in ipairs(HorseLead.husbandries()) do
         if entry.husbandry.animalTypeName == "HORSE" and entry.placeable.startRiding ~= nil then
             for _, item in ipairs(HorseLead.animals(entry)) do
-                local d = distance(px, pz, item.x, item.z)
-                if d < bestDistance then
-                    best, bestEntry, bestDistance = item, entry, d
+                local score, d = metric(item.x, item.y or 0, item.z)
+                if score ~= nil and score < bestScore then
+                    best, bestEntry, bestDistance, bestScore = item, entry, d, score
                 end
             end
         end
     end
-    if loose ~= nil and looseDistance < bestDistance then
+    if loose ~= nil and looseScore < bestScore then
         HorseLead.claimVehicle(loose)
         local x, _, z = getWorldTranslation(loose.rootNode)
         HorseLead.rides[#HorseLead.rides + 1] = { vehicle = loose, known = {}, from = { x, z }, waited = 0, stableMs = 0 }
@@ -710,6 +823,9 @@ function HorseLead.command(_, argument)
         return "a loose horse is following you now"
     end
     if best == nil then
+        if ray ~= nil then
+            return string.format("look at the horse you mean (within %d m)", HorseLead.LEASH_REACH_M)
+        end
         return "no horse found (in a pasture, or standing loose)"
     end
     local ride, problem = HorseLead.startHorse(bestEntry, best, bestDistance)
@@ -842,6 +958,56 @@ function HorseLead.easeSteer(spec, target, dt)
 end
 
 -- one horse, one frame: find the vehicle, steer it, give it back when it is at a stable. Returns true when the horse is done (gone, lost, or given back).
+-- A led horse does not run into a wagon another horse pulls. The string of a pulling horse (HorseHitch: ride.hitch or ride.joined) is the segment from the horse to STRING_TAIL_M behind the wagon's origin; when the straight
+-- way from the led horse to the player crosses it (or passes closer than STRING_CLEAR_M), the led horse aims at a point beside the pulling horse on ITS OWN side of the string instead, and goes along the wagon.
+-- It did not: it aimed at the player through the wagon, bumped it, stood, and caught up at a gallop until it bumped again.
+HorseLead.STRING_TAIL_M = 3
+HorseLead.STRING_CLEAR_M = 2.2
+HorseLead.STRING_PAST_M = 1                  -- (a horse that is not more than this far behind the pulling horse's origin is past the wagon)
+HorseLead.STRING_SIDE_M = 3                   -- the point to aim at is this far to the side of the pulling horse
+
+local function segmentDistance(ax, az, bx, bz, cx, cz, dx, dz)
+    local function pointSegment(px, pz, sx, sz, ex, ez)
+        local vx, vz = ex - sx, ez - sz
+        local len2 = vx * vx + vz * vz
+        local t = len2 > 0 and math.max(0, math.min(1, ((px - sx) * vx + (pz - sz) * vz) / len2)) or 0
+        return distance(px, pz, sx + vx * t, sz + vz * t)
+    end
+    local d1x, d1z, d2x, d2z = bx - ax, bz - az, dx - cx, dz - cz
+    local denominator = d1x * d2z - d1z * d2x
+    if math.abs(denominator) > 1e-9 then
+        local t = ((cx - ax) * d2z - (cz - az) * d2x) / denominator
+        local u = ((cx - ax) * d1z - (cz - az) * d1x) / denominator
+        if t >= 0 and t <= 1 and u >= 0 and u <= 1 then
+            return 0
+        end
+    end
+    return math.min(pointSegment(ax, az, cx, cz, dx, dz), pointSegment(bx, bz, cx, cz, dx, dz), pointSegment(cx, cz, ax, az, bx, bz), pointSegment(dx, dz, ax, az, bx, bz))
+end
+
+-- The point the led horse (at x, z) should aim at on its way to the player (px, pz): the player, or the side of a pulling horse. Returns the point and whether it is a way round.
+function HorseLead.aimAround(ride, x, z, px, pz)
+    for _, other in ipairs(HorseLead.rides) do
+        local hitch = other ~= ride and (other.joined or other.hitch) or nil
+        local wagon = hitch ~= nil and hitch.vehicle or nil
+        if wagon ~= nil and not wagon.isDeleted and wagon.rootNode ~= nil and other.vehicle ~= nil and not other.vehicle.isDeleted and other.vehicle.rootNode ~= nil then
+            local hx, _, hz = getWorldTranslation(other.vehicle.rootNode)
+            local wx, _, wz = getWorldTranslation(wagon.rootNode)
+            local length = distance(hx, hz, wx, wz)
+            if length > 0.5 then
+                local ux, uz = (wx - hx) / length, (wz - hz) / length
+                local ex, ez = wx + ux * HorseLead.STRING_TAIL_M, wz + uz * HorseLead.STRING_TAIL_M
+                local along = (x - hx) * ux + (z - hz) * uz                              -- (how far along the string the led horse is, from the pulling horse back to the wagon: level with the pulling horse or ahead of it there is nothing in the way)
+                if along > HorseLead.STRING_PAST_M and segmentDistance(x, z, px, pz, hx, hz, ex, ez) < HorseLead.STRING_CLEAR_M then
+                    local side = (ux * (z - hz) - uz * (x - hx)) >= 0 and 1 or -1       -- (+: the led horse is to the left of the string, looking from the pulling horse to the wagon)
+                    return hx - uz * side * HorseLead.STRING_SIDE_M, hz + ux * side * HorseLead.STRING_SIDE_M, true
+                end
+            end
+        end
+    end
+    return px, pz, false
+end
+
 function HorseLead.stepRide(ride, dt)
     if ride.vehicle == nil then
         ride.waited = ride.waited + dt
@@ -932,7 +1098,8 @@ function HorseLead.stepRide(ride, dt)
             end
         end
     end
-    local diff = normalizeAngle(math.atan2(px - x, pz - z) - spec.currentTurnAngle)
+    local aimX, aimZ, goingRound = HorseLead.aimAround(ride, x, z, px, pz)
+    local diff = normalizeAngle(math.atan2(aimX - x, aimZ - z) - spec.currentTurnAngle)
     local mounted = playerVehicle() ~= nil
     local arriveM = mounted and HorseLead.RIDE_ARRIVE_MOUNTED_M or HorseLead.RIDE_ARRIVE_M
     local keepUpM = mounted and HorseLead.RIDE_KEEP_UP_MOUNTED_M or HorseLead.RIDE_KEEP_UP_M
@@ -989,6 +1156,9 @@ function HorseLead.stepRide(ride, dt)
         gait = gaits.STILL
     else
         gait = HorseLead.rideGait(gait, d, leash and HorseLead.RIDE_GAITS_LEASH or nil, leash and HorseLead.RIDE_GAIT_MARGIN_LEASH_M or nil, spec.topSpeeds)
+        if goingRound and gait == gaits.GALLOP then
+            gait = gaits.TROT                                  -- (no gallop along a wagon: that is how it bumped into it)
+        end
         if math.abs(diff) > HorseLead.RIDE_STEER_DEADBAND then
             steerTarget = math.max(-1, math.min(1, diff * HorseLead.RIDE_STEER_GAIN))
         end

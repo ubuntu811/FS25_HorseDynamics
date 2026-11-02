@@ -1644,6 +1644,58 @@ do
     g_currentMission.handToolSystem, g_currentMission.getFarmId, g_currentMission.addMoney = nil, nil, nil
 end
 
+-- a led horse goes round a wagon another horse pulls (it ran into it, stood, and caught up at a gallop until it bumped it again)
+;(function()
+    nodes[950], nodes[951] = { pos = { 0, 0, 0 } }, { pos = { 0, 0, -4 } }           -- the pulling horse, and its wagon behind it (the string runs along -z)
+    local savedRides = HorseLead.rides
+    local puller = { vehicle = { rootNode = 950 }, joined = { vehicle = { rootNode = 951 } } }
+    local led = { vehicle = { rootNode = 952 } }
+    HorseLead.rides = { puller, led }
+    local ax, az, round = HorseLead.aimAround(led, -1.5, -3, 0, 0)
+    check("beside the wagon, the player at the pulling horse: it aims at a point beside the pulling horse on its OWN side (3 m to the left, x -3), a way round", round == true and math.abs(ax + 3) < 1e-9 and math.abs(az) < 1e-9)
+    ax, az, round = HorseLead.aimAround(led, 1.5, -3, 0, 0)
+    check("... the other side of the string: the other side of the pulling horse", round == true and math.abs(ax - 3) < 1e-9)
+    ax, az, round = HorseLead.aimAround(led, -1.5, 2, 0, 0)
+    check("ahead of the pulling horse there is nothing in the way: it aims at the player", round == false and ax == 0 and az == 0)
+    ax, az, round = HorseLead.aimAround(led, -9, -3, -9, 6)
+    check("a path that stays well clear of the string: the player", round == false and ax == -9 and az == 6)
+    puller.joined, puller.hitch = nil, nil
+    ax, az, round = HorseLead.aimAround(led, -1.5, -3, 0, 0)
+    check("nothing hitched: the player", round == false and ax == 0)
+    check("the string is not an obstacle for the horse that pulls it", (function() puller.joined = { vehicle = { rootNode = 951 } }; local _, _, r = HorseLead.aimAround(puller, 0, -1, 0, 5); return r == false end)())
+    HorseLead.rides = savedRides
+end)()
+
+-- the tools act on the horse you LOOK at: of several horses near each other, the one the view ray points at, not the nearest
+;(function()
+    nodes[960], nodes[961], nodes[962] = { pos = { 0, 1.0, 0 } }, { pos = { 0, 0, 5 } }, { pos = { 1.8, 0, 3 } }
+    local savedPlayer, savedDir, savedRides = g_localPlayer, localDirectionToWorld, HorseLead.rides
+    g_localPlayer = { rootNode = 900, getCurrentCameraNode = function() return 960 end }
+    localDirectionToWorld = function(n, x, y, z) if n == 960 then return 0, 0, 1 end; return savedDir(n, x, y, z) end
+    local far, near = { vehicle = { rootNode = 961 } }, { vehicle = { rootNode = 962 } }
+    HorseLead.rides = { near, far }
+    local ride, t = HorseLead.pickRide(0, 0, 8)
+    check("two horses, the nearer one (1.8 m to the side, 3 m away) not in the view: the one the ray points at is picked", ride == far and t ~= nil and math.abs(t - 5) < 0.1)
+    HorseLead.LOOK = false
+    ride = HorseLead.pickRide(0, 0, 8)
+    check("LOOK = false: the nearest, as before", ride == near)
+    HorseLead.LOOK = true
+    nodes[962].pos = { 0.2, 0, 2.5 }
+    ride = HorseLead.pickRide(0, 0, 8)
+    check("two horses in the line of sight: the front one (the one you see), a graze does not count against it", ride == near)
+    nodes[962].pos = { 0.9, 0, 2.5 }
+    ride = HorseLead.pickRide(0, 0, 8)
+    check("a horse that the ray only grazes (0.9 m off) 2.5 m away loses to one dead ahead at 5 m", ride == far)
+    nodes[961].pos = { 0, 0, 12 }
+    ride = HorseLead.pickRide(0, 0, 8, nil)
+    check("a horse beyond the reach is not picked, and one that is only grazed still is when it is the only one", ride == near)
+    nodes[962].pos = { 3, 0, 2.5 }
+    ride = HorseLead.pickRide(0, 0, 8)
+    check("looking at nothing (a log, no horse in the ray): no horse is picked, however near the horse stands", ride == nil)
+    check("... and the distance says there is no horse in view", HorseLead.nearestHorseDistance(0, 0) == nil)
+    g_localPlayer, localDirectionToWorld, HorseLead.rides = savedPlayer, savedDir, savedRides
+end)()
+
 print = realPrint
 print(string.format("horsedynamics_test: %d/%d passed", passed, passed + failed))
 os.exit(failed == 0 and 0 or 1)
