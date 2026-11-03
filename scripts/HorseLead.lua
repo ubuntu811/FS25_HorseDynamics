@@ -631,6 +631,11 @@ function HorseLead.harness(gear)
     if hitched ~= nil then
         return hitched
     end
+    -- a horse's rope in hand and a log in view: the log is tied to that horse at the point looked at
+    local tiedLog = HorseHitch ~= nil and HorseHitch.clickLog ~= nil and HorseHitch.clickLog() or nil
+    if tiedLog ~= nil then
+        return tiedLog
+    end
     local ride = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M)
     if ride == nil then
         local horseDistance = HorseLead.nearestHorseDistance(px, pz)

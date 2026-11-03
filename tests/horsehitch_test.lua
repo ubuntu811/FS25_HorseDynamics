@@ -844,6 +844,18 @@ do
     TILT[300] = 90                                                              -- (a log lies on its side: its up axis is horizontal)
     HorseHitch.update(logRide, 16)
     check("a log lying on its side is not 'tipped over': it stays hitched", logRide.hitch ~= nil)
+    -- the drag: a pull on the grip towards the hook ring when the log is further than the rope, nothing when it is nearer, never a push
+    nodes[301] = { 0, 0.3, -8 }
+    forces = {}
+    HorseHitch.update(logRide, 16)
+    local pull = forces[#forces]
+    check("a log 7 m behind the hook ring is pulled towards it: a force on the log's body at the grip, along +z, no vertical part", pull ~= nil and pull[1] == 300 and pull[4] > 0 and math.abs(pull[2]) < 1e-9 and pull[3] == 0 and pull[5] == 0 and pull[7] == -8)
+    check("... with at most LOG_ACCEL_MS2 times its mass", pull[4] <= HorseHitch.LOG_ACCEL_MS2 * MASS + 1e-9)
+    nodes[301] = { 0, 0.3, -2 }
+    forces = {}
+    HorseHitch.update(logRide, 16)
+    check("a log nearer than the rope (1 m from the ring) is not pulled, and not pushed away either", #forces == 0)
+    nodes[301] = { 0, 0.3, -4 }
     bodyType = 3
     HorseHitch.update(logRide, 16)
     check("a log that got belted or cut is let go, and its grip with it", logRide.hitch == nil and dropped[1] == logTarget)
@@ -860,6 +872,42 @@ do
     HorseHitch.takeLog(winchApiFake)
     check("the leash's click lets a log on a horse go", HorseHitch.releaseLogs() == true and logRide.hitch == nil and dropped[2] == logTarget)
     check("... and with none hitched it says so by returning false", HorseHitch.releaseLogs() == false)
+    -- the harness tool with a horse's rope in hand: the ring is on the log in view, the click ties the log there
+    local logPick = { kind = "log", node = 300, component = 300, x = 1, y = 0.3, z = -6, ring = { 1, 0.3, -6, 0, 0, 1, 0.3 } }
+    local why = nil
+    winchApiFake.pickLog = function() return (why == nil) and logPick or nil, why end
+    local hookedFrom = nil
+    winchApiFake.hookLog = function(l) hookedFrom = l; l.vehicle = logTarget.vehicle; l.node = 301; l.ownsNode = true; return l end
+    HorseLead.rides = { logRide }
+    logRide.towRope = nil
+    check("no rope in hand: no ring on logs and no click on them", HorseHitch.harnessHint() == nil and HorseHitch.clickLog() == nil)
+    logRide.towRope = true
+    local hint = HorseHitch.harnessHint()
+    check("a horse's rope in hand and a log in view: the ring is the trunk's own (centre, axis, radius)", hint ~= nil and hint[1] == 1 and hint[7] == 0.3)
+    logPick.ring = nil
+    hint = HorseHitch.harnessHint()
+    check("... or a flat ring on the point looked at when the game gave no trunk geometry", hint ~= nil and hint[3] == -6 and hint[5] == 1)
+    local tied = HorseHitch.clickLog()
+    check("the click ties the log to that horse at the point looked at, and uses the rope up", tied ~= nil and tied:find("tied to the harness", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.isLog and logRide.towRope == nil and hookedFrom == logPick)
+    HorseHitch.release(logRide)
+    logRide.towRope = true
+    why = "that tree still stands: fell it first"
+    check("a standing tree in view says why, the harness stays on", HorseHitch.clickLog() == why and logRide.hitch == nil and logRide.towRope == true)
+    why = nil
+    winchApiFake.pickLog = function() return nil end
+    check("looking at the horse (no log): the click is none of its business, the harness tool takes the harness off", HorseHitch.clickLog() == nil)
+    logRide.towRope = nil
+    -- the leash with a log hooked: the ring is round the hook ring of the horse a click would hand it to
+    winchApiFake.target = logTarget
+    pickedRide = logRide
+    local ringHint = HorseHitch.leashHint()
+    check("a log on the leash and a harnessed horse looked at: the ring is round its hook ring (0.12 m)", ringHint ~= nil and ringHint[1] == 0 and ringHint[2] == 0.9 and ringHint[3] == -1 and ringHint[7] == 0.12)
+    pickedRide = nil
+    check("no horse in reach: no ring", HorseHitch.leashHint() == nil)
+    winchApiFake.target = nil
+    pickedRide = logRide
+    check("nothing on the leash: no ring", HorseHitch.leashHint() == nil)
+    winchApiFake.pickLog, winchApiFake.hookLog = nil, nil
     winchApiFake.target, winchApiFake.handOver, winchApiFake.dropGrip = nil, nil, nil
     HorseLead.rides = { ride }
 end

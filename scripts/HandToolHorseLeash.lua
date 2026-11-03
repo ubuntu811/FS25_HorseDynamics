@@ -79,6 +79,7 @@ function HandToolHorseLeash:onHeldStart()
     local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
     if winch ~= nil then
         winch.hold(self.rootNode)                             -- (the winch easter egg: its rope starts at the leash in the hand)
+        winch.hint = HorseHitch ~= nil and HorseHitch.leashHint or nil          -- (a log on the leash: the ring is round the harness ring of the horse a click would hand it to)
         winch.gate = HorseLead ~= nil and HorseLead.winchFree or nil     -- (and its green ring only shows where a click would hook, not when a horse is in reach)
     end
 end
