@@ -840,7 +840,7 @@ do
     winchApiFake.dropGrip = function(t) dropped[#dropped + 1] = t end
     local message = HorseHitch.takeLog(winchApiFake)
     check("a log on the leash and a harnessed horse looked at: the log is handed over and tied to the harness", message ~= nil and message:find("tied to the harness", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.isLog == true and logRide.hitch.component == 300 and winchApiFake.target == nil)
-    check("a log has no tow bar and no pieces, and keys it has none", logRide.hitch.barLength == 0 and #logRide.hitch.pieces == 0 and HorseHitch.keys(logTarget.vehicle, true) == false)
+    check("a log has no tow bar and no keys, but one steel cable from the hook ring to the log's hook", logRide.hitch.barLength == 0 and #logRide.hitch.pieces == 1 and logRide.hitch.pieces[1].diameter == HorseHitch.LOG_CABLE_DIAMETER and logRide.hitch.targets[1] == 301 and HorseHitch.keys(logTarget.vehicle, true) == false)
     TILT[300] = 90                                                              -- (a log lies on its side: its up axis is horizontal)
     HorseHitch.update(logRide, 16)
     check("a log lying on its side is not 'tipped over': it stays hitched", logRide.hitch ~= nil)
@@ -849,12 +849,25 @@ do
     forces = {}
     HorseHitch.update(logRide, 16)
     local pull = forces[#forces]
-    check("a log 7 m behind the hook ring is pulled towards it: a force on the log's body at the grip, along +z, no vertical part", pull ~= nil and pull[1] == 300 and pull[4] > 0 and math.abs(pull[2]) < 1e-9 and pull[3] == 0 and pull[5] == 0 and pull[7] == -8)
+    check("a log 7 m behind the hook ring (the rope is 5 m) is pulled towards it: a force on the log's body at the grip, along +z", pull ~= nil and pull[1] == 300 and pull[4] > 0 and math.abs(pull[2]) < 1e-9 and pull[5] == 0 and pull[7] == -8)
     check("... with at most LOG_ACCEL_MS2 times its mass", pull[4] <= HorseHitch.LOG_ACCEL_MS2 * MASS + 1e-9)
-    nodes[301] = { 0, 0.3, -2 }
+    check("... and a lift of LOG_LIFT_SHARE of its weight at the grip, so its front rides over the ground", math.abs(pull[3] - HorseHitch.LOG_LIFT_SHARE * MASS * 9.81) < 1e-9)
+    nodes[301] = { 0, 0.3, -4 }
     forces = {}
     HorseHitch.update(logRide, 16)
-    check("a log nearer than the rope (1 m from the ring) is not pulled, and not pushed away either", #forces == 0)
+    check("a log nearer than the rope (3 m from the ring) is not pulled, not lifted and not pushed away either", #forces == 0)
+    -- stuck: the rope as long as it gets stops the horse until the log is near again (backing up is allowed)
+    nodes[301] = { 0, 0.3, -12 }
+    HorseHitch.update(logRide, 16)
+    check("a log 11 m behind (the rope is longer than it gets) is stuck: the horse stops, and it says so", logRide.hitch.strained == true and HorseHitch.limitGait(logRide, Rideable.GAITTYPES.WALK) == Rideable.GAITTYPES.STILL and HorseHitch.limitGait(logRide, Rideable.GAITTYPES.TROT) == Rideable.GAITTYPES.STILL)
+    check("... but it may back up", HorseHitch.limitGait(logRide, Rideable.GAITTYPES.BACKWARDS) == Rideable.GAITTYPES.BACKWARDS)
+    nodes[301] = { 0, 0.3, -8 }
+    HorseHitch.update(logRide, 16)
+    check("still 7 m: between the two limits it stays stopped (no flapping)", logRide.hitch.strained == true)
+    nodes[301] = { 0, 0.3, -6 }
+    HorseHitch.update(logRide, 16)
+    check("within 6 m of the ring again: the horse goes on", logRide.hitch.strained == false and HorseHitch.limitGait(logRide, Rideable.GAITTYPES.WALK) == Rideable.GAITTYPES.WALK)
+    nodes[301] = { 0, 0.3, -4 }
     nodes[301] = { 0, 0.3, -4 }
     bodyType = 3
     HorseHitch.update(logRide, 16)
@@ -902,6 +915,11 @@ do
     pickedRide = logRide
     local ringHint = HorseHitch.leashHint()
     check("a log on the leash and a harnessed horse looked at: the ring is round its hook ring (0.12 m)", ringHint ~= nil and ringHint[1] == 0 and ringHint[2] == 0.9 and ringHint[3] == -1 and ringHint[7] == 0.12)
+    local savedHook = logRide.rig.hookNode
+    logRide.rig.hookNode, logRide.rig.traceEnds = nil, { 2 }
+    local fallback = HorseHitch.leashHint()
+    check("a harness with no hook node: the ring is where the trace ends meet (the hitch's own anchor)", fallback ~= nil and fallback[2] == 0.9 and fallback[3] == -1)
+    logRide.rig.hookNode, logRide.rig.traceEnds = savedHook, nil
     pickedRide = nil
     check("no horse in reach: no ring", HorseHitch.leashHint() == nil)
     winchApiFake.target = nil

@@ -91,6 +91,8 @@ function HorseHitch.anchor(ride)
     return sx / n, sy / n, sz / n
 end
 
+HorseHitch.LOG_CABLE_DIAMETER = 0.015
+
 local function deletePieces(hitch)
     for _, rope in ipairs(hitch.pieces) do
         pcall(rope.delete, rope)
@@ -110,7 +112,14 @@ end
 local function makePieces(ride, hitch)
     deletePieces(hitch)
     hitch.rig = ride.rig
-    if (hitch.barLength or 0) > 0 and ride.rig.hookRear ~= nil then
+    if hitch.isLog and ride.rig.hookRear ~= nil then
+        local cable = HorseRope.createSegment(ride.rig.hookRear, HorseHitch.LOG_CABLE_DIAMETER, nil)       -- (the steel cable from the hook ring to the hook on the trunk)
+        if cable ~= nil then
+            cable.rfMaterialDone = true
+            hitch.pieces[1] = cable
+            hitch.targets[1] = hitch.ropeNode or hitch.node
+        end
+    elseif (hitch.barLength or 0) > 0 and ride.rig.hookRear ~= nil then
         local rope = HorseRope.createSegment(ride.rig.hookRear, HorseHitch.TOW_BAR_DIAMETER, nil)
         if rope ~= nil then
             rope.rfMaterialDone = true                                -- (steel: no gear material)
@@ -302,7 +311,7 @@ function HorseHitch.hitch(ride, target)
     local winch = winchApi()
     HorseHitch.logJointPlace(target)
     HorseHitch.logLoad(target)
-    ride.hitch = { vehicle = target.vehicle, node = target.node, component = target.component, kind = target.kind, pieces = {}, tied = {}, speed = 0 }
+    ride.hitch = { vehicle = target.vehicle, node = target.node, component = target.component, kind = target.kind, pieces = {}, tied = {}, speed = 0, isLog = target.kind == "log", ropeNode = target.ropeNode }
     ride.hitch.barLength = target.kind == "hitch" and HorseHitch.TOW_BAR_M or 0
     -- a trailer's drawbar eye is not lifted to the hook: the horse comes to the height the trailer is made to be pulled at (the game moves a tractor's hitch to it, AttacherJoints attacherHeight)
     if HorseHitch.canJoin(target) then
@@ -511,11 +520,14 @@ function HorseHitch.leashHint()
     if px == nil then
         return nil
     end
-    local ride = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.harness and r.rig ~= nil and r.rig.hookNode ~= nil and r.vehicle ~= nil and r.hitch == nil and r.joined == nil end)
+    local ride = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.harness and r.rig ~= nil and r.vehicle ~= nil and r.hitch == nil and r.joined == nil end)
     if ride == nil then
         return nil
     end
-    local x, y, z = getWorldTranslation(ride.rig.hookNode)
+    local x, y, z = HorseHitch.anchor(ride)                                  -- (the hook ring, or the middle of the trace ends when the harness has no hook node)
+    if x == nil then
+        return nil
+    end
     local bx, by, bz = localDirectionToWorld(ride.vehicle.rootNode, 0, 0, -1)
     return { x, y, z, bx, by, bz, HorseHitch.HINT_RADIUS_M }
 end
@@ -727,9 +739,28 @@ function HorseHitch.liftTongue(ride, hitch, seconds, winch)
     end
 end
 
+-- The trace ropes / the tow bar / the log's cable: made again when the harness was rebuilt, tied once their shape has loaded, moved with their ends.
+function HorseHitch.updatePieces(ride, hitch)
+    if ride.rig ~= nil and ride.rig ~= hitch.rig then
+        makePieces(ride, hitch)
+    end
+    for i, rope in ipairs(hitch.pieces) do
+        HorseRope.applyMaterial(rope)
+        HorseRope.setShown(rope, true)
+        if hitch.tied[i] then
+            pcall(rope.update, rope, 0)
+        elseif rope.referenceFrame ~= nil then
+            hitch.tied[i] = pcall(rope.setTargetNode, rope, hitch.targets[i], true) or nil
+        end
+    end
+end
+
 -- A log is dragged on a rope, not driven like a wagon: a pull on the grip towards the hook ring when the log is further from it than LOG_REACH_M, never a push, never a speed override. A trunk hooked in
 -- the middle then trails behind the horse instead of being swung round it.
-HorseHitch.LOG_REACH_M = 2.5          -- the rope's length: a log nearer than this is not pulled
+HorseHitch.LOG_REACH_M = 5            -- the rope's length: a log nearer than this is not pulled
+HorseHitch.LOG_STOP_M = 7.5           -- a log further than this (stuck: the horse walked on and the rope is as long as it gets) stops the horse, as a load too heavy for a tractor does; it goes on again within LOG_GO_M
+HorseHitch.LOG_GO_M = 6
+HorseHitch.LOG_LIFT_SHARE = 0.35      -- the pull also lifts this share of the log's weight at the grip, so the front rides over the ground (a real winch lifts the end it drags)
 HorseHitch.LOG_ACCEL_MS2 = 6          -- the most the pull accelerates it
 HorseHitch.LOG_GAIN = 3               -- 1/s: speed wanted per metre it is further than the rope
 HorseHitch.LOG_MAX_MS = 4             -- ... at most this fast
@@ -741,6 +772,15 @@ function HorseHitch.dragLog(ride, hitch, seconds, winch)
     local jx, jy, jz = getWorldTranslation(hitch.node)
     local ex, ez = ax - jx, az - jz
     local d = math.sqrt(ex * ex + ez * ez)
+    -- stuck: the rope as long as it gets and the log still not coming (the horse is stopped by limitGait until it is within LOG_GO_M again)
+    if hitch.strained then
+        if d < HorseHitch.LOG_GO_M then
+            hitch.strained = false
+        end
+    elseif d > HorseHitch.LOG_STOP_M then
+        hitch.strained = true
+        tell("the log is stuck: the rope is as long as it gets, the horse stops. Back it up or free the log")
+    end
     if d <= HorseHitch.LOG_REACH_M or d < 1e-3 then
         return
     end
@@ -755,7 +795,7 @@ function HorseHitch.dragLog(ride, hitch, seconds, winch)
         a = math.min(a, HorseHitch.MAX_PULL_KN / mass)
     end
     if a > 1e-3 then
-        addForce(hitch.component, ux * a * mass, 0, uz * a * mass, jx, jy, jz, false)        -- (tonnes * m/s2 = kN)
+        addForce(hitch.component, ux * a * mass, HorseHitch.LOG_LIFT_SHARE * mass * 9.81, uz * a * mass, jx, jy, jz, false)        -- (tonnes * m/s2 = kN)
     end
 end
 
@@ -787,6 +827,7 @@ function HorseHitch.update(ride, dt)
     local winch = winchApi()
     if hitch.isLog then
         HorseHitch.dragLog(ride, hitch, seconds, winch)
+        HorseHitch.updatePieces(ride, hitch)
         return
     end
     -- step one of a hitch that hands over to the game's joint: only the tongue is lifted, the wagon stays where it is (HorseHitch.liftTongue); the pull-in starts when it is up
@@ -956,19 +997,7 @@ function HorseHitch.update(ride, dt)
             end
         end
     end
-    -- the trace ropes
-    if ride.rig ~= nil and ride.rig ~= hitch.rig then
-        makePieces(ride, hitch)
-    end
-    for i, rope in ipairs(hitch.pieces) do
-        HorseRope.applyMaterial(rope)
-        HorseRope.setShown(rope, true)
-        if hitch.tied[i] then
-            pcall(rope.update, rope, 0)
-        elseif rope.referenceFrame ~= nil then
-            hitch.tied[i] = pcall(rope.setTargetNode, rope, hitch.targets[i], true) or nil
-        end
-    end
+    HorseHitch.updatePieces(ride, hitch)
 end
 
 -- From the saddle: like a tractor. Riding a horse in its harness, the game's own attach key (InputAction.ATTACH, Q) shows "Hitch" when a trailer's drawbar eye (or a machine's hitch) is within SADDLE_REACH_M of
@@ -1387,6 +1416,9 @@ function HorseHitch.limitGait(ride, gait)
         return gait
     end
     local gaits = Rideable.GAITTYPES
+    if hitch.isLog and hitch.strained and gait ~= gaits.BACKWARDS then
+        return gaits.STILL                                                    -- (the rope is as long as it gets: the horse stops, backing up is allowed)
+    end
     local rank = { [gaits.STILL] = 0, [gaits.WALK] = 1, [gaits.CANTER] = 2, [gaits.TROT] = 3, [gaits.GALLOP] = 4 }
     if gaits.BACKWARDS ~= nil then
         rank[gaits.BACKWARDS] = 0
