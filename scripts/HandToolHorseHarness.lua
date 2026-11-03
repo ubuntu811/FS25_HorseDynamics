@@ -57,6 +57,7 @@ function HandToolHorseHarness:onHeldEnd()
     end
     if HorseLead ~= nil and HorseLead.harnessSource == self.rootNode then
         HorseLead.harnessSource = nil
+        HorseLead.dropTowRopes()
     end
     local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
     if winch ~= nil then

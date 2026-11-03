@@ -1039,7 +1039,8 @@ HorseLead.rides = { { vehicle = harnessVehicle } }
 g_localPlayer = { rootNode = 900 }
 nodes[900].pos = { 12, 0, 13 }                                                       -- 1 m from the led horse
 check("the harness tool with a led horse beside you puts the harness on it", HorseLead.harness():find("harness on", 1, true) ~= nil and HorseLead.rides[1].harness == true)
-check("... and the same action takes it off, the horse stays led", HorseLead.harness() == "harness off" and HorseLead.rides[1].harness == false and #HorseLead.rides == 1)
+check("a harnessed horse touched again: the first click hands you its rope (the harness stays on)", HorseLead.harness():find("rope in hand", 1, true) ~= nil and HorseLead.rides[1].harness == true and HorseLead.rides[1].towRope == true)
+check("... the second click takes the harness off, the horse stays led", HorseLead.harness() == "harness off" and HorseLead.rides[1].harness == false and HorseLead.rides[1].towRope == nil and #HorseLead.rides == 1)
 nodes[900].pos = { 12, 0, 20 }                                                       -- 8 m from it
 HorseLead.nearestHorseDistance = function() return 6 end
 check("no horse within 4 m (a led one 8 m away does not count): it does not summon one", HorseLead.harness():find("no horse within 4 m", 1, true) ~= nil and HorseLead.rides[1].harness == false)
@@ -1049,11 +1050,22 @@ HorseLead.command = function() HorseLead.rides[#HorseLead.rides + 1] = { vehicle
 nodes[900].pos = { 12, 0, 13 }
 check("with no horse led, the nearest horse within reach is taken as a horse that STAYS and harnessed: no leash, no halter, it follows nobody",
     HorseLead.harness():find("without a halter", 1, true) ~= nil and #HorseLead.rides == 1 and HorseLead.rides[1].leash == nil and HorseLead.rides[1].stay == true and HorseLead.rides[1].harness == true)
+HorseLead.harness()                                                                    -- (the rope first)
 check("taking the harness off a horse that only stays gives it back to its pasture", HorseLead.harness():find("goes back to its pasture", 1, true) ~= nil and #HorseLead.rides == 0)
 -- independent of the halter: a led horse gets both
 HorseLead.rides = { { vehicle = harnessVehicle, leash = true } }
 check("a horse on the leash (it wears the halter) that is touched with the harness gets both, and says so", HorseLead.harness():find("halter too", 1, true) ~= nil and HorseLead.rides[1].harness == true and HorseLead.rides[1].leash == true and HorseLead.rides[1].stay == nil)
+HorseLead.harness()                                                                    -- (the rope first)
 check("... taking the harness off leaves it led", HorseLead.harness() == "harness off" and #HorseLead.rides == 1 and HorseLead.rides[1].leash == true)
+-- the rope in hand is dropped when the tool is put away, and with the switch off one click takes the harness off
+HorseLead.rides[1].harness = true
+HorseLead.harness()
+check("put away: nobody holds the rope any more", HorseLead.rides[1].towRope == true and (function() HorseLead.dropTowRopes(); return HorseLead.rides[1].towRope == nil end)())
+HorseLead.TOW_ROPE_FIRST = false
+check("with TOW_ROPE_FIRST off one click takes the harness off (the old way)", HorseLead.harness() == "harness off" and HorseLead.rides[1].harness == false)
+HorseLead.TOW_ROPE_FIRST = true
+HorseLead.rides[1].harness = false
+HorseLead.harness()                                                                    -- (harness on again, as the next check expects)
 -- the leash takes a horse that stays in its harness
 HorseLead.rides = { { vehicle = harnessVehicle, stay = true, harness = true } }
 check("the leash tool takes the horse that stays in its harness: it gets the halter and follows, and keeps the harness", HorseLead.leash():find("leashed", 1, true) ~= nil and HorseLead.rides[1].leash == true and HorseLead.rides[1].stay == nil and HorseLead.rides[1].harness == true)
@@ -1108,7 +1120,7 @@ HALTERMSG = HorseLead.leash("rope")
 check("let go outside a pasture: the halter stays on (the ride stays, no leash, no rope), and the message says so", HALTERED.halter == HALTER and HALTERED.stay == true and HALTERED.halterOn == true and HALTERED.leash == nil and #HorseLead.rides == 1 and HALTERMSG:find("halter stays on", 1, true) ~= nil)
 HorseLead.updateRide(50)
 check("... and the halter is still kept up every frame (no rope)", HALTER.frames ~= nil and HALTERED.rope == nil)
-check("the harness tool does not give a horse that keeps its halter back when the harness goes off", (function() HALTERED.harness = true; local m = HorseLead.harness(); return m == "harness off" and #HorseLead.rides == 1 end)())
+check("the harness tool does not give a horse that keeps its halter back when the harness goes off", (function() HALTERED.harness = true; HorseLead.harness(); local m = HorseLead.harness(); return m == "harness off" and #HorseLead.rides == 1 end)())
 HALTERED.harness = nil
 check("the leash takes the horse that stands there in its halter: it follows again, the halter on it keeps its gear", HorseLead.leash("rope"):find("leashed", 1, true) ~= nil and HALTERED.leash == true and HALTERED.halterOn == nil and HALTERED.stay == nil and HALTERED.halterGear == "leather")
 g_currentMission.husbandrySystem.getHusbandryInRideableRange = function() return true end

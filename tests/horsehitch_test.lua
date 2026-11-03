@@ -114,7 +114,9 @@ pickResult = nil
 check("nothing in view: the click is none of the hitch's business (the harness tool does its own)", HorseHitch.click() == nil and ride.hitch == nil)
 -- a joint in view, a harnessed horse 4 m away: hitched
 pickResult = target
+ride.towRope = true                                                                  -- (the harness tool handed its rope over first)
 local message = HorseHitch.click()
+check("tying the rope to the joint uses it up", ride.towRope == nil)
 check("a joint in view and a harnessed horse near it: hitched, with a message saying what and how to undo", message ~= nil and message:find("hitched to the drawbar eye of Small Trailer", 1, true) ~= nil and ride.hitch ~= nil)
 check("hitching puts the support leg up", support[#support] == true)
 check("a trailer's drawbar eye needs no pieces of its own (the hook ring and the traces are the harness's, always there): none, no tow bar", #pieces == 0 and ride.hitch.barLength == 0)

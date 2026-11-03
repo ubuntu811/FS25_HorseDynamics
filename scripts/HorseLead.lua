@@ -612,6 +612,15 @@ end
 -- gets the harness on top, a horse that is not led is taken as a horse that STAYS (ride.stay: it is a vehicle so that it can wear things, it stands where it is, no halter, no rope) and wears only the harness.
 -- Taking the harness off a horse that only stays gives it back to its pasture; a led horse stays led.
 -- and harnessed. Taking the harness off leaves the horse on its leash (the leash tool lets it go). Returns a message.
+HorseLead.TOW_ROPE_FIRST = true            -- the harness tool on a harnessed horse: first click the rope, second click the harness off (false: one click takes it off)
+
+-- The harness tool is put away: nobody holds a rope any more.
+function HorseLead.dropTowRopes()
+    for _, ride in ipairs(HorseLead.rides) do
+        ride.towRope = nil
+    end
+end
+
 function HorseLead.harness(gear)
     local px, _, pz = playerPosition()
     if px == nil then
@@ -639,6 +648,12 @@ function HorseLead.harness(gear)
         end
         ride.stay = true
     end
+    -- a harnessed horse that is touched again: the first click hands you its rope (tie it to a joint with the next click on one), only the second takes the harness off
+    if ride.harness and ride.hitch == nil and not ride.towRope and HorseLead.TOW_ROPE_FIRST then
+        ride.towRope = true
+        return "rope in hand: look at an attacher joint and click to tie the harness to it; click the horse again to take the harness off"
+    end
+    ride.towRope = nil
     ride.harness = not ride.harness
     if ride.harness then
         ride.harnessGear = gear                              -- (rope or leather: the tool in the hand says)

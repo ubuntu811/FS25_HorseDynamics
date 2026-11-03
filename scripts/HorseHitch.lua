@@ -407,6 +407,7 @@ function HorseHitch.click()
     if best == nil then
         return nil
     end
+    best.towRope = nil                                                       -- (the rope in hand is tied now)
     if HorseHitch.start(best, target) then
         return string.format("hitching the %s of %s: the rope pulls it in, then the game's joint takes over; the same click unhitches", target.kind, vehicleName(target.vehicle))
     end
