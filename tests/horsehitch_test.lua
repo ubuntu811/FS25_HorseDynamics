@@ -395,6 +395,9 @@ do
     MASSES, MASS = savedMasses, savedMass
 end
 
+-- the player's walk while a horse pulls: light loads quick, the heaviest only a horse's walk (a wheeled load rolls)
+check("the cap by load: 1 t quick (3.5 m/s), 5.6 t halfway, 10 t and more a horse's walk (1.4 m/s)", HorseHitch.playerCapMs(1) == 3.5 and math.abs(HorseHitch.playerCapMs(5.6) - (3.5 + 1.4) / 2) < 1e-9 and HorseHitch.playerCapMs(10) == 1.4 and HorseHitch.playerCapMs(40) == 1.4)
+
 -- belts first: unfastened tension belts are thrown before the hitch, so the loose logs are part of the frame and not shoved about
 do
     local thrown = 0
@@ -774,7 +777,7 @@ do
     check("PLAYER_CAP on (the default), SPEED_LIMITS off: the player is capped by what the horse pulls (a light wagon: 3.5 m/s)", HorseHitch.SPEED_LIMITS == false and HITCHCAPS.horsehitch == 3.5)
     vehicle.total = 14
     HorseHitch.updatePlayer()
-    check("... a 14 t load (a tractor): 2 km/h", math.abs(HITCHCAPS.horsehitch - 2 / 3.6) < 1e-9)
+    check("... a 14 t load (a tractor): 5 km/h, a horse's walk (the heaviest load rolls: it does not crawl)", math.abs(HITCHCAPS.horsehitch - HorseHitch.PLAYER_CAP_HEAVY_MS) < 1e-9)
     HorseHitch.PLAYER_CAP = false
     HorseHitch.updatePlayer()
     check("PLAYER_CAP off and SPEED_LIMITS off: no cap", HITCHCAPS.horsehitch == nil)
@@ -793,7 +796,7 @@ do
     check("a light wagon hitched: the player is capped at the speed the winch gives it (3.5 m/s)", HITCHCAPS.horsehitch == 3.5)
     vehicle.total = 14
     HorseHitch.updatePlayer()
-    check("a 14 t load: capped at 2 km/h", math.abs(HITCHCAPS.horsehitch - 2 / 3.6) < 1e-9)
+    check("a 14 t load: capped at a horse's walk (5 km/h)", math.abs(HITCHCAPS.horsehitch - HorseHitch.PLAYER_CAP_HEAVY_MS) < 1e-9)
     HorseHitch.click()
     HorseHitch.updatePlayer()
     check("unhitched: the cap is taken off", HITCHCAPS.horsehitch == nil)

@@ -1179,6 +1179,21 @@ end
 -- The player is led by the load too: while a horse pulls something, the player's speed is capped (walking and running: FS25_WinchTow's speed cap on the walk state) at the speed the winch gives a load of that
 -- weight, the lowest of the loads when there are several. The horse follows the player, so the whole string slows down instead of the horse stopping and starting (which made a heavy load bounce). The cap is
 -- taken off when nothing is hitched. Called every frame by HorseLead.updateRide.
+-- The speed the player may walk at while a horse pulls a load of `mass` tonnes: the winch's table is for dragging (2 km/h at 10 t and more: a tractor pulled on its brakes), a wheeled load rolls: a horse pulls
+-- 12 t on a flat road at a walk (rolling resistance 2 to 5 percent: 2.4 to 6 kN against a horse's 3 to 5), so the heaviest load only slows the string to a horse's walk. Light ground: no slower than the winch's quick speed.
+HorseHitch.PLAYER_CAP_LIGHT_T, HorseHitch.PLAYER_CAP_HEAVY_T = 1.2, 10
+HorseHitch.PLAYER_CAP_LIGHT_MS, HorseHitch.PLAYER_CAP_HEAVY_MS = 3.5, 1.4         -- (5 km/h)
+function HorseHitch.playerCapMs(mass)
+    local light, heavy = HorseHitch.PLAYER_CAP_LIGHT_T, HorseHitch.PLAYER_CAP_HEAVY_T
+    if mass <= light then
+        return HorseHitch.PLAYER_CAP_LIGHT_MS
+    elseif mass >= heavy then
+        return HorseHitch.PLAYER_CAP_HEAVY_MS
+    end
+    local t = (mass - light) / (heavy - light)
+    return HorseHitch.PLAYER_CAP_LIGHT_MS + (HorseHitch.PLAYER_CAP_HEAVY_MS - HorseHitch.PLAYER_CAP_LIGHT_MS) * t
+end
+
 function HorseHitch.updatePlayer()
     local winch = winchApi()
     if winch == nil or winch.setSpeedCap == nil then
@@ -1189,7 +1204,7 @@ function HorseHitch.updatePlayer()
         for _, ride in ipairs(HorseLead.rides) do
             local hitch = ride.hitch
             if hitch ~= nil and not hitch.vehicle.isDeleted then
-                local speed = winch.pullSpeed(winch.pullMass(hitch.vehicle, hitch.component))
+                local speed = HorseHitch.playerCapMs(winch.pullMass(hitch.vehicle, hitch.component))
                 cap = cap ~= nil and math.min(cap, speed) or speed
             end
         end
