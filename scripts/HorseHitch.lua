@@ -349,6 +349,9 @@ end
 -- keepSupport: the rope lets go to hand the vehicle to the game's joint (the handover): its support animation is not played back. On some trailers it IS the tongue's hinge (the DPW 1800's
 -- "lockDrawbarLimit": the hinge is locked while it is parked, the attach frees it): played back, the hinge snapped locked in the middle of the hitch.
 function HorseHitch.release(ride, keepSupport)
+    if not keepSupport then
+        ride.byLeash = nil
+    end
     local joined = ride.joined
     if joined ~= nil then
         ride.joined = nil
@@ -447,6 +450,7 @@ function HorseHitch.takeHooked(winch)
     if target == nil then
         return nil
     end
+    ride.byLeash = true                                                       -- (the leash's click lets it go again: HorseHitch.releaseHandedOver)
     if target.kind == "log" then
         return HorseHitch.attachLog(ride, target)
     end
@@ -565,16 +569,18 @@ function HorseHitch.adjustRope(direction, inputValue, dt)
     return result
 end
 
--- A log on a horse is let go (the leash's click). Returns true when one was.
-function HorseHitch.releaseLogs()
+-- What the leash handed to a horse (a log, a vehicle) is let go: the leash's click. Returns true when something was.
+function HorseHitch.releaseHandedOver()
     local released = false
     for _, ride in ipairs(HorseLead.rides) do
-        if ride.hitch ~= nil and ride.hitch.isLog and HorseHitch.release(ride) then
+        local held = ride.hitch ~= nil or ride.joined ~= nil
+        if held and (ride.byLeash or (ride.hitch ~= nil and ride.hitch.isLog)) and HorseHitch.release(ride) then
             released = true
         end
     end
     return released
 end
+HorseHitch.releaseLogs = HorseHitch.releaseHandedOver
 
 -- The rope hitches; when the game's joint can take the vehicle, the rope hands it over once the eye is at the hook (update). Returns true when a handover is to come. (The saddle key and the harness click.)
 function HorseHitch.start(ride, target)

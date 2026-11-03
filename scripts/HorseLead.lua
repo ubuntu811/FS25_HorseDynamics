@@ -715,8 +715,8 @@ function HorseLead.leash(gear)
         end
         return winch.toggle()
     end
-    if HorseHitch ~= nil and HorseHitch.releaseLogs ~= nil and HorseHitch.releaseLogs() then
-        return "the log is let go"
+    if HorseHitch ~= nil and HorseHitch.releaseHandedOver ~= nil and HorseHitch.releaseHandedOver() then
+        return "let go: what the leash handed to the horse is unhitched"
     end
     if HorseLead.hasFlagged("leash") then
         local gate = HorseLead.gateAtPlayer()

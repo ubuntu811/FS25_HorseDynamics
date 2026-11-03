@@ -906,6 +906,10 @@ check("every frame the wire is hung from the hook ring to the log's hook, with i
     pickedRide = logRide
     local jointMessage = HorseHitch.takeHooked(winchApiFake)
     check("a joint hooked with the leash and a harnessed horse looked at: hitched to it (the same as the harness tool's click on a joint)", jointMessage ~= nil and jointMessage:find("hitched to the drawbar eye of Small Trailer", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.component == 100 and not logRide.hitch.isLog and winchApiFake.target == nil)
+    check("the horse is marked as one the leash handed something to", logRide.byLeash == true)
+    check("the leash's click lets a vehicle it handed over go (unhitched), and the mark goes", HorseHitch.releaseHandedOver() == true and logRide.hitch == nil and logRide.byLeash == nil)
+    HorseHitch.start(logRide, jointTarget)
+    check("a hitch made some other way (the harness tool) is not the leash's to let go", HorseHitch.releaseHandedOver() == false and logRide.hitch ~= nil)
     HorseHitch.release(logRide)
     winchApiFake.target = jointTarget
     check("the ring round the harness ring is shown for a joint on the leash too", HorseHitch.leashHint() ~= nil)
