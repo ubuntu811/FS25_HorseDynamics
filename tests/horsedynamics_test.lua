@@ -1410,6 +1410,9 @@ do
     HorseLead.nearestHorseDistance = function() return nil end
     calls = { pickResult = nil, logResult = { kind = "log" } }
     check("no joint but a log in view: the leash hooks the log too (no complaint about a horse)", HorseLead.leash() == "hooked" and calls[2] == "toggle")
+    winch.pickLog = function() return nil, "that tree still stands: fell it first" end
+    calls = { pickResult = nil }
+    check("a log in view that cannot be hooked says why, not 'look at the horse'", HorseLead.leash() == "that tree still stands: fell it first")
     winch.pickLog = nil
     HorseLead.nearestHorseDistance = function() return 2 end
     calls = { pickResult = { vehicle = {} } }

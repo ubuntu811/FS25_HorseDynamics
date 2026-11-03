@@ -724,9 +724,19 @@ function HorseLead.leash(gear)
         local horseDistance = HorseLead.nearestHorseDistance(px, pz)
         if horseDistance == nil or horseDistance > HorseLead.LEASH_REACH_M then
             -- no horse in reach: a joint or a log in view is for the winch, else the leash says to walk up to a horse
-            if winch ~= nil and (winch.pick(true) ~= nil or (winch.pickLog ~= nil and winch.pickLog() ~= nil)) then
-                winch.hold(HorseLead.leashSource)
-                return winch.toggle()
+            if winch ~= nil then
+                local joint = winch.pick(true)
+                local log, why = nil, nil
+                if joint == nil and winch.pickLog ~= nil then
+                    log, why = winch.pickLog()
+                end
+                if joint ~= nil or log ~= nil then
+                    winch.hold(HorseLead.leashSource)
+                    return winch.toggle()
+                end
+                if why ~= nil then
+                    return why                                               -- (a log in view that cannot be hooked says why)
+                end
             end
             if horseDistance ~= nil then
                 return string.format("no horse within %d m: walk up to one (the carrot calls the whole pasture)", HorseLead.LEASH_REACH_M)
