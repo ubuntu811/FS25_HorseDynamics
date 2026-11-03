@@ -724,7 +724,7 @@ function HorseLead.leash(gear)
         local horseDistance = HorseLead.nearestHorseDistance(px, pz)
         if horseDistance == nil or horseDistance > HorseLead.LEASH_REACH_M then
             -- no horse in reach: a joint in view is for the winch, else the leash says to walk up to a horse
-            if winch ~= nil and winch.pick() ~= nil then
+            if winch ~= nil and winch.pick(true) ~= nil then
                 winch.hold(HorseLead.leashSource)
                 return winch.toggle()
             end
