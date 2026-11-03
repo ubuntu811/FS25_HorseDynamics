@@ -1179,19 +1179,26 @@ end
 -- The player is led by the load too: while a horse pulls something, the player's speed is capped (walking and running: FS25_WinchTow's speed cap on the walk state) at the speed the winch gives a load of that
 -- weight, the lowest of the loads when there are several. The horse follows the player, so the whole string slows down instead of the horse stopping and starting (which made a heavy load bounce). The cap is
 -- taken off when nothing is hitched. Called every frame by HorseLead.updateRide.
--- The speed the player may walk at while a horse pulls a load of `mass` tonnes: the winch's table is for dragging (2 km/h at 10 t and more: a tractor pulled on its brakes), a wheeled load rolls: a horse pulls
--- 12 t on a flat road at a walk (rolling resistance 2 to 5 percent: 2.4 to 6 kN against a horse's 3 to 5), so the heaviest load only slows the string to a horse's walk. Light ground: no slower than the winch's quick speed.
-HorseHitch.PLAYER_CAP_LIGHT_T, HorseHitch.PLAYER_CAP_HEAVY_T = 1.2, 10
-HorseHitch.PLAYER_CAP_LIGHT_MS, HorseHitch.PLAYER_CAP_HEAVY_MS = 3.5, 1.4         -- (5 km/h)
-function HorseHitch.playerCapMs(mass)
-    local light, heavy = HorseHitch.PLAYER_CAP_LIGHT_T, HorseHitch.PLAYER_CAP_HEAVY_T
-    if mass <= light then
-        return HorseHitch.PLAYER_CAP_LIGHT_MS
-    elseif mass >= heavy then
-        return HorseHitch.PLAYER_CAP_HEAVY_MS
+-- The speed the player may walk at while a horse pulls: the horse's OWN top speed. The horse follows the player (it does not stop and start), so the player is held to what the horse can do, and not slower:
+-- a horse that pulls trots at most (limitGait), so a tractor behind it costs the player nothing beyond that. The speed table of the hand winch is for pulling a load yourself, not for leading a horse that does.
+-- The top speed of the fastest gait it may use (the game's topSpeeds per gait); without that table PLAYER_CAP_FALLBACK_MS.
+HorseHitch.PLAYER_CAP_FALLBACK_MS = 3.5
+function HorseHitch.horseTopSpeedMs(ride)
+    local spec = ride.vehicle ~= nil and ride.vehicle.spec_rideable or nil
+    local top = spec ~= nil and spec.topSpeeds or nil
+    local gaits = Rideable ~= nil and Rideable.GAITTYPES or nil
+    if top == nil or gaits == nil then
+        return HorseHitch.PLAYER_CAP_FALLBACK_MS
     end
-    local t = (mass - light) / (heavy - light)
-    return HorseHitch.PLAYER_CAP_LIGHT_MS + (HorseHitch.PLAYER_CAP_HEAVY_MS - HorseHitch.PLAYER_CAP_LIGHT_MS) * t
+    local allowed = { "WALK", "CANTER", "TROT" }                        -- (what limitGait leaves a pulling horse)
+    if not (HorseHitch.GALLOP_LIMIT or HorseHitch.SPEED_LIMITS) then
+        allowed[#allowed + 1] = "GALLOP"
+    end
+    local best = 0
+    for _, name in ipairs(allowed) do
+        best = math.max(best, gaits[name] ~= nil and top[gaits[name]] or 0)
+    end
+    return best > 0 and best or HorseHitch.PLAYER_CAP_FALLBACK_MS
 end
 
 function HorseHitch.updatePlayer()
@@ -1200,11 +1207,11 @@ function HorseHitch.updatePlayer()
         return
     end
     local cap = nil
-    if (HorseHitch.PLAYER_CAP or HorseHitch.SPEED_LIMITS) and winch.pullSpeed ~= nil and winch.pullMass ~= nil then
+    if HorseHitch.PLAYER_CAP or HorseHitch.SPEED_LIMITS then
         for _, ride in ipairs(HorseLead.rides) do
-            local hitch = ride.hitch
-            if hitch ~= nil and not hitch.vehicle.isDeleted then
-                local speed = HorseHitch.playerCapMs(winch.pullMass(hitch.vehicle, hitch.component))
+            local hitch = ride.hitch or ride.joined                  -- (on the rope or on the game's own joint)
+            if hitch ~= nil and hitch.vehicle ~= nil and not hitch.vehicle.isDeleted then
+                local speed = HorseHitch.horseTopSpeedMs(ride)
                 cap = cap ~= nil and math.min(cap, speed) or speed
             end
         end

@@ -1279,6 +1279,22 @@ RIDERHORSE.getVehicleCharacter = function() return nil end
 check("... no character at all: the anchor at the horse's side", nodes[HorseLead.ropeSource()].parent == 962)
 RIDERHORSE.getVehicleCharacter = nil
 g_localPlayer.getCurrentVehicle = nil
+-- on foot: the rope starts in the player's hand when the character is seen (third person), else 1.1 m above the capsule's foot
+nodes[965], nodes[966] = { pos = { 0, 0, 0 }, children = {} }, { pos = { 0, 0, 0 }, children = {} }
+g_localPlayer.graphicsComponent = { model = { thirdPersonRightHandNode = 965, thirdPersonLeftHandNode = 966 } }
+g_localPlayer.camera = { isFirstPerson = false }
+check("on foot in third person the rope starts at the player's right hand (the node a hand tool is linked to)", HorseLead.ropeSource() == 965)
+g_localPlayer.graphicsComponent.model.thirdPersonRightHandNode = nil
+check("... the left hand when there is no right one", HorseLead.ropeSource() == 966)
+g_localPlayer.camera.isFirstPerson = true
+check("in first person (the character is hidden) it is the anchor above the capsule's foot", nodes[HorseLead.ropeSource()].parent == g_localPlayer.rootNode)
+g_localPlayer.camera.isFirstPerson = false
+g_localPlayer.graphicsComponent = nil
+check("without a loaded model: the anchor above the capsule's foot", nodes[HorseLead.ropeSource()].parent == g_localPlayer.rootNode)
+g_localPlayer.camera = nil
+HorseLead.leashSource = 4242
+check("a leash tool in the hand still wins: its own node", HorseLead.ropeSource() == 4242)
+HorseLead.leashSource = nil
 -- a piece whose node was deleted with a horse is skipped, not updated into an error every frame (a contract mod hands in a ridden and a led horse at once)
 FORESTRYUPDATES = 0
 ForestryRope.update = function(self, dt) FORESTRYUPDATES = FORESTRYUPDATES + 1 end

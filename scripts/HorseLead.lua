@@ -1232,6 +1232,24 @@ function HorseLead.riderHand(vehicle)
     return nil
 end
 
+-- The hand of the player on foot, in the camera view where the character is seen (third person): the node the game links a hand tool to (HandTool:attachToolToHand: playerModel.thirdPersonRightHandNode, the left
+-- one for a tool used with the left). nil in first person (the character is hidden there, the leash in the hand is attached to the camera) or when the model is not loaded.
+HorseLead.PLAYER_HANDS = { "thirdPersonRightHandNode", "thirdPersonLeftHandNode" }
+function HorseLead.playerHand()
+    local player = g_localPlayer
+    local model = player ~= nil and player.graphicsComponent ~= nil and player.graphicsComponent.model or nil
+    if model == nil or (player.camera ~= nil and player.camera.isFirstPerson) then
+        return nil
+    end
+    for _, name in ipairs(HorseLead.PLAYER_HANDS) do
+        local node = model[name]
+        if node ~= nil and (entityExists == nil or entityExists(node)) then
+            return node
+        end
+    end
+    return nil
+end
+
 function HorseLead.ropeSource()
     if HorseLead.leashSource ~= nil then
         return HorseLead.leashSource
@@ -1247,6 +1265,10 @@ function HorseLead.ropeSource()
         end
         local a = HorseLead.MOUNTED_ANCHOR
         return HorseRope.anchorOn(vehicle.rootNode, a[1], a[2], a[3])
+    end
+    local hand = HorseLead.playerHand()
+    if hand ~= nil then
+        return hand                                          -- (on foot, seen in third person: the rope starts in the hand, not 1.1 m above the capsule's foot)
     end
     return HorseRope.anchorOn(g_localPlayer.rootNode, 0, 1.1, 0)
 end

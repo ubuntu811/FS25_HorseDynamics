@@ -395,9 +395,6 @@ do
     MASSES, MASS = savedMasses, savedMass
 end
 
--- the player's walk while a horse pulls: light loads quick, the heaviest only a horse's walk (a wheeled load rolls)
-check("the cap by load: 1 t quick (3.5 m/s), 5.6 t halfway, 10 t and more a horse's walk (1.4 m/s)", HorseHitch.playerCapMs(1) == 3.5 and math.abs(HorseHitch.playerCapMs(5.6) - (3.5 + 1.4) / 2) < 1e-9 and HorseHitch.playerCapMs(10) == 1.4 and HorseHitch.playerCapMs(40) == 1.4)
-
 -- belts first: unfastened tension belts are thrown before the hitch, so the loose logs are part of the frame and not shoved about
 do
     local thrown = 0
@@ -777,7 +774,17 @@ do
     check("PLAYER_CAP on (the default), SPEED_LIMITS off: the player is capped by what the horse pulls (a light wagon: 3.5 m/s)", HorseHitch.SPEED_LIMITS == false and HITCHCAPS.horsehitch == 3.5)
     vehicle.total = 14
     HorseHitch.updatePlayer()
-    check("... a 14 t load (a tractor): 5 km/h, a horse's walk (the heaviest load rolls: it does not crawl)", math.abs(HITCHCAPS.horsehitch - HorseHitch.PLAYER_CAP_HEAVY_MS) < 1e-9)
+    check("... a 14 t load (a tractor) changes nothing: the cap is the horse's own speed, not the load's", HITCHCAPS.horsehitch == 3.5)
+    local G1 = Rideable.GAITTYPES
+    local horseSpec = ride.vehicle.spec_rideable
+    ride.vehicle.spec_rideable = { topSpeeds = { [G1.WALK] = 1.08, [G1.TROT] = 2.5, [G1.CANTER] = 5.0, [G1.GALLOP] = 10 } }
+    HorseHitch.updatePlayer()
+    check("with the horse's own speeds: the fastest gait a pulling horse may use (no gallop): 5 m/s, not the winch's table and not slower", HITCHCAPS.horsehitch == 5.0)
+    HorseHitch.GALLOP_LIMIT = false
+    HorseHitch.updatePlayer()
+    check("... a horse that may gallop: the player may run with it (10 m/s)", HITCHCAPS.horsehitch == 10)
+    HorseHitch.GALLOP_LIMIT = true
+    ride.vehicle.spec_rideable = horseSpec
     HorseHitch.PLAYER_CAP = false
     HorseHitch.updatePlayer()
     check("PLAYER_CAP off and SPEED_LIMITS off: no cap", HITCHCAPS.horsehitch == nil)
@@ -793,10 +800,10 @@ do
     HorseHitch.click()
     vehicle.total = 0.66
     HorseHitch.updatePlayer()
-    check("a light wagon hitched: the player is capped at the speed the winch gives it (3.5 m/s)", HITCHCAPS.horsehitch == 3.5)
+    check("a light wagon hitched: the player is capped at the horse's speed (the fallback 3.5 m/s without its speed table)", HITCHCAPS.horsehitch == 3.5)
     vehicle.total = 14
     HorseHitch.updatePlayer()
-    check("a 14 t load: capped at a horse's walk (5 km/h)", math.abs(HITCHCAPS.horsehitch - HorseHitch.PLAYER_CAP_HEAVY_MS) < 1e-9)
+    check("a 14 t load: the same cap (it is the horse's own speed, the load does not change it)", HITCHCAPS.horsehitch == 3.5)
     HorseHitch.click()
     HorseHitch.updatePlayer()
     check("unhitched: the cap is taken off", HITCHCAPS.horsehitch == nil)
