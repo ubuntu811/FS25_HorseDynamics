@@ -428,10 +428,11 @@ function HorseHitch.click()
     return string.format("hitched to the %s of %s: lead the horse on, the same key unhitches", target.kind, vehicleName(target.vehicle))
 end
 
--- The leash has a log hooked (the winch) and you look at a harnessed horse: the log is handed to it, the horse pulls it. Returns a message, nil when this is none of its business.
-function HorseHitch.takeLog(winch)
+-- The leash has something hooked (the winch: a log, or the attacher joint of a vehicle) and you look at a harnessed horse: it is handed to the horse, which pulls it. Returns a message, nil when this is none of
+-- its business.
+function HorseHitch.takeHooked(winch)
     local hooked = winch ~= nil and winch.target or nil
-    if hooked == nil or hooked.kind ~= "log" or winch.handOver == nil then
+    if hooked == nil or winch.handOver == nil then
         return nil
     end
     local px, _, pz = HorseLead.playerPosition()
@@ -446,7 +447,19 @@ function HorseHitch.takeLog(winch)
     if target == nil then
         return nil
     end
-    return HorseHitch.attachLog(ride, target)
+    if target.kind == "log" then
+        return HorseHitch.attachLog(ride, target)
+    end
+    return HorseHitch.hitchMessage(ride, target)
+end
+HorseHitch.takeLog = HorseHitch.takeHooked
+
+-- A vehicle's joint is hitched to the horse (the same as the harness tool's click on a joint): the message says what happens.
+function HorseHitch.hitchMessage(ride, target)
+    if HorseHitch.start(ride, target) then
+        return string.format("hitching the %s of %s: the rope pulls it in, then the game's joint takes over; the harness tool's click unhitches", target.kind, vehicleName(target.vehicle))
+    end
+    return string.format("hitched to the %s of %s: lead the horse on, the harness tool's click unhitches", target.kind, vehicleName(target.vehicle))
 end
 
 -- The log (a grip made by WinchHand.hookLog) is tied to the harness of this horse: it pulls it from now on.
@@ -507,12 +520,12 @@ function HorseHitch.harnessHint()
     return log.ring or { log.x, log.y, log.z, 0, 1, 0, 0.18 }
 end
 
--- The ring of the leash while a log hangs on it: round the hook ring of the harnessed horse a click would hand it to (WinchHand.hint). nil when there is none.
+-- The ring of the leash while something hangs on it (a log, a vehicle's joint): round the hook ring of the harnessed horse a click would hand it to (WinchHand.hint). nil when there is none.
 HorseHitch.HINT_RADIUS_M = 0.12
 function HorseHitch.leashHint()
     local winch = winchApi()
     local hooked = winch ~= nil and winch.target or nil
-    if hooked == nil or hooked.kind ~= "log" then
+    if hooked == nil then
         return nil
     end
     local px, _, pz = HorseLead.playerPosition()

@@ -899,9 +899,17 @@ check("every frame the wire is hung from the hook ring to the log's hook, with i
     winchApiFake.target = logTarget
     pickedRide = nil
     check("no harnessed horse in view: the click is none of its business (the leash lets the log go)", HorseHitch.takeLog(winchApiFake) == nil and winchApiFake.target == logTarget)
-    winchApiFake.target = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye" }
+    -- a vehicle's joint hooked with the leash: handed to the harnessed horse, hitched the way the harness tool's click would
+    local jointTarget = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye" }
+    winchApiFake.target = jointTarget
+    winchApiFake.handOver = function() winchApiFake.target = nil; return jointTarget end
     pickedRide = logRide
-    check("a joint on the winch is not a log: not handed over", HorseHitch.takeLog(winchApiFake) == nil)
+    local jointMessage = HorseHitch.takeHooked(winchApiFake)
+    check("a joint hooked with the leash and a harnessed horse looked at: hitched to it (the same as the harness tool's click on a joint)", jointMessage ~= nil and jointMessage:find("hitched to the drawbar eye of Small Trailer", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.component == 100 and not logRide.hitch.isLog and winchApiFake.target == nil)
+    HorseHitch.release(logRide)
+    winchApiFake.target = jointTarget
+    check("the ring round the harness ring is shown for a joint on the leash too", HorseHitch.leashHint() ~= nil)
+    winchApiFake.target = nil
     winchApiFake.target = logTarget
     winchApiFake.handOver = function() winchApiFake.target = nil; return logTarget end
     pickedRide = logRide
