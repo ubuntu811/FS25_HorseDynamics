@@ -45,7 +45,7 @@ function HandToolHorseHarness:onHeldStart()
     end
     local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
     if winch ~= nil and HorseHitch ~= nil then
-        winch.hold(self.rootNode)                             -- (the green ring of the winch shows on the joint a click would hitch a harnessed horse to)
+        winch.hold(self.rootNode, false)                      -- (the green ring of the winch shows on the joint a click would hitch a harnessed horse to, never on a log)
         winch.gate = HorseHitch.ringFree
     end
 end
