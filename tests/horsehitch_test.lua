@@ -76,6 +76,8 @@ HorseRope = {
     gearOptions = function(w, b, x, y, z, gear) if gear == "leather" then return { leather = true } end return nil end,
     applyMaterial = function(rope) if not rope.rfMaterialDone then rope.materialDone = true end end,
     setShown = function(rope, visible) rope.visible = visible end,
+    syncCable = function(cable, source, target, length, diameter) cable.synced = { source, target, length, diameter } end,
+    dropCable = function(cable) cable.dropped = true; cable.chain = nil end,
 }
 HorseHarness = { spec = { trace = { diameter = 0.02 } } }
 local player = true
@@ -840,7 +842,10 @@ do
     winchApiFake.dropGrip = function(t) dropped[#dropped + 1] = t end
     local message = HorseHitch.takeLog(winchApiFake)
     check("a log on the leash and a harnessed horse looked at: the log is handed over and tied to the harness", message ~= nil and message:find("tied to the harness", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.isLog == true and logRide.hitch.component == 300 and winchApiFake.target == nil)
-    check("a log has no tow bar and no keys, but one steel cable from the hook ring to the log's hook", logRide.hitch.barLength == 0 and #logRide.hitch.pieces == 1 and logRide.hitch.pieces[1].diameter == HorseHitch.LOG_CABLE_DIAMETER and logRide.hitch.targets[1] == 301 and HorseHitch.keys(logTarget.vehicle, true) == false)
+    check("a log has no tow bar and no keys, but a winch wire of its own (not a piece of the harness)", logRide.hitch.barLength == 0 and #logRide.hitch.pieces == 0 and logRide.hitch.cable ~= nil and HorseHitch.keys(logTarget.vehicle, true) == false and logRide.hitch.ropeLength == HorseHitch.LOG_ROPE_M)
+HorseHitch.update(logRide, 16)
+local synced = logRide.hitch.cable.synced
+check("every frame the wire is hung from the hook ring to the log's hook, with its own length and thickness (a wire keeps its length: the slack lies on the ground)", synced ~= nil and synced[1] == 3 and synced[2] == 301 and synced[3] == 5 and synced[4] == HorseHitch.LOG_CABLE_DIAMETER)
     TILT[300] = 90                                                              -- (a log lies on its side: its up axis is horizontal)
     HorseHitch.update(logRide, 16)
     check("a log lying on its side is not 'tipped over': it stays hitched", logRide.hitch ~= nil)
@@ -868,6 +873,24 @@ do
     HorseHitch.update(logRide, 16)
     check("within 6 m of the ring again: the horse goes on", logRide.hitch.strained == false and HorseHitch.limitGait(logRide, Rideable.GAITTYPES.WALK) == Rideable.GAITTYPES.WALK)
     nodes[301] = { 0, 0.3, -4 }
+    -- the keys: the wire runs out and in (held: inputValue 1), within its limits
+    check("no log tied: the keys do nothing", (function() local saved = logRide.hitch; logRide.hitch = nil; local r = HorseHitch.adjustRope(1, 1, 1000); logRide.hitch = saved; return r == nil end)())
+    check("a key that is not held does nothing", HorseHitch.adjustRope(1, 0, 1000) == nil and logRide.hitch.ropeLength == 5)
+    check("held for a second, the wire runs out ROPE_SPEED_MS metres", math.abs(HorseHitch.adjustRope(1, 1, 1000) - 6.5) < 1e-9)
+    nodes[301] = { 0, 0.3, -12 }
+    HorseHitch.update(logRide, 16)
+    check("with 6.5 m of wire a log 11 m behind is still stuck (6.5 + 2.5 = 9)", logRide.hitch.strained == true)
+    HorseHitch.adjustRope(1, 1, 2000)
+    HorseHitch.update(logRide, 16)
+    check("10 m of wire: 11 m is stuck no more... within wire plus 2.5, and it goes on again within wire plus 1 (11 > 10 + 1: still stopped)", logRide.hitch.strained == true)
+    HorseHitch.adjustRope(1, 1, 5000)
+    check("the wire is never longer than LOG_ROPE_MAX_M", logRide.hitch.ropeLength == HorseHitch.LOG_ROPE_MAX_M)
+    nodes[301] = { 0, 0.3, -8 }
+    HorseHitch.update(logRide, 16)
+    check("12 m of wire: a log 7 m behind is not pulled and not stuck", logRide.hitch.strained == false)
+    HorseHitch.adjustRope(-1, 1, 20000)
+    check("taking in runs down to LOG_ROPE_MIN_M, no further", logRide.hitch.ropeLength == HorseHitch.LOG_ROPE_MIN_M)
+    logRide.hitch.ropeLength = 5
     nodes[301] = { 0, 0.3, -4 }
     bodyType = 3
     HorseHitch.update(logRide, 16)

@@ -338,12 +338,12 @@ function HorseRope.targetNodeOf(vehicle)
 end
 
 -- The points between the ends, on the hanging curve from the source to the target (world coordinates: the points hang under the root node).
-function HorseRope.place(chain, sourceNode, targetNode)
+function HorseRope.place(chain, sourceNode, targetNode, length)
     local ax, ay, az = getWorldTranslation(sourceNode)
     local bx, by, bz = getWorldTranslation(targetNode)
     local dx, dy, dz = bx - ax, by - ay, bz - az
     local d = math.sqrt(dx * dx + dy * dy + dz * dz)
-    local slack = math.max(0, HorseRope.LENGTH_M - d)
+    local slack = math.max(0, (length or HorseRope.LENGTH_M) - d)
     local sag = math.min(HorseRope.SAG_MAX_M, math.sqrt(3 * d * slack / 8))      -- (a parabola of span d and length d + slack)
     for i, mid in ipairs(chain.mids) do
         local t = i / chain.segments
@@ -775,6 +775,59 @@ function HorseRope.sync(ride, sourceNode)
         if chain.tied[i] then
             pcall(rope.update, rope, 0)       -- (the points moved just now: the piece follows them this frame, not the next)
         end
+    end
+end
+
+-- A steel cable of a fixed length (a winch wire): a chain of pieces hung from source to target on the curve of a wire of that length; what is not needed to span the gap lies on the ground, it is never
+-- stretched (past its length it is simply straight). cable is a table the caller keeps: { chain = nil, failed = false }.
+HorseRope.CABLE_SEGMENTS = 8
+function HorseRope.syncCable(cable, sourceNode, targetNode, length, diameter)
+    if cable.failed or sourceNode == nil or targetNode == nil then
+        return
+    end
+    if cable.chain == nil then
+        local chain = { ropes = {}, mids = {}, tied = {}, segments = HorseRope.CABLE_SEGMENTS }
+        local previous = sourceNode
+        for i = 1, chain.segments do
+            local rope = createSegment(previous, diameter, nil)
+            if rope == nil then
+                HorseRope.destroy(chain)
+                cable.failed = true
+                return
+            end
+            rope.rfMaterialDone = true                                  -- (steel: no gear material)
+            chain.ropes[i] = rope
+            if i < chain.segments then
+                local mid = createTransformGroup("horseCablePoint")
+                link(getRootNode(), mid)
+                chain.mids[i] = mid
+                previous = mid
+            end
+        end
+        cable.chain = chain
+    end
+    local chain = cable.chain
+    local ok, err = pcall(HorseRope.place, chain, sourceNode, targetNode, length)
+    if not ok then
+        print("[HorseDynamics] cable: could not hang it: " .. tostring(err))
+        return
+    end
+    for i, rope in ipairs(chain.ropes) do
+        HorseRope.applyMaterial(rope)
+        HorseRope.setShown(rope, true)
+        if rope.referenceFrame ~= nil and not chain.tied[i] then
+            chain.tied[i] = pcall(rope.setTargetNode, rope, chain.mids[i] or targetNode, true) or nil
+        end
+        if chain.tied[i] then
+            pcall(rope.update, rope, 0)
+        end
+    end
+end
+
+function HorseRope.dropCable(cable)
+    if cable ~= nil and cable.chain ~= nil then
+        HorseRope.destroy(cable.chain)
+        cable.chain = nil
     end
 end
 

@@ -139,6 +139,14 @@ function HorseDynamics.onRelease()
     HorseDynamics.notify(HorseLead.command(nil, "stop"))
 end
 
+function HorseDynamics.onRopeLonger(_, _, inputValue)
+    HorseHitch.adjustRope(1, inputValue, g_currentDt)
+end
+
+function HorseDynamics.onRopeShorter(_, _, inputValue)
+    HorseHitch.adjustRope(-1, inputValue, g_currentDt)
+end
+
 function HorseDynamics.registerActionEvents()
     if g_inputBinding == nil or InputAction == nil or InputAction.HORSEDYN_CALL == nil then
         return
@@ -148,6 +156,19 @@ function HorseDynamics.registerActionEvents()
         if eventId ~= nil then
             g_inputBinding:setActionEventTextPriority(eventId, GS_PRIO_LOW)
             g_inputBinding:setActionEventTextVisibility(eventId, true)
+        end
+    end
+end
+
+-- the two keys of the winch wire of a tied log (held: the wire runs in or out): not a hand tool's action, they work with the player on foot or on the horse
+function HorseDynamics.registerRopeKeys()
+    if g_inputBinding == nil or InputAction == nil or InputAction.HORSEDYN_ROPE_LONGER == nil then
+        return
+    end
+    for _, spec in ipairs({ { InputAction.HORSEDYN_ROPE_LONGER, HorseDynamics.onRopeLonger }, { InputAction.HORSEDYN_ROPE_SHORTER, HorseDynamics.onRopeShorter } }) do
+        local _, eventId = g_inputBinding:registerActionEvent(spec[1], HorseDynamics, spec[2], false, true, true, true, nil, true)
+        if eventId ~= nil then
+            g_inputBinding:setActionEventTextVisibility(eventId, false)
         end
     end
 end
@@ -292,6 +313,7 @@ if PlayerInputComponent ~= nil and PlayerInputComponent.registerGlobalPlayerActi
     HorseDynamics.hooked = true
     PlayerInputComponent.registerGlobalPlayerActionEvents = Utils.appendedFunction(PlayerInputComponent.registerGlobalPlayerActionEvents, function()
         HorseDynamics.registerActionEvents()
+        HorseDynamics.registerRopeKeys()
     end)
 end
 function HorseDynamics.consoleFreeze()

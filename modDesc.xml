@@ -59,11 +59,28 @@ Single player only for now.
         <action name="HORSEDYN_CALL" axisType="HALF"/>
         <action name="HORSEDYN_RELEASE" axisType="HALF"/>
         <action name="HORSEDYN_FREEZE" axisType="HALF"/>
+        <action name="HORSEDYN_ROPE_LONGER" axisType="HALF"/>
+        <action name="HORSEDYN_ROPE_SHORTER" axisType="HALF"/>
     </actions>
 
-    <!-- no default keys: the tools are used with the mouse (their own action), the actions below can be bound in the settings; while a horse pulls something its keys are the pulled vehicle's (HorseHitch.keys) -->
+    <inputBinding>
+        <actionBinding action="HORSEDYN_ROPE_LONGER">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_m" axisComponent="+"/>
+        </actionBinding>
+        <actionBinding action="HORSEDYN_ROPE_SHORTER">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_lctrl KEY_k" axisComponent="+"/>
+        </actionBinding>
+    </inputBinding>
+
+    <!-- no default keys for the tools: they are used with the mouse (their own action), the call/release/freeze actions can be bound in the settings; while a horse pulls something its keys are the pulled vehicle's (HorseHitch.keys). Only the wire of a tied log has default keys: Ctrl+M lets wire out, Ctrl+K takes it in -->
 
     <l10n>
+        <text name="input_HORSEDYN_ROPE_LONGER">
+            <en>Let more wire out (a log tied to a horse)</en>
+        </text>
+        <text name="input_HORSEDYN_ROPE_SHORTER">
+            <en>Take wire in (a log tied to a horse)</en>
+        </text>
         <text name="warning_horseDynamicsHandToolOwned">
             <en>You already own this tool.</en>
             <de>Dieses Werkzeug besitzt du bereits.</de>
