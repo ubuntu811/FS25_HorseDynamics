@@ -184,6 +184,9 @@ function HorseHitch.registerKeys(vehicle)
 end
 
 function HorseHitch.keys(vehicle, on)
+    if vehicle.isLog then
+        return false                                                 -- (a log has no keys of its own)
+    end
     if on then
         HorseHitch.keyed[vehicle] = true
         return HorseHitch.registerKeys(vehicle)
@@ -365,6 +368,9 @@ function HorseHitch.release(ride, keepSupport)
     deletePieces(hitch)
     HorseHitch.keys(hitch.vehicle, false)
     local winch = winchApi()
+    if hitch.winchTarget ~= nil and winch ~= nil and winch.dropGrip ~= nil then
+        winch.dropGrip(hitch.winchTarget)                                    -- (a log: the grip node, the hook and the traffic group go with the hitch)
+    end
     if winch ~= nil and not hitch.vehicle.isDeleted then
         if winch.setBrakeOff ~= nil then
             winch.setBrakeOff(hitch, false)
@@ -412,6 +418,40 @@ function HorseHitch.click()
         return string.format("hitching the %s of %s: the rope pulls it in, then the game's joint takes over; the same click unhitches", target.kind, vehicleName(target.vehicle))
     end
     return string.format("hitched to the %s of %s: lead the horse on, the same key unhitches", target.kind, vehicleName(target.vehicle))
+end
+
+-- The leash has a log hooked (the winch) and you look at a harnessed horse: the log is handed to it, the horse pulls it. Returns a message, nil when this is none of its business.
+function HorseHitch.takeLog(winch)
+    local hooked = winch ~= nil and winch.target or nil
+    if hooked == nil or hooked.kind ~= "log" or winch.handOver == nil then
+        return nil
+    end
+    local px, _, pz = HorseLead.playerPosition()
+    if px == nil then
+        return nil
+    end
+    local ride = HorseLead.pickRide(px, pz, HorseLead.LEASH_REACH_M, function(r) return r.harness and r.rig ~= nil and r.vehicle ~= nil and r.hitch == nil and r.joined == nil end)
+    if ride == nil then
+        return nil
+    end
+    local target = winch.handOver()
+    if target == nil then
+        return nil
+    end
+    HorseHitch.hitch(ride, target)
+    ride.hitch.isLog, ride.hitch.winchTarget = true, target
+    return "the log is tied to the harness: lead the horse on, it pulls it; the leash (or the harness tool) lets it go"
+end
+
+-- A log on a horse is let go (the leash's click). Returns true when one was.
+function HorseHitch.releaseLogs()
+    local released = false
+    for _, ride in ipairs(HorseLead.rides) do
+        if ride.hitch ~= nil and ride.hitch.isLog and HorseHitch.release(ride) then
+            released = true
+        end
+    end
+    return released
 end
 
 -- The rope hitches; when the game's joint can take the vehicle, the rope hands it over once the eye is at the hook (update). Returns true when a handover is to come. (The saddle key and the harness click.)
@@ -620,6 +660,11 @@ function HorseHitch.update(ride, dt)
         print("[HorseDynamics] hitch: let go (the vehicle is gone)")
         return
     end
+    if hitch.isLog and (not entityExists(hitch.component) or getRigidBodyType(hitch.component) ~= RigidBodyType.DYNAMIC) then
+        HorseHitch.release(ride)
+        tell("the log was cut or belted: let go")
+        return
+    end
     -- the horse's own speed (smoothed): the vehicle is pulled at least that fast
     local px, _, pz = getWorldTranslation(ride.vehicle.rootNode)
     local seconds = math.max((dt or 16) / 1000, 0.001)
@@ -697,7 +742,7 @@ function HorseHitch.update(ride, dt)
             ref = hitch.component
         end
         local _, tipY, _ = localDirectionToWorld(ref, 0, 1, 0)
-        if tipY < HorseHitch.TIP_UP_MIN then
+        if tipY < HorseHitch.TIP_UP_MIN and not hitch.isLog then
             HorseHitch.release(ride)
             tell("the wagon tipped over: unhitched")
             return

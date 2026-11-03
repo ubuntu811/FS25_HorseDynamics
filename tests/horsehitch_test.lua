@@ -821,6 +821,49 @@ HorseHitch.SPEED_LIMITS = false
 -- release is quiet and safe on a ride without a hitch (HorseHarness.destroy calls it for every ride)
 check("release without a hitch: false, nothing happens", HorseHitch.release({}) == false)
 
+-- a log on the leash (the winch) and a harnessed horse in view: the horse pulls it
+do
+    local winchApiFake = g_currentMission.winchTow
+    local dropped = {}
+    local logTarget = { vehicle = { isLog = true, isDeleted = false, components = { { node = 300 } }, getName = function() return "a log" end }, node = 301, component = 300, kind = "log" }
+    nodes[300], nodes[301] = { 0, 0.3, -4 }, { 0, 0.3, -4 }
+    RigidBodyType = { DYNAMIC = 2, KINEMATIC = 3 }
+    local bodyType = 2
+    getRigidBodyType = function() return bodyType end
+    local logRide = { vehicle = { rootNode = 1 }, harness = true, harnessGear = "leather", rig = { hookNode = 2, hookRear = 3 } }
+    HorseLead.rides = { logRide }
+    local pickedRide = logRide
+    HorseLead.LEASH_REACH_M = 4
+    HorseLead.pickRide = function(px, pz, reach, filter) if pickedRide ~= nil and filter(pickedRide) then return pickedRide end end
+    winchApiFake.target = logTarget
+    winchApiFake.handOver = function() winchApiFake.target = nil; return logTarget end
+    winchApiFake.dropGrip = function(t) dropped[#dropped + 1] = t end
+    local message = HorseHitch.takeLog(winchApiFake)
+    check("a log on the leash and a harnessed horse looked at: the log is handed over and tied to the harness", message ~= nil and message:find("tied to the harness", 1, true) ~= nil and logRide.hitch ~= nil and logRide.hitch.isLog == true and logRide.hitch.component == 300 and winchApiFake.target == nil)
+    check("a log has no tow bar and no pieces, and keys it has none", logRide.hitch.barLength == 0 and #logRide.hitch.pieces == 0 and HorseHitch.keys(logTarget.vehicle, true) == false)
+    TILT[300] = 90                                                              -- (a log lies on its side: its up axis is horizontal)
+    HorseHitch.update(logRide, 16)
+    check("a log lying on its side is not 'tipped over': it stays hitched", logRide.hitch ~= nil)
+    bodyType = 3
+    HorseHitch.update(logRide, 16)
+    check("a log that got belted or cut is let go, and its grip with it", logRide.hitch == nil and dropped[1] == logTarget)
+    bodyType = 2
+    winchApiFake.target = logTarget
+    pickedRide = nil
+    check("no harnessed horse in view: the click is none of its business (the leash lets the log go)", HorseHitch.takeLog(winchApiFake) == nil and winchApiFake.target == logTarget)
+    winchApiFake.target = { vehicle = vehicle, node = 10, component = 100, kind = "drawbar eye" }
+    pickedRide = logRide
+    check("a joint on the winch is not a log: not handed over", HorseHitch.takeLog(winchApiFake) == nil)
+    winchApiFake.target = logTarget
+    winchApiFake.handOver = function() winchApiFake.target = nil; return logTarget end
+    pickedRide = logRide
+    HorseHitch.takeLog(winchApiFake)
+    check("the leash's click lets a log on a horse go", HorseHitch.releaseLogs() == true and logRide.hitch == nil and dropped[2] == logTarget)
+    check("... and with none hitched it says so by returning false", HorseHitch.releaseLogs() == false)
+    winchApiFake.target, winchApiFake.handOver, winchApiFake.dropGrip = nil, nil, nil
+    HorseLead.rides = { ride }
+end
+
 -- no winch mod: the click is none of its business
 g_currentMission.winchTow = nil
 check("without FS25_WinchTow the hitch does nothing (no pick)", HorseHitch.click() == nil)

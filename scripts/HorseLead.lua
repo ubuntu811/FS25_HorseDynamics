@@ -703,7 +703,15 @@ function HorseLead.leash(gear)
     -- the leash hooks the attacher joint you look at, a vehicle that then creeps after you at 2 km/h
     local winch = g_currentMission ~= nil and g_currentMission.winchTow or nil
     if winch ~= nil and winch.target ~= nil then
+        -- a log on the leash and a harnessed horse in view: the horse pulls it (HorseHitch.takeLog); else the click lets the log go
+        local handed = HorseHitch ~= nil and HorseHitch.takeLog ~= nil and HorseHitch.takeLog(winch) or nil
+        if handed ~= nil then
+            return handed
+        end
         return winch.toggle()
+    end
+    if HorseHitch ~= nil and HorseHitch.releaseLogs ~= nil and HorseHitch.releaseLogs() then
+        return "the log is let go"
     end
     if HorseLead.hasFlagged("leash") then
         local gate = HorseLead.gateAtPlayer()
