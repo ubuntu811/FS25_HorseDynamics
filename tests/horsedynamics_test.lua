@@ -1406,6 +1406,11 @@ do
     check("a horse 6 m away does not matter: a joint in view is for the winch", HorseLead.leash() == "hooked" and calls[2] == "toggle")
     calls = { pickResult = nil }
     check("no joint in view and a horse 6 m away: the leash says to walk up to a horse, as before", HorseLead.leash():find("no horse within 4 m", 1, true) ~= nil)
+    winch.pickLog = function() return calls.logResult end
+    HorseLead.nearestHorseDistance = function() return nil end
+    calls = { pickResult = nil, logResult = { kind = "log" } }
+    check("no joint but a log in view: the leash hooks the log too (no complaint about a horse)", HorseLead.leash() == "hooked" and calls[2] == "toggle")
+    winch.pickLog = nil
     HorseLead.nearestHorseDistance = function() return 2 end
     calls = { pickResult = { vehicle = {} } }
     check("a horse within reach wins over a joint in view: the horse is taken", HorseLead.leash() == "taken" and calls[1] == nil)
