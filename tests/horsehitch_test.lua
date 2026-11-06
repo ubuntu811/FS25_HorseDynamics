@@ -358,6 +358,14 @@ end
 -- the ring gate for the harness tool
 check("ring gate: a harnessed horse is there and not hitched: no, it is hitched already", HorseHitch.ringFree() == false)
 
+-- a wagon on the game's own joint (ride.joined, ride.hitch is nil then) counts as hitched for the ring too
+do
+    local savedHitch, savedJoined = ride.hitch, ride.joined
+    ride.hitch, ride.joined = nil, { vehicle = {}, target = {} }
+    check("ring gate: a horse on the game's own joint is hitched: no ring", HorseHitch.ringFree() == false)
+    ride.hitch, ride.joined = savedHitch, savedJoined
+end
+
 -- unhitch: the same key
 message = HorseHitch.click()
 check("the click with a hitched horse unhitches (and says so)", message ~= nil and message:find("unhitched", 1, true) ~= nil and ride.hitch == nil)

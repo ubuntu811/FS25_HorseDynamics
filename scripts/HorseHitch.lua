@@ -512,7 +512,7 @@ function HorseHitch.harnessHint()
     end
     local roped = false
     for _, ride in ipairs(HorseLead.rides) do
-        roped = roped or (ride.towRope and ride.harness and ride.hitch == nil)
+        roped = roped or (ride.towRope and ride.harness and ride.hitch == nil and ride.joined == nil)
     end
     if not roped then
         return nil
@@ -599,7 +599,7 @@ function HorseHitch.ringFree()
         return false
     end
     for _, ride in ipairs(HorseLead.rides) do
-        if ride.harness and ride.rig ~= nil and ride.vehicle ~= nil and ride.hitch == nil then
+        if ride.harness and ride.rig ~= nil and ride.vehicle ~= nil and ride.hitch == nil and ride.joined == nil then
             local hx, _, hz = getWorldTranslation(ride.vehicle.rootNode)
             if math.sqrt((hx - px) ^ 2 + (hz - pz) ^ 2) <= HorseHitch.REACH_M + 6 then
                 return true
