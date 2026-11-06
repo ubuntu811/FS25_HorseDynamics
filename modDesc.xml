@@ -24,6 +24,7 @@ Single player only for now.
         <sourceFile filename="scripts/HorseHitch.lua" />
         <sourceFile filename="scripts/HorseJoint.lua" />
         <sourceFile filename="scripts/HorseLead.lua" />
+        <sourceFile filename="scripts/HorseSave.lua" />
         <sourceFile filename="scripts/HorseDynamics.lua" />
         <sourceFile filename="scripts/UIHelper.lua" />
         <sourceFile filename="scripts/HorseSettings.lua" />

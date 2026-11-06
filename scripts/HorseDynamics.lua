@@ -175,6 +175,9 @@ end
 
 function HorseDynamics.update(_, dt)
     HorseLead.updateRide(dt)
+    if HorseSave ~= nil then
+        HorseSave.update(dt)
+    end
     HorseDynamics.reconcileHandTools()
 end
 
