@@ -24,9 +24,13 @@ function HorseSave.snapshot(rides, env)
         local vehicle = ride.vehicle
         local id = vehicle ~= nil and not vehicle.isDeleted and env.uniqueId(vehicle) or nil
         local halter = ride.halterOn or ride.leash
-        if id ~= nil and (ride.harness or halter or ride.hitch ~= nil) then
+        if id ~= nil and (ride.harness or halter or ride.hitch ~= nil or ride.joined ~= nil) then
             local record = { vehicle = id, harness = ride.harness and true or nil, gear = ride.harness and ride.harnessGear or nil, halter = halter and true or nil }
             local hitch = ride.hitch
+            local joined = ride.joined                         -- (a wagon on the game's own joint: ride.hitch is nil then, the joint's target says where it sits)
+            if hitch == nil and joined ~= nil and joined.target ~= nil then
+                hitch = { vehicle = joined.vehicle, node = joined.target.node, kind = joined.target.kind }
+            end
             if hitch ~= nil and not hitch.isLog and hitch.vehicle ~= nil then
                 local target = env.uniqueId(hitch.vehicle)
                 local index = env.jointIndex(hitch)

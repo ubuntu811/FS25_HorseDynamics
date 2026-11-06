@@ -24,6 +24,7 @@ local records = HorseSave.snapshot(rides, env)
 check("three horses worth saving, the bare one and the vehicle-less one are not", #records == 3)
 check("harness, gear and hitch of the first", records[1].vehicle == "h1" and records[1].harness and records[1].gear == "leather" and records[1].hitch.vehicle == "wagon" and records[1].hitch.index == 2 and records[1].hitch.kind == "drawbar eye")
 check("a leashed horse comes back with the halter on, no harness", records[2].halter == true and records[2].harness == nil and records[2].hitch == nil)
+check("a wagon on the game's own joint (ride.joined) is saved too", (function() local r = HorseSave.snapshot({ { vehicle = horse1, harness = true, joined = { vehicle = wagon, target = { node = "eye", kind = "drawbar eye" } } } }, env)[1]; return r.hitch ~= nil and r.hitch.vehicle == "wagon" and r.hitch.index == 2 and r.hitch.kind == "drawbar eye" end)())
 check("a hitched log is not saved", records[3].hitch == nil and records[3].harness == true)
 local deleted = vehicle("gone"); deleted.isDeleted = true
 check("a deleted vehicle is skipped", #HorseSave.snapshot({ { vehicle = deleted, harness = true } }, env) == 0)
