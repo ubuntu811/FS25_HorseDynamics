@@ -58,9 +58,49 @@ function HorseGate.nearest(px, pz)
     return found, foundDistance
 end
 
--- Toggles the nearest gate within reach. Returns a message, or nil when there is no gate in reach.
-function HorseGate.toggleNearest(px, pz)
-    local leaves = HorseGate.nearest(px, pz)
+-- The gate the player looks at: the gates within REACH_M of the player whose door, hinge or trigger the view ray passes within LOOK_RADIUS_M of (aiming at the middle of the leaf, LOOK_HEIGHT_M above the
+-- ground point of a node), the one met first along the ray. Returns leaves, how far along the ray. With no ray (LOOK off, no camera) it is the nearest gate, as before. nil when there is none.
+HorseGate.LOOK_RADIUS_M = 1.8
+HorseGate.LOOK_HEIGHT_M = 0.6
+HorseGate.LOOK_REACH_M = 8
+function HorseGate.looked(px, pz, ray)
+    if ray == nil then
+        return HorseGate.nearest(px, pz)
+    end
+    local found, foundT = nil, HorseGate.LOOK_REACH_M
+    for _, leaves in ipairs(HorseGate.gates()) do
+        if HorseGate.distance(leaves, px, pz) <= HorseGate.REACH_M then
+            local function consider(node)
+                if node == nil then
+                    return
+                end
+                local x, y, z = getWorldTranslation(node)
+                local vx, vy, vz = x - ray[1], y + HorseGate.LOOK_HEIGHT_M - ray[2], z - ray[3]
+                local t = vx * ray[4] + vy * ray[5] + vz * ray[6]
+                if t >= 0 and t < foundT then
+                    local qx, qy, qz = vx - ray[4] * t, vy - ray[5] * t, vz - ray[6] * t
+                    if math.sqrt(qx * qx + qy * qy + qz * qz) <= HorseGate.LOOK_RADIUS_M then
+                        found, foundT = leaves, t
+                    end
+                end
+            end
+            for _, leaf in ipairs(leaves) do
+                consider(leaf.triggerNode)
+                for _, part in pairs(leaf.animation ~= nil and leaf.animation.parts or {}) do
+                    consider(part.node)
+                end
+            end
+        end
+    end
+    if found == nil then
+        return nil
+    end
+    return found, foundT
+end
+
+-- Toggles the gate looked at (see looked). Returns a message, or nil when there is none.
+function HorseGate.toggleNearest(px, pz, ray)
+    local leaves = HorseGate.looked(px, pz, ray)
     if leaves == nil then
         return nil
     end

@@ -470,7 +470,7 @@ function HorseLead.gateAtPlayer()
     if px == nil then
         return nil
     end
-    return HorseGate.toggleNearest(px, pz)
+    return HorseGate.toggleNearest(px, pz, HorseLead.viewRay())
 end
 
 -- How far the horse is that "start" would take: a loose horse vehicle or a horse of a pasture, whichever is nearer. nil when there is none.
@@ -681,7 +681,7 @@ end
 
 HorseLead.playerPosition = playerPosition          -- (for HorseHitch: on foot the player, on a horse the horse)
 
--- Whether a click of the leash would go to the winch: no horse on the rope, none in reach, no gate nearer (the green ring of the winch shows only then).
+-- Whether a click of the leash would go to the winch: no horse on the rope, none in reach, no gate looked at (the green ring of the winch shows only then).
 function HorseLead.winchFree()
     if HorseLead.hasFlagged("leash") then
         return false
@@ -692,7 +692,7 @@ function HorseLead.winchFree()
     end
     local horseDistance = HorseLead.nearestHorseDistance(px, pz)
     if HorseGate ~= nil then
-        local leaves, gateDistance = HorseGate.nearest(px, pz)
+        local leaves, gateDistance = HorseGate.looked(px, pz, HorseLead.viewRay())
         if leaves ~= nil and (horseDistance == nil or gateDistance < horseDistance) then
             return false
         end
@@ -701,8 +701,8 @@ function HorseLead.winchFree()
 end
 
 -- The leash, as a switch: takes the nearest horse (a pasture horse, or one that stands loose), or lets the leashed ones go when there are some. Returns a message.
--- A fence gate in reach is for the gate: with horses on the rope the click opens or closes it instead of letting them go (walk on a few metres to let a horse go), and with no horse on the rope it does the
--- same when the gate is nearer than the horse the click would take (a horse right beside you still wins), so a gate can be dealt with without putting the tool away and finding its own trigger.
+-- A fence gate looked at (in reach, the view ray on its door) is for the gate: with horses on the rope the click opens or closes it instead of letting them go (look away from it to let a horse go), and with no horse on the rope it does the
+-- same when the gate is nearer along the ray than the horse the click would take (a horse you look at in front of it wins; with no camera ray the nearest gate counts as it did), so a gate can be dealt with without putting the tool away and finding its own trigger.
 function HorseLead.leash(gear)
     -- an easter egg: the winch of FS25_WinchTow (published on g_currentMission.winchTow, mod globals are invisible between mods). A hooked vehicle is let go first (the same key); with no horse in reach
     -- the leash hooks the attacher joint you look at, a vehicle that then creeps after you at 2 km/h
@@ -740,7 +740,7 @@ function HorseLead.leash(gear)
         end
     end
     if HorseGate ~= nil and px ~= nil then
-        local leaves, gateDistance = HorseGate.nearest(px, pz)
+        local leaves, gateDistance = HorseGate.looked(px, pz, HorseLead.viewRay())
         if leaves ~= nil then
             local horseDistance = HorseLead.nearestHorseDistance(px, pz)
             if horseDistance == nil or gateDistance < horseDistance then
