@@ -80,7 +80,7 @@ def main(src, dst, age=0.0):
     tree.write(os.path.join(dst, "horseFoal.i3d"), encoding="iso-8859-1", xml_declaration=True)
     for ext in (".shapes", ".anim"):
         shutil.copy(os.path.join(src, "horse.i3d" + ext), os.path.join(dst, "horseFoal.i3d" + ext))
-    x = open(os.path.join(dst, "horseFoal.i3d"), encoding="iso-8859-1").read().replace('externalAnimFile="horse.i3d.anim"', 'externalAnimFile="horseFoal.i3d.anim"')
+    x = open(os.path.join(dst, "horseFoal.i3d"), encoding="iso-8859-1").read().replace('externalAnimFile="horse.i3d.anim"', 'externalAnimFile="horseFoal.i3d.anim"').replace('externalShapesFile="horse.i3d.shapes"', 'externalShapesFile="horseFoal.i3d.shapes"')
     open(os.path.join(dst, "horseFoal.i3d"), "w", encoding="iso-8859-1").write(x)
 
 if __name__ == "__main__":
