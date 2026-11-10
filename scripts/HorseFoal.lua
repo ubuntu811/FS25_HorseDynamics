@@ -1,4 +1,4 @@
--- Foals in the game: horses under HorseFoal.ADULT_AGE months use the baked foal model (animal dealer, pastures, riding); older ones the normal horse.
+-- Foals in the game: horses under HorseFoal.ADULT_AGE months use the baked foal model (animal dealer, pastures); they cannot be ridden; older ones the normal horse.
 HorseFoal = {}
 HorseFoal.dir = g_currentModDirectory
 HorseFoal.ADULT_AGE = 24            -- months: from here on the game's own horse is shown
@@ -73,11 +73,11 @@ function HorseFoal.patchVisuals(animalSystem)
     Logging.info("[HorseFoal] %d horse subtypes: foal visual from 0 months, adult from %d months", n, HorseFoal.ADULT_AGE)
 end
 
--- riding a young horse spawns the foal vehicle
+-- a foal cannot be ridden: no rideable vehicle for horses under ADULT_AGE (that removes the ride prompt, trailer unloading as a vehicle and the exercise check)
 function HorseFoal.getRidableFilename(cluster, superFunc)
     local filename = superFunc(cluster)
     if filename ~= nil and cluster.age ~= nil and cluster.age < HorseFoal.ADULT_AGE and string.find(filename, "horse/horse.xml", 1, true) ~= nil then
-        return HorseFoal.dir .. "horseFoal.xml"
+        return nil
     end
     return filename
 end
