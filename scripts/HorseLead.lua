@@ -1079,6 +1079,17 @@ function HorseLead.stepRide(ride, dt)
     local vehicle = ride.vehicle
     local spec = vehicle.spec_rideable
     local px, _, pz = playerPosition()
+    -- a horse tied to a hitching post follows the RING, not the player: it walks up to the post and stands there with the rope slack (HorseTie)
+    local tied = ride.tied ~= nil
+    if tied and HorseTie ~= nil then
+        local ring = HorseTie.sourceOf(ride)
+        if ring ~= nil then
+            local rx, _, rz = getWorldTranslation(ring)
+            px, pz = rx, rz
+        else
+            tied = false
+        end
+    end
     if not vehicle.isDeleted and HorseLead.isTakenOver(vehicle) then
         HorseLead.unclaimVehicle(vehicle)
         if ride.harness then
@@ -1127,7 +1138,7 @@ function HorseLead.stepRide(ride, dt)
     -- at a stable with the player: given back (the game's own check then puts it into that stable, a different one from its own too, and deletes the vehicle). Only for the carrot's horses: a horse on
     -- the leash is held by the player until he lets go (walking it through a pasture's gate must not take it away from him).
     ride.stableMs = (ride.stableMs or 0) + dt
-    if ride.stableMs >= HorseLead.RIDE_STABLE_CHECK_MS and not ride.leash then
+    if ride.stableMs >= HorseLead.RIDE_STABLE_CHECK_MS and not ride.leash and not tied then
         ride.stableMs = 0
         local system = g_currentMission ~= nil and g_currentMission.husbandrySystem or nil
         if system ~= nil and system.getHusbandryInRideableRange ~= nil then
@@ -1146,8 +1157,10 @@ function HorseLead.stepRide(ride, dt)
     local mounted = playerVehicle() ~= nil
     local arriveM = mounted and HorseLead.RIDE_ARRIVE_MOUNTED_M or HorseLead.RIDE_ARRIVE_M
     local keepUpM = mounted and HorseLead.RIDE_KEEP_UP_MOUNTED_M or HorseLead.RIDE_KEEP_UP_M
-    local leash = ride.leash == true
-    if leash and not mounted then
+    local leash = ride.leash == true or tied
+    if tied then
+        arriveM = HorseTie.STAND_M
+    elseif leash and not mounted then
         arriveM = HorseLead.RIDE_ARRIVE_LEASH_M
     elseif not mounted then
         ride.arriveExtra = ride.arriveExtra or HorseLead.random({ 0, HorseLead.RIDE_ARRIVE_SPREAD_M })
@@ -1172,6 +1185,9 @@ function HorseLead.stepRide(ride, dt)
         if api ~= nil and api.isFoal ~= nil and api.isFoal(vehicle) then
             backs, backM, backEndM = true, HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_M, HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_END_M
         end
+    end
+    if tied then
+        backs = false                                      -- (nobody walks into a horse at a post: it walks to the ring)
     end
     if backs then
         local inFront = math.abs(diff) < HorseLead.RIDE_BACKOFF_CONE
@@ -1208,6 +1224,9 @@ function HorseLead.stepRide(ride, dt)
         gait = gaits.STILL
     else
         gait = HorseLead.rideGait(gait, d, leash and HorseLead.RIDE_GAITS_LEASH or nil, leash and HorseLead.RIDE_GAIT_MARGIN_LEASH_M or nil, spec.topSpeeds)
+        if tied then
+            gait = gaits.WALK                                  -- (a tied horse that walks to its post walks, whatever the distance)
+        end
         if goingRound and gait == gaits.GALLOP then
             gait = gaits.TROT                                  -- (no gallop along a wagon: that is how it bumped into it)
         end

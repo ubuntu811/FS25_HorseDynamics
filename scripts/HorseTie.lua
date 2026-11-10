@@ -10,7 +10,8 @@ HorseTie.XML_NAME = "hitchingpost.xml"
 HorseTie.NODE_NAMES = { "tie1", "tie2" }
 HorseTie.REACH_M = 4.5          -- the player must stand within this of the ring
 HorseTie.LOOK_RADIUS_M = 0.6    -- the view ray may miss the ring by this
-HorseTie.HORSE_REACH_M = 4.0    -- the horse's head may be this far from the ring (the rope is about 3 m with a little slack)
+HorseTie.HORSE_REACH_M = 14     -- a leashed horse this close is tied: it walks to the post by itself
+HorseTie.STAND_M = 2.8          -- it stops this far from the ring (root distance: the nose is then about 1.6 m from it, the rope of about 3 m hangs slack)
 
 local function say(format, ...)
     print(string.format("[HorseDynamics] tie: " .. format, ...))
@@ -122,7 +123,7 @@ function HorseTie.click(gear)
     end
     local holder = HorseTie.tiedAt(ring.node)
     if holder ~= nil then
-        holder.tied, holder.stay, holder.leash = nil, nil, true
+        holder.tied, holder.stay, holder.leash = nil, nil, true      -- (it follows the player again)
         holder.halterGear = holder.halter ~= nil and holder.halterGear or gear
         say("untied from ring %d", ring.index)
         return "untied: the horse follows you again"
@@ -135,14 +136,14 @@ function HorseTie.click(gear)
     local hx, _, hz = getWorldTranslation(ride.vehicle.rootNode)
     local d = math.sqrt((hx - rx) ^ 2 + (hz - rz) ^ 2)
     if d > HorseTie.HORSE_REACH_M then
-        return string.format("the horse is %.0f m from the ring: lead it closer (the rope is about 3 m)", d)
+        return string.format("the horse is %.0f m from the ring: lead it closer", d)
     end
     ride.leash, ride.carrot, ride.halterOn, ride.towRope = nil, nil, nil, nil
-    ride.stay = true
+    ride.stay = nil
     ride.tied = { node = ring.node, placeable = ring.placeable }
     ride.halterGear = ride.halter ~= nil and ride.halterGear or gear
-    say("a horse tied to ring %d (%.1f m away)", ring.index, d)
-    return "tied: the horse stands at the hitching post (the leash on the ring unties it)"
+    say("a horse tied to ring %d (%.1f m away): it walks up to the post", ring.index, d)
+    return "tied: the horse walks to the hitching post and stands there (click the ring again to untie it)"
 end
 
 -- The rope's start for a tied ride: its ring node, or nil when the ring is gone (the post was sold: the horse is let go of the post, it stands there with its halter on).
@@ -152,7 +153,7 @@ function HorseTie.sourceOf(ride)
         return nil
     end
     if tied.node == nil or (entityExists ~= nil and not entityExists(tied.node)) then
-        ride.tied, ride.halterOn = nil, true
+        ride.tied, ride.halterOn, ride.stay = nil, true, true
         say("the post is gone: the horse is let go of it")
         return nil
     end
