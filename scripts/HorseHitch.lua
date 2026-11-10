@@ -1407,6 +1407,29 @@ function HorseHitch.updateSaddle()
             ride.saddleRequested, ride.saddleAskedAt, ride.staleCount = nil, nil, nil          -- (the next time it is mounted the events are requested again)
         end
     end
+    HorseHitch.silenceAttachKey()
+end
+
+-- The horse vehicle has the game's AttacherJoints (HorseJoint adds it for the harness hitch), and that shows "Attach tool" whenever an implement is in reach, harness or not. On the horse the player
+-- rides it is only for a horse in its harness (handled above): on any other it is switched off, so no key is offered that does nothing.
+function HorseHitch.silenceAttachKey()
+    local player = g_localPlayer
+    local ok, vehicle = pcall(function() return player ~= nil and player.getCurrentVehicle ~= nil and player:getCurrentVehicle() or nil end)
+    if not ok or vehicle == nil or vehicle.spec_rideable == nil or vehicle.spec_attacherJoints == nil then
+        return
+    end
+    for _, ride in ipairs(HorseLead.rides) do
+        if ride.vehicle == vehicle and ride.ridden and ride.harness and ride.rig ~= nil then
+            return                                                   -- (a horse in its harness: the key is its own, handled above)
+        end
+    end
+    local entry = HorseHitch.gameEvent(vehicle)
+    if entry ~= nil then
+        pcall(g_inputBinding.setActionEventActive, g_inputBinding, entry.id, false)
+        if g_inputBinding.setActionEventTextVisibility ~= nil then
+            pcall(g_inputBinding.setActionEventTextVisibility, g_inputBinding, entry.id, false)
+        end
+    end
 end
 
 -- The player is led by the load too: while a horse pulls something, the player's speed is capped (walking and running: FS25_WinchTow's speed cap on the walk state) at the speed the winch gives a load of that
