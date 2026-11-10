@@ -1332,8 +1332,57 @@ function HorseLead.ropeSource()
     return HorseRope.anchorOn(g_localPlayer.rootNode, 0, 1.1, 0)
 end
 
+-- Getting off a horse puts the leash in the hand (HorseSettings leashAfterRide, on by default): the rider is most likely to lead the horse next, and the click lets it go again. Waits a moment after the
+-- dismount (the game puts the hands back when the player is shown again), and does nothing when something else is already held or no leash is owned.
+HorseLead.LEASH_AFTER_DISMOUNT_MS = 700
+function HorseLead.watchDismount(dt)
+    local vehicle = playerVehicle()
+    local onHorse = vehicle ~= nil and vehicle.spec_rideable ~= nil
+    if HorseLead.wasOnHorse and vehicle == nil then
+        HorseLead.leashIn = HorseLead.LEASH_AFTER_DISMOUNT_MS
+    end
+    HorseLead.wasOnHorse = onHorse
+    if HorseLead.leashIn ~= nil then
+        if vehicle ~= nil then
+            HorseLead.leashIn = nil
+        else
+            HorseLead.leashIn = HorseLead.leashIn - dt
+            if HorseLead.leashIn <= 0 then
+                HorseLead.leashIn = nil
+                HorseLead.takeLeash()
+            end
+        end
+    end
+end
+
+function HorseLead.takeLeash()
+    if HorseSettings ~= nil and HorseSettings.config ~= nil and HorseSettings.config.leashAfterRide == false then
+        return
+    end
+    local player = g_localPlayer
+    if player == nil or player.carriedHandTools == nil or player.setCurrentHandTool == nil or HandToolHorseLeash == nil then
+        return
+    end
+    if player.currentHandTool ~= nil and player.currentHandTool ~= player.hands then
+        return                                                   -- (something is already in the hand)
+    end
+    local best = nil
+    for _, tool in ipairs(player.carriedHandTools) do
+        if tool[HandToolHorseLeash.SPEC_TABLE_NAME] ~= nil then
+            local leather = tool.configFileName ~= nil and string.find(string.lower(tool.configFileName), "leather", 1, true) ~= nil
+            if best == nil or leather then
+                best = tool                                      -- (the leather one when both are owned)
+            end
+        end
+    end
+    if best ~= nil and pcall(player.setCurrentHandTool, player, best) then
+        say("ride: you got off: the leash is in your hand")
+    end
+end
+
 function HorseLead.updateRide(dt)
     HorseLead.watchRidden(dt)
+    HorseLead.watchDismount(dt)
     if #HorseLead.rides == 0 then
         HorseLead.frozen = false                    -- (a horse led later is not born frozen)
     end

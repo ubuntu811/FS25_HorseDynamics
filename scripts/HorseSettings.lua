@@ -3,11 +3,12 @@
     each can be switched off. Saved in modSettings/FS25_HorseDynamics/config.xml, applied to the HorseHitch flags at load and on every change.
       gallopLimit  HorseHitch.GALLOP_LIMIT   a horse that pulls never gallops
       playerCap    HorseHitch.PLAYER_CAP     the load slows you down (walk and run), and the string with you
+      leashAfterRide  (no HorseHitch flag) the leash tool goes into your hand when you get off a horse
       pullLimit    HorseHitch.SPEED_LIMITS   a horse is no tractor: its pull is limited (a heavy load hardly gets going), and the same three limits are on
 ]]
 HorseSettings = {}
-HorseSettings.DEFAULTS = { gallopLimit = true, playerCap = true, pullLimit = false }
-HorseSettings.ORDER = { "gallopLimit", "playerCap", "pullLimit" }
+HorseSettings.DEFAULTS = { gallopLimit = true, playerCap = true, pullLimit = false, leashAfterRide = true }
+HorseSettings.ORDER = { "gallopLimit", "playerCap", "pullLimit", "leashAfterRide" }
 HorseSettings.FLAGS = { gallopLimit = "GALLOP_LIMIT", playerCap = "PLAYER_CAP", pullLimit = "SPEED_LIMITS" }
 HorseSettings.config = {}
 for name, value in pairs(HorseSettings.DEFAULTS) do

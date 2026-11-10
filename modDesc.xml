@@ -137,6 +137,12 @@ Single player only for now.
         <text name="hd_playerCap_info">
             <en>While a horse pulls something, your walking and running speed is held to what the horse itself can do (a pulling horse trots at most): you do not outrun it, and the load behind it costs you nothing more. Off: no cap.</en>
         </text>
+        <text name="hd_leashAfterRide_title">
+            <en>Leash in hand after dismounting</en>
+        </text>
+        <text name="hd_leashAfterRide_info">
+            <en>When you get off a horse, the leash tool (if you own it) goes into your hand: lead the horse, a click lets it go. Off: the hands stay empty.</en>
+        </text>
         <text name="hd_pullLimit_title">
             <en>A horse is no tractor</en>
         </text>
