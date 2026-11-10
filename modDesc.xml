@@ -36,6 +36,10 @@ Single player only for now.
     </extraSourceFiles>
 
     <!-- two hand tools in the shop's "animals" hand tool category (the one the game's own horse brush is in) -->
+    <!-- a shop category of our own in the vehicles' Animals section: the horse things that are vehicles (the sulky for now) -->
+    <storeCategories>
+        <storeCategory name="horses" title="$l10n_category_horses" image="vehicles/horseSulky/store_horseSulky.dds" type="ANIMALS"/>
+    </storeCategories>
     <storeItems>
         <storeItem xmlFilename="handTools/carrot/carrot.xml"/>
         <storeItem xmlFilename="handTools/leash/leash.xml"/>
@@ -134,6 +138,10 @@ Single player only for now.
         <text name="action_horseLeash">
             <en>Leash the nearest horse / let it go</en>
             <de>Nächstes Pferd anleinen / freilassen</de>
+        </text>
+        <text name="category_horses">
+            <en>Horses</en>
+            <de>Pferde</de>
         </text>
         <text name="configuration_horseBallWeight">
             <en>Weight</en>
