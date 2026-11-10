@@ -7,7 +7,7 @@
             <en>Horse jump: cross-pole</en>
         </name>
         <functions>
-            <function>A low cross-pole jump (bar at 55 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over.</function>
+            <function>A low cross-pole jump (bar at 50 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over.</function>
         </functions>
         <image>vehicles/horseJumps/store_jumpCross.dds</image>
         <price>90</price>
@@ -32,7 +32,7 @@
     <base>
         <typeDesc>Horse jump</typeDesc>
         <filename>vehicles/horseJumps/jumpCross.i3d</filename>
-        <size width="3.2" length="1.0" height="0.7" />
+        <size width="3.2" length="1.0" height="0.8" />
         <canBeReset>true</canBeReset>
         <components maxMass="200">
             <component centerOfMass="0 0.25 0" solverIterationCount="10" mass="12"/>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Two horse jumps as shop vehicles (dynamic objects like the horse ball and the game's pallets: bought in the shop, picked up with the hands, set down anywhere, knocked over by a horse):
-  jumpCross      a low cross-pole: two white X stands, a bar in green and white (the bar 55 cm up), 12 kg
+  jumpCross      a low cross-pole: two white X stands (in the plane across the bar), a bar in green and white (the bar 50 cm up), 12 kg
   jumpStandards  a jump with two posts on cross feet, pins every 30 cm, a red and natural bar on the pin at 90 cm, 15 kg
   python3 tools/make_horse_jumps.py [out dir]      -> vehicles/horseJumps/<name>.i3d, .i3d.shapes, .xml (the vehicle xml)
 A jump is not one convex shape, so its body is a compound: the first collision box is the root shape, the others are compoundChild shapes (as in the game's pallets); each has its own cooked convex hull
@@ -19,6 +19,20 @@ def rot_z(m, start, angle, pivot):
         x, y, z = m.p[i]; x -= pivot[0]; y -= pivot[1]
         m.p[i] = (pivot[0] + x * c - y * s, pivot[1] + x * s + y * c, z)
         nx, ny, nz = m.n[i]; m.n[i] = (nx * c - ny * s, nx * s + ny * c, nz)
+
+def rot_x(m, start, angle, pivot):
+    """Turns the vertices (and normals) added since index `start` round the x axis through pivot = (py, pz)."""
+    c, s = math.cos(angle), math.sin(angle)
+    for i in range(start, len(m.p)):
+        x, y, z = m.p[i]; y -= pivot[0]; z -= pivot[1]
+        m.p[i] = (x, pivot[0] + y * c - z * s, pivot[1] + y * s + z * c)
+        nx, ny, nz = m.n[i]; m.n[i] = (nx, ny * c - nz * s, ny * s + nz * c)
+
+def board_x(m, cx, cy, cz, length, width, thick, angle):
+    """A board whose long side is vertical, its flat face looking along the bar (x), turned by `angle` round x about its centre: one arm of an X stand in the y-z plane."""
+    start = len(m.p)
+    H.box(m, cx, cy, cz, thick / 2, length / 2, width / 2)
+    rot_x(m, start, angle, (cy, cz))
 
 def board(m, cx, cy, cz, length, width, thick, angle):
     """A board whose long side is vertical (y) turned by `angle` round z about its centre."""
@@ -64,16 +78,17 @@ def shapes_of(name, white, a, b, boxes):
     return ents
 
 def jump_cross():
+    """Two X stands (in the y-z plane: the X faces along the bar), the bar resting in the V at the top of each: with an arm tilt of 32 degrees a bar of radius 3.5 cm sits 6.6 cm above the crossing."""
     white, a, b, col = H.Mesh(), H.Mesh(), H.Mesh(), []
     for sx in (-1, 1):
         x = sx * 1.1
-        board(white, x, 0.34, -0.012, 0.76, 0.10, 0.045, math.radians(32))
-        board(white, x, 0.34, 0.012, 0.76, 0.10, 0.045, math.radians(-32))
-        H.box(white, x, 0.03, 0, 0.05, 0.03, 0.40)                # the foot, along z
-        col.append(((x, 0.03, 0), (0.05, 0.03, 0.40)))              # (collision boxes: the foot, the X as one thin box)
-        col.append(((x, 0.36, 0), (0.30, 0.30, 0.05)))
-    bar([a, b], -1.3, 1.3, 0.55, 0.0, 0.035, 0.26)
-    col.append(((0, 0.55, 0), (1.3, 0.035, 0.035)))
+        board_x(white, x - 0.012, 0.43, 0, 0.80, 0.10, 0.045, math.radians(32))
+        board_x(white, x + 0.012, 0.43, 0, 0.80, 0.10, 0.045, math.radians(-32))
+        H.box(white, x, 0.03, 0, 0.06, 0.03, 0.40)                # the base plank, along z, under the lower arms
+        col.append(((x, 0.03, 0), (0.06, 0.03, 0.40)))            # (collision boxes: the base, the X as one thin box)
+        col.append(((x, 0.43, 0), (0.05, 0.32, 0.27)))
+    bar([a, b], -1.3, 1.3, 0.43 + 0.066, 0.0, 0.035, 0.26)
+    col.append(((0, 0.50, 0), (1.3, 0.035, 0.035)))
     return shapes_of("jumpCross", white, a, b, col)
 
 def jump_standards():
@@ -98,7 +113,7 @@ MATERIALS = {
 }
 
 VEHICLE = {   # name: (store name, price, mass kg, centre of mass y, width, depth, height, text)
-    "jumpCross": ("Horse jump: cross-pole", 90, 12.0, 0.25, 3.2, 1.0, 0.7, "A low cross-pole jump (bar at 55 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over."),
+    "jumpCross": ("Horse jump: cross-pole", 90, 12.0, 0.25, 3.2, 1.0, 0.8, "A low cross-pole jump (bar at 50 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over."),
     "jumpStandards": ("Horse jump: standards", 120, 15.0, 0.5, 3.2, 1.0, 1.4, "A jump on two posts with pins every 30 cm (bar at 90 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over."),
 }
 

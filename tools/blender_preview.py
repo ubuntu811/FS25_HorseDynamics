@@ -8,9 +8,9 @@ for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
 before = set(bpy.data.objects)
 bpy.ops.import_scene.fs25_i3d(filepath=model)
 objs = [o for o in bpy.data.objects if o not in before]
-meshes = [o for o in objs if o.type == "MESH" and not (o.name.endswith(":col") or "main_component1" in o.name)]
+meshes = [o for o in objs if o.type == "MESH" and not (o.name.endswith(":col") or "main_component1" in o.name or "_col" in o.name)]
 for o in objs:
-    if o.type == "MESH" and (o.name.endswith(":col") or "main_component1" in o.name): o.hide_render = True; o.hide_set(True)
+    if o.type == "MESH" and (o.name.endswith(":col") or "main_component1" in o.name or "_col" in o.name): o.hide_render = True; o.hide_set(True)
     if o.type in ("CAMERA", "LIGHT"): o.hide_render = True
 print("meshes", [(o.name, len(o.data.vertices), [m.name if m else None for m in o.data.materials]) for o in meshes])
 import re as _re
