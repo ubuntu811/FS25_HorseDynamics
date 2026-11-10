@@ -110,8 +110,10 @@ function applySocket(P, pos, jointsNow, jointsBase) {
   });
   const R = P.socket, r0 = R * 0.35, up = headLine.up, E = headLine.E, p0 = mesh.body.pos0;
   const sOf = (x, y, z) => (x - E[0]) * up[0] + (y - E[1]) * up[1] + (z - E[2]) * up[2];
+  const RS = R * 1.7;                                                       // the relaxing reaches past the push, so its outer fold dissolves
   for (const e of socket.list) {
-    if (e.d >= R) continue;
+    if (e.d >= RS) continue;
+    if (e.d >= R) { if (!e.lid) { const u = 1 - (e.d - R) / (RS - R); const w = u * u * (3 - 2 * u) * 0.6 * e.hw0; if (w > sockW[e.v]) sockW[e.v] = w; } continue; }
     if (e.sa === undefined) { const c = socket.cen[e.side]; e.sa = sOf(p0[e.v*3], p0[e.v*3+1], p0[e.v*3+2]) - sOf(c[0], c[1], c[2]); }
     let t = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); t = t * t * (3 - 2 * t);
     let fa = 1; if (e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }   // the forehead line above the brow stays put
@@ -127,7 +129,7 @@ function relaxSocket(pos, amount) {
   const { dups, ids, lists, canon } = sockNb, n = ids.length, w = new Float32Array(n), tmp = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { let m = 0; for (const v of dups.get(ids[i])) if (sockW[v] > m) m = sockW[v]; w[i] = Math.min(1, m * 2.5) * amount; }
   const at = new Map(); ids.forEach((c, i) => at.set(c, i));
-  for (let it = 0; it < 3; it++) {
+  for (let it = 0; it < 6; it++) {
     for (let i = 0; i < n; i++) {
       const c = ids[i], nbs = lists[i], l = w[i];
       let x = pos[c*3], y = pos[c*3+1], z = pos[c*3+2];
@@ -287,6 +289,10 @@ function skinMatrices(P, clip, key) {
       if (t) L = preRotZ(L, rad(t));
       if (P.ear_fwd) L = mul(Tm(0, P.ear_fwd, 0), L);
       if (P.ear_in) L = mul(Tm(0, 0, name.endsWith('_R') ? P.ear_in : -P.ear_in), L);
+    }
+    if (name.startsWith('lid') && Math.abs(ringGrow(P) - 1) > 1e-3) {      // the lid ring grows about the eyeball centre, not about its own pivot
+      const e = restLocal[idxOf['Eye_' + (name.endsWith('_R') ? 'R' : 'L')]], g = ringGrow(P);
+      L = L.slice(); L[3] = e[3] + (L[3] - e[3]) * g; L[7] = e[7] + (L[7] - e[7]) * g; L[11] = e[11] + (L[11] - e[11]) * g;
     }
     if (name.startsWith('Eye_') || name.startsWith('lid')) {
       if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
