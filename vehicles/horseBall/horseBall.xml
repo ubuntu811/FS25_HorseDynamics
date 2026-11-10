@@ -63,7 +63,7 @@
         <components maxMass="50">
             <component centerOfMass="0 0.45 0" solverIterationCount="10" mass="3"/>
         </components>
-        <showInVehicleMenu>false</showInVehicleMenu>
+        <showInVehicleMenu>true</showInVehicleMenu>
         <mapHotspot available="false" />
         <input allowed="false"/>
     </base>
