@@ -65,10 +65,10 @@ const headIdx = [];                              // body vertices that mostly fo
 const socket = (() => {
   const b = mesh.body, isUnder = i => { for (let a = i; a >= 0; a = nodes[a].parent) if (a === idxOf.Head_M) return true; return false; };
   const head = nodes.map((n, i) => isUnder(i)), eyeLid = nodes.map(n => n.name.startsWith('Eye_') || n.name.startsWith('lid'));
-  const cen = {};
+  const cen = {}, ball = {};
   ['R', 'L'].forEach(sd => {
-    const e = idxOf['Eye_' + sd], c = [0, 0, 0]; let n = 0;
-    for (let v = 0; v < b.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (b.jn[v*4+k] === e) w += b.wt[v*4+k]; if (w > 0.5) { for (let a = 0; a < 3; a++) c[a] += b.pos0[v*3+a]; n++; } }
+    const e = idxOf['Eye_' + sd], c = [0, 0, 0]; let n = 0; ball[sd] = [];
+    for (let v = 0; v < b.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (b.jn[v*4+k] === e) w += b.wt[v*4+k]; if (w > 0.5) { ball[sd].push(v); for (let a = 0; a < 3; a++) c[a] += b.pos0[v*3+a]; n++; } }
     cen[sd] = c.map(x => x / n);
   });
   const list = [];                                // vertices within the widest reach (0.2 m) of an eye
@@ -81,7 +81,7 @@ const socket = (() => {
       if (d < 0.2) list.push({ v, side: sd, d, k: hw * (1 - Math.min(1, ew)) });
     }
   }
-  return { list, cen };
+  return { list, cen, ball };
 })();
 // vertex neighbours around the eyes, seam duplicates welded by rest position, for relaxing the socket skin
 const sockNb = (() => {
@@ -98,10 +98,16 @@ const sockNb = (() => {
   const ids = [...near], lists = ids.map(c => [...nb.get(c)].filter(x => x !== c));
   return { canon, dups, ids, lists };
 })();
+function socketActive(P) { return P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out || Math.abs(ringGrow(P) - 1) > 1e-3); }
+function ringGrow(P) { return P.eyes / ((P.head_d + P.head_l + P.head_w) / 3); }   // how much bigger the eyelid ring is than the skin around it
 function applySocket(P, pos, jointsNow, jointsBase) {
-  if (!(P.socket > 0) || !(P.eye_down || P.eye_fwd || P.eye_out)) return;
-  const dl = {};
-  ['R', 'L'].forEach(sd => { const i = idxOf['Eye_' + sd]; dl[sd] = [0, 1, 2].map(a => jointsNow[i][a] - jointsBase[i][a]); });
+  if (!socketActive(P)) return;
+  const dl = {}, c0 = {}, grow = ringGrow(P) - 1;
+  ['R', 'L'].forEach(sd => {
+    const i = idxOf['Eye_' + sd]; dl[sd] = [0, 1, 2].map(a => jointsNow[i][a] - jointsBase[i][a]);
+    const bl = socket.ball[sd], c = [0, 0, 0]; bl.forEach(v => { c[0] += pos[v*3]; c[1] += pos[v*3+1]; c[2] += pos[v*3+2]; });
+    c0[sd] = [c[0] / bl.length - dl[sd][0], c[1] / bl.length - dl[sd][1], c[2] / bl.length - dl[sd][2]];   // eyeball centre before the move
+  });
   const R = P.socket, r0 = R * 0.35, up = headLine.up, E = headLine.E, p0 = mesh.body.pos0;
   const sOf = (x, y, z) => (x - E[0]) * up[0] + (y - E[1]) * up[1] + (z - E[2]) * up[2];
   for (const e of socket.list) {
@@ -109,7 +115,8 @@ function applySocket(P, pos, jointsNow, jointsBase) {
     if (e.sa === undefined) { const c = socket.cen[e.side]; e.sa = sOf(p0[e.v*3], p0[e.v*3+1], p0[e.v*3+2]) - sOf(c[0], c[1], c[2]); }
     let t = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); t = t * t * (3 - 2 * t);
     let fa = 1; if (e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }   // the forehead line above the brow stays put
-    const f = t * fa * e.k, d = dl[e.side];
+    const f = t * fa * e.k, d = dl[e.side], c = c0[e.side];
+    if (grow) { const g = grow * f; pos[e.v*3+1] += (pos[e.v*3+1] - c[1]) * g; pos[e.v*3+2] += (pos[e.v*3+2] - c[2]) * g; }   // skin makes room for a bigger eye (sideways stays)
     pos[e.v*3] += d[0] * f; pos[e.v*3+1] += d[1] * f; pos[e.v*3+2] += d[2] * f;
     if (!e.lid && f > sockW[e.v]) sockW[e.v] = f;
   }
@@ -314,7 +321,7 @@ function skin(P, clip, key, want) {
   });
   if (out.body) { const mz = applyHeadLine(P, out.body, Db); if (mz > maxZ) maxZ = mz; }
   let jointsBase = null;
-  if (out.body && P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out)) {
+  if (out.body && socketActive(P)) {
     const D0 = skinMatrices(Object.assign({}, P, { eye_down: 0, eye_fwd: 0, eye_out: 0 }), clip, key);
     const jb = nodes.map((n, i) => { const d = D0[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
     const jn = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
@@ -559,6 +566,10 @@ function frame(now) {
     if (state.view === 'head' && curLm) {                                  // the head view follows the head, whatever its size or pose
       orbit.target = [(curLm.E[0] + curLm.N[0]) / 2, (curLm.E[1] + curLm.N[1]) / 2, (curLm.E[2] + curLm.N[2]) / 2 - 0.02];
       orbit.dist = Math.max(0.55, curLm.chord * 3.4);
+      if (q.has('cam')) {                                                  // debug: cam=az,el,dist[,eye]
+        const c = q.get('cam').split(','); orbit.az = parseFloat(c[0]); orbit.el = parseFloat(c[1]); orbit.dist = parseFloat(c[2]);
+        if (c[3] === 'eye') orbit.target = [curLm.Y[0] - 0.1 * 0, curLm.Y[1], curLm.Y[2]];
+      }
     }
     placeCamera(); renderer.render(scene, camera);
   }
