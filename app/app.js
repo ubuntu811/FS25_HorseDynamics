@@ -113,7 +113,7 @@ const eyeFit = (() => {
   return out;
 })();
 function fitLids(P, pos) {
-  const t = P.eye_fit; if (!(t > 0)) return;
+  const t = P.eye_fit; if (!(t > 0) || P.eye_legacy) return;
   const bb = vs => { const mn = [1e9, 1e9], mx = [-1e9, -1e9]; for (const v of vs) for (let a = 0; a < 2; a++) { const x = pos[v*3+1+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2], h: [(mx[0] - mn[0]) / 2, (mx[1] - mn[1]) / 2] }; };
   ['R', 'L'].forEach(sd => {
     const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(1.5, Math.max(1, 0.9 * k.h[0] / r.h[0])), sz = Math.min(1.5, Math.max(1, 0.9 * k.h[1] / r.h[1]));
@@ -129,11 +129,11 @@ function fitLids(P, pos) {
     }
   });
 }
-function socketActive(P) { return P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out || Math.abs(ringGrow(P) - 1) > 1e-3); }
+function socketActive(P) { return P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out || (!P.eye_legacy && Math.abs(ringGrow(P) - 1) > 1e-3)); }
 function ringGrow(P) { return P.eyes / ((P.head_d + P.head_l + P.head_w) / 3); }   // how much bigger the eyelid ring is than the skin around it
 function applySocket(P, pos, jointsNow, jointsBase) {
   if (!socketActive(P)) return;
-  const dl = {}, c0 = {}, grow = ringGrow(P) - 1;
+  const dl = {}, c0 = {}, grow = P.eye_legacy ? 0 : ringGrow(P) - 1;
   ['R', 'L'].forEach(sd => {
     const i = idxOf['Eye_' + sd]; dl[sd] = [0, 1, 2].map(a => jointsNow[i][a] - jointsBase[i][a]);
     const bl = socket.ball[sd], c = [0, 0, 0]; bl.forEach(v => { c[0] += pos[v*3]; c[1] += pos[v*3+1]; c[2] += pos[v*3+2]; });
@@ -144,7 +144,7 @@ function applySocket(P, pos, jointsNow, jointsBase) {
   const RS = R * 1.7;                                                       // the relaxing reaches past the push, so its outer fold dissolves
   for (const e of socket.list) {
     if (e.d >= RS) continue;
-    if (e.d >= R) { if (!e.lid) { const u = 1 - (e.d - R) / (RS - R); const w = u * u * (3 - 2 * u) * 0.6 * e.hw0; if (w > sockW[e.v]) sockW[e.v] = w; } continue; }
+    if (e.d >= R) { if (!e.lid && !P.eye_legacy) { const u = 1 - (e.d - R) / (RS - R); const w = u * u * (3 - 2 * u) * 0.6 * e.hw0; if (w > sockW[e.v]) sockW[e.v] = w; } continue; }
     if (e.sa === undefined) { const c = socket.cen[e.side]; e.sa = sOf(p0[e.v*3], p0[e.v*3+1], p0[e.v*3+2]) - sOf(c[0], c[1], c[2]); }
     let t = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); t = t * t * (3 - 2 * t);
     let fa = 1; if (e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }   // the forehead line above the brow stays put
@@ -153,7 +153,7 @@ function applySocket(P, pos, jointsNow, jointsBase) {
     pos[e.v*3] += d[0] * f; pos[e.v*3+1] += d[1] * f; pos[e.v*3+2] += d[2] * f;
     if (!e.lid && f > sockW[e.v]) sockW[e.v] = f;
   }
-  if (P.socket_smooth > 0) relaxSocket(pos, P.socket_smooth); else sockW.fill(0);
+  if (P.socket_smooth > 0 && !P.eye_legacy) relaxSocket(pos, P.socket_smooth); else sockW.fill(0);
 }
 const sockW = new Float32Array(mesh.body.nv);
 function relaxSocket(pos, amount) {
@@ -247,6 +247,7 @@ const PARAMS = [
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
   ['eye_out',   'Eyes outward',        -0.02, 0.03, 0.002, 0,   'Eyes',  'm'],
   ['socket_smooth', 'Socket smoothing', 0, 1, 0.05, 0.5, 'Eyes', '%'],
+  ['eye_legacy','Classic eyes (Nov 10 look: no fit, no skin push, no relaxing)', 0, 1, 1, 0, 'Eyes', 'x'],
   ['eye_fit',    'Fit the lids to the eyeball', 0, 1, 0.05, 0, 'Eyes', '%'],
   ['lid_up',    'Upper lid down over the eye', 0, 0.03, 0.001, 0, 'Eyes', 'm'],
   ['lid_low',   'Lower lid up',        0, 0.02, 0.001, 0, 'Eyes', 'm'],
@@ -268,7 +269,8 @@ const PRESETS = [
   ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2, tail: 0.85 })],
   ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2 }))],
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
-  ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_fit: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
+  ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_legacy: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
+  ['fav2',      'Favorite, fitted eyes', 'lids fitted to the ball',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_legacy: 0, eye_fit: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
@@ -324,7 +326,7 @@ function skinMatrices(P, clip, key) {
       if (P.ear_fwd) L = mul(Tm(0, P.ear_fwd, 0), L);
       if (P.ear_in) L = mul(Tm(0, 0, name.endsWith('_R') ? P.ear_in : -P.ear_in), L);
     }
-    if (name.startsWith('lid') && Math.abs(ringGrow(P) - 1) > 1e-3) {      // the lid ring grows about the eyeball centre, not about its own pivot
+    if (name.startsWith('lid') && !P.eye_legacy && Math.abs(ringGrow(P) - 1) > 1e-3) {      // the lid ring grows about the eyeball centre, not about its own pivot
       const e = restLocal[idxOf['Eye_' + (name.endsWith('_R') ? 'R' : 'L')]], g = ringGrow(P);
       L = L.slice(); L[3] = e[3] + (L[3] - e[3]) * g; L[7] = e[7] + (L[7] - e[7]) * g; L[11] = e[11] + (L[11] - e[11]) * g;
     }
@@ -392,7 +394,7 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false } };
+  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
@@ -430,7 +432,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones', 'dark'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -441,7 +443,7 @@ function writeUrl() {
     PARAMS.forEach(d => { if (Math.abs(state.P[d[0]] - DEF[d[0]]) > 1e-9) p.set(d[0], String(+state.P[d[0]].toFixed(4))); });
     if (state.clip !== 'rest') p.set('pose', state.clip);
     if (state.view !== 'side') p.set('view', state.view);
-    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false };
+    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false };
     Object.keys(dflt).forEach(k => { if (state.show[k] !== dflt[k]) p.set(k, state.show[k] ? '1' : '0'); });
     try { history.replaceState(null, '', p.toString() ? '?' + p.toString() : location.pathname); } catch (e) { /* file:// in some browsers */ }
   }, 150);
@@ -490,7 +492,7 @@ function makeMesh(name, color) {
   if (name === 'body') {                                     // preview only: dark eyeballs so the lids read (export is untouched)
     const col = new Float32Array(m.nv * 3), base = new THREE.Color(0xffffff), dark = new THREE.Color(0x3a2e28), eyes = [idxOf.Eye_R, idxOf.Eye_L];
     for (let v = 0; v < m.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (eyes.includes(m.jn[v*4+k])) w += m.wt[v*4+k]; const c = w > 0.5 ? dark : base; col[v*3] = c.r; col[v*3+1] = c.g; col[v*3+2] = c.b; }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat.vertexColors = true;
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   }
   const o = new THREE.Mesh(g, mat); o.frustumCulled = false; scene.add(o); return o;
 }
@@ -566,7 +568,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)']].forEach(t => {
+  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -576,7 +578,7 @@ function applyShow() {
   if (!renderer) return;
   meshes.maneTail.visible = state.show.mane; meshes.saddle.visible = state.show.saddle; meshes.reins.visible = state.show.reins;
   ['body', 'maneTail', 'saddle', 'reins'].forEach(n => { meshes[n].material.wireframe = state.show.wire; });
-  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; });
+  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; }); if (meshes.body.material.vertexColors !== state.show.dark) { meshes.body.material.vertexColors = state.show.dark; meshes.body.material.needsUpdate = true; }
 }
 function setStats(res, lm) {
   const pct = (res.height / 2.28 * 100).toFixed(0);
