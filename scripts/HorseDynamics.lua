@@ -179,6 +179,9 @@ function HorseDynamics.update(_, dt)
         HorseSave.update(dt)
     end
     HorseDynamics.reconcileHandTools()
+    if HorseBall ~= nil then
+        HorseBall.update(dt)
+    end
 end
 
 function HorseDynamics.consoleLead(_, argument, value, ...)

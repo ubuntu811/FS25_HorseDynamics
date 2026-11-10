@@ -25,7 +25,8 @@ mkdir -p $BUILD_DIR
 
 echo "--> Copying production files to staging area..."
 # Copy the core runtime logic and metadata
-for i in icon.dds store/ handTools/ placeables/ scripts/ textures/ xml/ modDesc.xml; do
+for i in icon.dds store/ handTools/ models/ball/ placeables/ scripts/ textures/ xml/ modDesc.xml; do
+  mkdir -p "$(dirname "$BUILD_DIR/$i")"
   cp -r "$i" "$BUILD_DIR/$i"
 done
 # only the .dds files are needed (the .png sources of the two tiny solid-colour rope textures stay in the repo)
