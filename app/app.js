@@ -81,17 +81,20 @@ const socket = (() => {
       if (d < 0.2) list.push({ v, side: sd, d, k: hw * (1 - Math.min(1, ew)) });
     }
   }
-  return { list };
+  return { list, cen };
 })();
 function applySocket(P, pos, jointsNow, jointsBase) {
   if (!(P.socket > 0) || !(P.eye_down || P.eye_fwd || P.eye_out)) return;
   const dl = {};
   ['R', 'L'].forEach(sd => { const i = idxOf['Eye_' + sd]; dl[sd] = [0, 1, 2].map(a => jointsNow[i][a] - jointsBase[i][a]); });
-  const R = P.socket, r0 = R * 0.35;
+  const R = P.socket, r0 = R * 0.35, up = headLine.up, E = headLine.E, p0 = mesh.body.pos0;
+  const sOf = (x, y, z) => (x - E[0]) * up[0] + (y - E[1]) * up[1] + (z - E[2]) * up[2];
   for (const e of socket.list) {
     if (e.d >= R) continue;
+    if (e.sa === undefined) { const c = socket.cen[e.side]; e.sa = sOf(p0[e.v*3], p0[e.v*3+1], p0[e.v*3+2]) - sOf(c[0], c[1], c[2]); }
     let t = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); t = t * t * (3 - 2 * t);
-    const f = t * e.k, d = dl[e.side];
+    let fa = 1; if (e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }   // the forehead line above the brow stays put
+    const f = t * fa * e.k, d = dl[e.side];
     pos[e.v*3] += d[0] * f; pos[e.v*3+1] += d[1] * f; pos[e.v*3+2] += d[2] * f;
   }
 }
@@ -116,7 +119,7 @@ const headLine = (() => {
     if (ew > 0.5) { const e = b.pos0[v*3] < 0 ? eyeC.R : eyeC.L; s = sOf(e[0], e[1], e[2]); }   // eyeball and lids move as one piece
     list.push({ v, s, hw: Math.min(1, hw) });
   }
-  return { list, up };
+  return { list, up, E };
 })();
 function applyHeadLine(P, pos, Db) {
   if (!P.head_top && !P.head_bot) return 0;
@@ -159,7 +162,7 @@ const PARAMS = [
   ['eye_down',  'Eyes down',           -0.02, 0.07, 0.002, 0,   'Eyes',  'm'],
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
   ['eye_out',   'Eyes outward',        -0.01, 0.03, 0.002, 0,   'Eyes',  'm'],
-  ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.12, 'Eyes', 'm'],
+  ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.09, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
   ['hip_th',    'Hind thigh thickness',   0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
