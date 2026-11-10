@@ -35,6 +35,17 @@
         <material materialSlotName="ball_mat" materialTemplateUseColorOnly="true"/>
     </designColorConfigurations>
 
+    <!-- the weight: a shop option (the game's additionalMass configuration data) on top of the 3 kg of the component; the ball does not roll on for ever: damping is set on its shape (the i3d) -->
+    <horseBallWeightConfigurations>
+        <horseBallWeightConfiguration name="Light (3 kg)" price="0"/>
+        <horseBallWeightConfiguration name="Medium (10 kg)" price="10">
+            <component node="horseBall_main_component1" additionalMass="7"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Heavy (25 kg)" price="25">
+            <component node="horseBall_main_component1" additionalMass="22"/>
+        </horseBallWeightConfiguration>
+    </horseBallWeightConfigurations>
+
     <base>
         <typeDesc>Horse toy</typeDesc>
         <filename>vehicles/horseBall/horseBall.i3d</filename>
@@ -47,4 +58,8 @@
         <mapHotspot available="false" />
         <input allowed="false"/>
     </base>
+
+    <i3dMappings>
+        <i3dMapping id="horseBall_main_component1" node="0>" />
+    </i3dMappings>
 </vehicle>

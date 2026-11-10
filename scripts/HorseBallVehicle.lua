@@ -3,9 +3,15 @@
     updated here gets kicked by the horses that run into it: HorseBall.kick (the game's own football is shot the same way, Football:shoot: addImpulse with mass * velocity).
 ]]
 HorseBallVehicle = {}
+HorseBallVehicle.modName = g_currentModName
 
 function HorseBallVehicle.prerequisitesPresent(_)
     return true
+end
+
+-- the shop option "Weight" (the game's configuration mechanism; the items' additionalMass is applied by the game: VehicleConfigurationDataAdditionalMass)
+function HorseBallVehicle.initSpecialization()
+    g_vehicleConfigurationManager:addConfigurationType("horseBallWeight", g_i18n:getText("configuration_horseBallWeight", HorseBallVehicle.modName), "horseBallWeight", VehicleConfigurationItem)
 end
 
 function HorseBallVehicle.registerEventListeners(vehicleType)

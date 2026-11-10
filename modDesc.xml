@@ -115,6 +115,10 @@ Single player only for now.
             <en>Leash the nearest horse / let it go</en>
             <de>Nächstes Pferd anleinen / freilassen</de>
         </text>
+        <text name="configuration_horseBallWeight">
+            <en>Weight</en>
+            <de>Gewicht</de>
+        </text>
         <text name="action_horseHarness">
             <en>Put the harness on the horse / take it off</en>
             <de>Geschirr anlegen / abnehmen</de>
