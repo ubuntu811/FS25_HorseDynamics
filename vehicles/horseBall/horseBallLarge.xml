@@ -30,10 +30,13 @@
         <audioMemoryUsage>0</audioMemoryUsage>
     </storeData>
 
-    <!-- the colour: the game's own palette (35 colours) as a configuration in the shop; the i3d's material "ball_mat" takes it (a vehicle shader material, colorScale) -->
-    <designColorConfigurations useDefaultColors="true" defaultColorIndex="13" price="0">
+    <!-- the colours: the game's own palette (35 colours) twice as a configuration in the shop (panels 1 and 2 + the caps): the i3d's materials ball_mat and ball_mat2 take them (vehicle shader materials, colorScale) -->
+    <designColorConfigurations title="Panel colour 1" useDefaultColors="true" defaultColorIndex="13" price="0">
         <material materialSlotName="ball_mat" materialTemplateUseColorOnly="true"/>
     </designColorConfigurations>
+    <designColor2Configurations title="Panel colour 2 (and the caps)" useDefaultColors="true" defaultColorIndex="18" price="0">
+        <material materialSlotName="ball_mat2" materialTemplateUseColorOnly="true"/>
+    </designColor2Configurations>
 
     <!-- the weight: a shop option (the game's additionalMass configuration data) on top of the 3 kg of the component; the ball does not roll on for ever: damping is set on its shape (the i3d) -->
     <horseBallWeightConfigurations>

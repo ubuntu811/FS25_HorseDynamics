@@ -26,6 +26,56 @@ def sphere(r, rings=14, sides=24):
             if i < rings - 1: m.t.append((a, c, d))
     return m
 
+class TMesh(H.Mesh):
+    """A mesh with a tangent per vertex (the seams are a normal map)."""
+    def __init__(self):
+        super().__init__(); self.tan = []
+    def vert(self, p, n, uv, tan=(1, 0, 0, 1)):
+        self.tan.append(tan); return super().vert(p, n, uv)
+
+GORES = 12                                   # the ball has 12 panels, alternating the two colours; the first and the last ring (the caps) are in the second colour
+
+def panel_meshes(r, rings=14, sides=24):
+    """Two meshes (colour 1 panels / colour 2 panels + the two pole caps), each quad with its own vertices: smooth normals, u round the ball, v pole to pole, tangents along u."""
+    A, B = TMesh(), TMesh()
+    per = sides // GORES
+    def corner(m, i, j):
+        a = math.pi * i / rings; b = 2 * math.pi * j / sides
+        n = (math.sin(a) * math.cos(b), math.cos(a), math.sin(a) * math.sin(b))
+        t = (-math.sin(b), 0.0, math.cos(b), 1.0)
+        return m.vert((r * n[0], r * n[1], r * n[2]), n, (j / sides, i / rings), t)
+    for i in range(rings):
+        for j in range(sides):
+            cap = i == 0 or i == rings - 1
+            m = B if (cap or (j // per) % 2 == 1) else A
+            a, b, c, d = corner(m, i, j), corner(m, i, j + 1), corner(m, i + 1, j + 1), corner(m, i + 1, j)
+            if i > 0: m.t.append((a, b, c))
+            if i < rings - 1: m.t.append((a, c, d))
+    return A, B
+
+def seam_normal_map(path, w=1024, h=512):
+    """The normal map of the stitched seams: a raised ridge with stitches along every panel boundary (u = k / GORES) and round both caps (v = 1/14 and 13/14)."""
+    import numpy as np
+    x = np.arange(w)[None, :].repeat(h, 0).astype(float); y = np.arange(h)[:, None].repeat(w, 1).astype(float)
+    ridge = np.zeros((h, w))
+    for k in range(GORES):
+        d = np.abs(x - k * w / GORES); d = np.minimum(d, w - d)
+        stitch = 0.65 + 0.35 * (np.sin(2 * np.pi * y / 14.0) > 0)
+        ridge += np.exp(-(d / 4.5) ** 2) * stitch
+    for v0 in (h / 14.0, h * 13.0 / 14.0):
+        d = np.abs(y - v0)
+        stitch = 0.65 + 0.35 * (np.sin(2 * np.pi * x / 14.0) > 0)
+        ridge += np.exp(-(d / 4.5) ** 2) * stitch
+    gy, gx = np.gradient(ridge)
+    nx, ny, nz = -gx * 5.0, -gy * 5.0, np.ones_like(ridge)
+    ln = np.sqrt(nx * nx + ny * ny + nz * nz)
+    rgb = np.stack([(nx / ln * 0.5 + 0.5), (ny / ln * 0.5 + 0.5), (nz / ln * 0.5 + 0.5)], -1)
+    rgb = (rgb * 255 + 0.5).astype(np.uint8)
+    ppm = path + ".ppm"
+    with open(ppm, "wb") as f:
+        f.write(b"P6 %d %d 255\n" % (w, h)); f.write(rgb.tobytes())
+    os.system('convert "%s" -define dds:compression=dxt5 -define dds:mipmaps=10 "%s"' % (ppm, path)); os.remove(ppm)
+
 def fibonacci_sphere(n, r):
     pts = []
     g = math.pi * (3 - math.sqrt(5))
@@ -71,8 +121,13 @@ def build(out, radius, name="horseBall"):
         n = [N[T[k]][i] + N[T[k+1]][i] + N[T[k+2]][i] for i in range(3)]
         if cr[0]*n[0] + cr[1]*n[1] + cr[2]*n[2] < 0: bad += 1
     print("triangles against their normals:", bad, "of", len(T) // 3)
-    vis = H.shape_entity("horseBall_vis", 1, P, N, U, T, subsets, ["ball_mat"])
+    # what is seen: two colours of panels (two materials), with tangents for the seams' normal map; what collides: the smooth sphere
+    A, B = panel_meshes(radius)
+    VP, VN, VU, VT, vsub = H.merge([(A, 1), (B, 2)])
+    VP = [(p[0], p[1] + radius, p[2]) for p in VP]
+    vis = H.shape_entity("horseBall_vis", 1, VP, VN, VU, VT, vsub, ["ball_mat", "ball_mat2"], tangents=A.tan + B.tan)
     col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["ball_mat"], attachments=[(2, hull)])
+    seam_normal_map(os.path.join(out, "horseBallSeams_normal.dds"))
     hdr = type("Hd", (), {"version": 10, "seed": 91})()
     sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, vis), H.Raw(1, col)]})()
     S.write(os.path.join(out, name + ".i3d.shapes"), sf)
@@ -85,7 +140,7 @@ def build(out, radius, name="horseBall"):
   <Files>
     <File fileId="1" filename="$data/shaders/vehicleShader.xml" />
     <File fileId="2" filename="$data/shared/white_diffuse.png" />
-    <File fileId="3" filename="$data/shared/detailLibrary/flat_normal.png" />
+    <File fileId="3" filename="horseBallSeams_normal.dds" />
     <File fileId="4" filename="$data/shared/default_vmask.png" />
     <File fileId="5" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_diffuse.png" />
     <File fileId="6" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_normal.png" />
@@ -93,10 +148,22 @@ def build(out, radius, name="horseBall"):
   </Files>
   <Materials>
     <Material name="ball_mat" materialId="1" customShaderId="1">
-      <CustomParameter name="clearCoatIntensity" value="0.3"/>
-      <CustomParameter name="clearCoatSmoothness" value="0.6"/>
+      <CustomParameter name="clearCoatIntensity" value="0.8"/>
+      <CustomParameter name="clearCoatSmoothness" value="0.9"/>
       <CustomParameter name="colorScale" value="0.85 0.04 0.04"/>
-      <CustomParameter name="smoothnessScale" value="0.7"/>
+      <CustomParameter name="smoothnessScale" value="0.9"/>
+      <Custommap name="detailDiffuse" fileId="5"/>
+      <Custommap name="detailNormal" fileId="6"/>
+      <Custommap name="detailSpecular" fileId="7"/>
+      <Texture fileId="2"/>
+      <Normalmap fileId="3"/>
+      <Glossmap fileId="4"/>
+    </Material>
+    <Material name="ball_mat2" materialId="2" customShaderId="1">
+      <CustomParameter name="clearCoatIntensity" value="0.8"/>
+      <CustomParameter name="clearCoatSmoothness" value="0.9"/>
+      <CustomParameter name="colorScale" value="0.05 0.2 0.9"/>
+      <CustomParameter name="smoothnessScale" value="0.9"/>
       <Custommap name="detailDiffuse" fileId="5"/>
       <Custommap name="detailNormal" fileId="6"/>
       <Custommap name="detailSpecular" fileId="7"/>
@@ -109,7 +176,7 @@ def build(out, radius, name="horseBall"):
   </Shapes>
   <Scene>
     <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe3ffb83" linearDamping="0.15" angularDamping="1.0" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
-      <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="2"/>
+      <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1,2" nodeId="2"/>
     </Shape>
   </Scene>
 

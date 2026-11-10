@@ -84,14 +84,14 @@ def merge(parts):
 def align(buf, n):
     while len(buf) % n: buf.append(0)
 
-def shape_entity(name, sid, P, N, U, T, subsets, slots, attachments=()):
+def shape_entity(name, sid, P, N, U, T, subsets, slots, attachments=(), tangents=None):
     assert len(P) <= 65535
     b = bytearray()
     nm = name.encode("ascii"); b += struct.pack("<i", len(nm)); b += nm; align(b, 4); b += struct.pack("<I", sid)
     lo = [min(p[i] for p in P) for i in range(3)]; hi = [max(p[i] for p in P) for i in range(3)]
     c = [(lo[i] + hi[i]) / 2 for i in range(3)]; rad = max(math.dist(c, p) for p in P)
     b += struct.pack("<4f", c[0], c[1], c[2], rad)
-    options = 0x3                                     # normals + uv1
+    options = 0x3 | (0x80 if tangents is not None else 0)      # normals + uv1 (+ tangents: the normal map needs them)
     b += struct.pack("<IIII", len(T), len(subsets), len(P), options)
     b += struct.pack("<f", 0.0)                       # vtxCompression
     for fv, nv, fi, ni in subsets:
@@ -103,6 +103,8 @@ def shape_entity(name, sid, P, N, U, T, subsets, slots, attachments=()):
     b += struct.pack("<%dH" % len(T), *T); align(b, 4)
     for p in P: b += struct.pack("<3f", *p)
     for n in N: b += struct.pack("<3f", *n)
+    if tangents is not None:
+        for t in tangents: b += struct.pack("<4f", *t)
     for u in U: b += struct.pack("<2f", *u)
     b += struct.pack("<I", len(attachments))          # attachments: (flags, bytes) each (flags 2 = a cooked convex hull, see make_horse_ball.convex_hull_block)
     for flags, data in attachments:
