@@ -85,6 +85,9 @@ def build(out, radius, name="horseBall"):
     <File fileId="2" filename="$data/shared/white_diffuse.png" />
     <File fileId="3" filename="$data/shared/detailLibrary/flat_normal.png" />
     <File fileId="4" filename="$data/shared/default_vmask.png" />
+    <File fileId="5" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_diffuse.png" />
+    <File fileId="6" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_normal.png" />
+    <File fileId="7" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_specular.png" />
   </Files>
   <Materials>
     <Material name="ball_mat" materialId="1" customShaderId="1">
@@ -92,6 +95,9 @@ def build(out, radius, name="horseBall"):
       <CustomParameter name="clearCoatSmoothness" value="0.6"/>
       <CustomParameter name="colorScale" value="0.85 0.04 0.04"/>
       <CustomParameter name="smoothnessScale" value="0.7"/>
+      <Custommap name="detailDiffuse" fileId="5"/>
+      <Custommap name="detailNormal" fileId="6"/>
+      <Custommap name="detailSpecular" fileId="7"/>
       <Texture fileId="2"/>
       <Normalmap fileId="3"/>
       <Glossmap fileId="4"/>
