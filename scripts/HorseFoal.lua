@@ -1,4 +1,4 @@
--- Foals in the game: horses under HorseFoal.ADULT_AGE months use the baked foal model (animal dealer, pastures); they cannot be ridden; older ones the normal horse.
+-- Foals in the game: horses under HorseFoal.ADULT_AGE months use the baked foal model (animal dealer, pastures); they are led but never mounted; older ones the normal horse.
 HorseFoal = {}
 HorseFoal.dir = g_currentModDirectory
 HorseFoal.ADULT_AGE = 12            -- months: from here on the game's own horse is shown
@@ -70,18 +70,50 @@ function HorseFoal.patchVisuals(animalSystem)
     Logging.info("[HorseFoal] %d horse subtypes: foal visual from 0 months, adult from %d months", n, HorseFoal.ADULT_AGE)
 end
 
--- a foal cannot be ridden: no rideable vehicle for horses under ADULT_AGE (that removes the ride prompt, trailer unloading as a vehicle and the exercise check)
+local function isFoalCluster(cluster)
+    return cluster ~= nil and cluster.age ~= nil and cluster.age < HorseFoal.ADULT_AGE
+end
+
+-- a foal under ADULT_AGE becomes the foal vehicle (horseFoal.xml: led, steered, towed by script like any horse) but nobody mounts it
 function HorseFoal.getRidableFilename(cluster, superFunc)
     local filename = superFunc(cluster)
-    if filename ~= nil and cluster.age ~= nil and cluster.age < HorseFoal.ADULT_AGE and string.find(filename, "horse/horse.xml", 1, true) ~= nil then
-        return nil
+    if filename ~= nil and isFoalCluster(cluster) and string.find(filename, "horse/horse.xml", 1, true) ~= nil then
+        return HorseFoal.dir .. "horseFoal.xml"
     end
     return filename
+end
+
+-- no "ride" prompt on a pasture foal
+function HorseFoal.getAnimalSupportsRiding(placeable, superFunc, clusterId)
+    local cluster = placeable.spec_husbandryAnimals.clusterSystem:getClusterById(clusterId)
+    if isFoalCluster(cluster) then return false end
+    return superFunc(placeable, clusterId)
+end
+
+-- every way a player gets onto a vehicle (E, tab, map, force) ends here: not onto a foal
+function HorseFoal.requestToEnterVehicle(player, superFunc, vehicle, force)
+    local cluster = vehicle ~= nil and vehicle.getCluster ~= nil and vehicle:getCluster() or nil
+    if isFoalCluster(cluster) then return end
+    return superFunc(player, vehicle, force)
+end
+
+-- and no "enter" prompt next to a foal vehicle
+function HorseFoal.hideEnterPrompt(vehicle)
+    if vehicle.horseFoalPromptHidden then return end
+    vehicle.horseFoalPromptHidden = true
+    local orig = vehicle.getIsInteractive
+    vehicle.getIsInteractive = function(self, ...)
+        if isFoalCluster(self:getCluster()) then return false end
+        return orig(self, ...)
+    end
 end
 
 AnimalSystem.loadAnimalConfig = Utils.prependedFunction(AnimalSystem.loadAnimalConfig, HorseFoal.prepareConfig)
 AnimalSystem.loadAnimals = Utils.appendedFunction(AnimalSystem.loadAnimals, HorseFoal.patchVisuals)
 AnimalCluster.getRidableFilename = Utils.overwrittenFunction(AnimalCluster.getRidableFilename, HorseFoal.getRidableFilename)
+PlaceableHusbandryAnimals.getAnimalSupportsRiding = Utils.overwrittenFunction(PlaceableHusbandryAnimals.getAnimalSupportsRiding, HorseFoal.getAnimalSupportsRiding)
+Player.requestToEnterVehicle = Utils.overwrittenFunction(Player.requestToEnterVehicle, HorseFoal.requestToEnterVehicle)
+Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, HorseFoal.hideEnterPrompt)
 
 -- diagnostics: what the husbandry asks the engine for (cluster age / visual index, add / swap / remove calls)
 local function wrapGlobal(name)
