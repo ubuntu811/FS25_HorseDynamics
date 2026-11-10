@@ -47,7 +47,7 @@ check("no file: the defaults stay", S.config.gallopLimit == true and S.config.pu
 
 -- the page
 InGameMenu.onMenuOpened()
-check("opening the menu injects the section once: one switch per setting, bound by name, prefix hd_", #UIHelper.calls == 1 and UIHelper.calls[1][1] == page and UIHelper.calls[1][2] == "hd_setting_title" and UIHelper.calls[1][5] == "hd_" and #UIHelper.calls[1][4] == 4 and UIHelper.calls[1][4][1].name == "gallopLimit" and UIHelper.calls[1][4][1].autoBind == true and UIHelper.calls[1][4][1].min == nil and UIHelper.calls[1][4][1].values == nil)
+check("opening the menu injects the section once: one switch per setting, bound by name, prefix hd_", #UIHelper.calls == 1 and UIHelper.calls[1][1] == page and UIHelper.calls[1][2] == "hd_setting_title" and UIHelper.calls[1][5] == "hd_" and #UIHelper.calls[1][4] == 5 and UIHelper.calls[1][4][1].name == "gallopLimit" and UIHelper.calls[1][4][1].autoBind == true and UIHelper.calls[1][4][1].min == nil and UIHelper.calls[1][4][1].values == nil)
 check("... bound to the config, a change calls onSettingsChange, and the controls are filled", UIHelper.bound[2] == S.config and UIHelper.bound[3] == S.ui.onSettingsChange and UIHelper.populated == true)
 InGameMenu.onMenuOpened()
 check("opening it again does not inject a second time", #UIHelper.calls == 1 and opened == 2)
