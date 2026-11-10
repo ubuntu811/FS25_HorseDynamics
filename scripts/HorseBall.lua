@@ -15,10 +15,20 @@ HorseBall.KICK_COOLDOWN_MS = 350
 HorseBall.KICK_GAIN = 0.7                   -- the ball leaves at this times the horse's speed ...
 HorseBall.KICK_BASE = 1.0                   -- ... plus this (m/s): a trot (2.5 m/s) sends it at 2.8 m/s, a gallop (10 m/s) at 8
 HorseBall.MAX_SPEED = 7                      -- the ball is never faster than this (m/s, 25 km/h): a horse's hoof is not a rifle (the engine's own contact of a 400 kg horse with a 3 kg ball would send it off at twice the horse's speed)
+-- Rolling resistance follows the ground under the ball. The engine has one friction for every terrain, so it is set from the game's own measure of how soft the ground is (the depth that
+-- getTerrainAttributesAtWorldPos returns: what WheelsUtil.getGroundType sorts into road / hard / soft terrain for the wheels; about 0 on a road, 0.6 on meadow): damping = base + gain * softness.
+-- A road: the ball rolls a long way and stops in the end; grass: it slows down at once.
+HorseBall.ROLL_ANGULAR_BASE = 0.35          -- angular damping on the hardest ground ...
+HorseBall.ROLL_ANGULAR_GAIN = 3.0           -- ... plus this times the softness (meadow 0.6: 2.2)
+HorseBall.ROLL_LINEAR_BASE = 0.03
+HorseBall.ROLL_LINEAR_GAIN = 0.7
+HorseBall.REST_SPEED = 0.08                 -- m/s: slower than this on the ground the ball is stopped (it would creep for ever)
+HorseBall.CHECK_MS = 100                    -- the ground is read this often
 HorseBall.horses = {}                        -- vehicle -> { x, z } at the last frame
 HorseBall.moving = {}                        -- the horses that move now (worked out once per frame)
 HorseBall.frame = -1
 HorseBall.lastKick = setmetatable({}, { __mode = "k" })
+HorseBall.ground = setmetatable({}, { __mode = "k" })
 HorseBall.age = setmetatable({}, { __mode = "k" })
 
 local function say(format, ...)
@@ -66,7 +76,8 @@ function HorseBall.kick(vehicle, dt)
     HorseBall.age[vehicle] = age
     if age >= 3000 and age - dt < 3000 then
         local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
-        say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), mass %.1f kg, sleeping: %s", by - ground, HorseBall.RADIUS, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
+        local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
+        say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, HorseBall.RADIUS, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
     end
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
@@ -74,6 +85,28 @@ function HorseBall.kick(vehicle, dt)
     if speed > HorseBall.MAX_SPEED then
         local k = HorseBall.MAX_SPEED / speed
         setLinearVelocity(node, vx * k, vy * k, vz * k)
+    end
+    -- the ground under it: damping from its softness while it rolls on it (not while it flies)
+    local st = HorseBall.ground[vehicle]
+    if st == nil then
+        st = { nextCheck = 0 }
+        HorseBall.ground[vehicle] = st
+    end
+    if now >= st.nextCheck then
+        st.nextCheck = now + HorseBall.CHECK_MS
+        local terrainY = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
+        if by - terrainY < HorseBall.RADIUS + 0.2 then
+            local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
+            local soft = math.max(0, math.min(1, depth or 0))
+            if st.soft == nil or math.abs(st.soft - soft) > 0.02 then
+                st.soft = soft
+                pcall(setAngularDamping, node, HorseBall.ROLL_ANGULAR_BASE + HorseBall.ROLL_ANGULAR_GAIN * soft)
+                pcall(setLinearDamping, node, HorseBall.ROLL_LINEAR_BASE + HorseBall.ROLL_LINEAR_GAIN * soft)
+            end
+            if speed < HorseBall.REST_SPEED then
+                setLinearVelocity(node, 0, math.min(vy, 0), 0)
+            end
+        end
     end
     if now - (HorseBall.lastKick[vehicle] or -1e9) < HorseBall.KICK_COOLDOWN_MS then
         return
