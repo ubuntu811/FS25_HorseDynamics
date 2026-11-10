@@ -61,6 +61,41 @@ const headIdx = [];                              // body vertices that mostly fo
   }
 }
 
+// skin around each eye: follows the eye when it is moved (the eyelid ring is already carried by the lid bones)
+const socket = (() => {
+  const b = mesh.body, isUnder = i => { for (let a = i; a >= 0; a = nodes[a].parent) if (a === idxOf.Head_M) return true; return false; };
+  const head = nodes.map((n, i) => isUnder(i)), eyeLid = nodes.map(n => n.name.startsWith('Eye_') || n.name.startsWith('lid'));
+  const cen = {};
+  ['R', 'L'].forEach(sd => {
+    const e = idxOf['Eye_' + sd], c = [0, 0, 0]; let n = 0;
+    for (let v = 0; v < b.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (b.jn[v*4+k] === e) w += b.wt[v*4+k]; if (w > 0.5) { for (let a = 0; a < 3; a++) c[a] += b.pos0[v*3+a]; n++; } }
+    cen[sd] = c.map(x => x / n);
+  });
+  const list = [];                                // vertices within the widest reach (0.2 m) of an eye
+  for (let v = 0; v < b.nv; v++) {
+    let hw = 0, ew = 0;
+    for (let k = 0; k < 4; k++) { const j = b.jn[v*4+k], w = b.wt[v*4+k]; if (head[j]) hw += w; if (eyeLid[j]) ew += w; }
+    if (hw < 0.5) continue;
+    for (const sd of ['R', 'L']) {
+      const c = cen[sd], d = Math.hypot(b.pos0[v*3]-c[0], b.pos0[v*3+1]-c[1], b.pos0[v*3+2]-c[2]);
+      if (d < 0.2) list.push({ v, side: sd, d, k: hw * (1 - Math.min(1, ew)) });
+    }
+  }
+  return { list };
+})();
+function applySocket(P, pos, jointsNow, jointsBase) {
+  if (!(P.socket > 0) || !(P.eye_down || P.eye_fwd || P.eye_out)) return;
+  const dl = {};
+  ['R', 'L'].forEach(sd => { const i = idxOf['Eye_' + sd]; dl[sd] = [0, 1, 2].map(a => jointsNow[i][a] - jointsBase[i][a]); });
+  const R = P.socket, r0 = R * 0.35;
+  for (const e of socket.list) {
+    if (e.d >= R) continue;
+    let t = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); t = t * t * (3 - 2 * t);
+    const f = t * e.k, d = dl[e.side];
+    pos[e.v*3] += d[0] * f; pos[e.v*3+1] += d[1] * f; pos[e.v*3+2] += d[2] * f;
+  }
+}
+
 // ====================== parameters ======================
 // [key, label, min, max, step, adult default, group, unit]
 const PARAMS = [
@@ -84,6 +119,7 @@ const PARAMS = [
   ['eye_down',  'Eyes down',           -0.02, 0.07, 0.002, 0,   'Eyes',  'm'],
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
   ['eye_out',   'Eyes outward',        -0.01, 0.03, 0.002, 0,   'Eyes',  'm'],
+  ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.12, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
   ['hip_th',    'Thigh / rump thickness', 0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
@@ -186,6 +222,13 @@ function skin(P, clip, key, want) {
     }
     out[name] = pos;
   });
+  let jointsBase = null;
+  if (out.body && P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out)) {
+    const D0 = skinMatrices(Object.assign({}, P, { eye_down: 0, eye_fwd: 0, eye_out: 0 }), clip, key);
+    const jb = nodes.map((n, i) => { const d = D0[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
+    const jn = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
+    applySocket(P, out.body, jn, jb);
+  }
   names.forEach(name => { const p = out[name]; for (let v = 2; v < p.length; v += 3) p[v] -= minZ; });   // ground
   const joints = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11] - minZ]; });
   return { pos: out, joints, height: maxZ - minZ, minZ };
