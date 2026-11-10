@@ -85,3 +85,24 @@ end
 AnimalSystem.loadAnimalConfig = Utils.prependedFunction(AnimalSystem.loadAnimalConfig, HorseFoal.prepareConfig)
 AnimalSystem.loadAnimals = Utils.appendedFunction(AnimalSystem.loadAnimals, HorseFoal.patchVisuals)
 AnimalCluster.getRidableFilename = Utils.overwrittenFunction(AnimalCluster.getRidableFilename, HorseFoal.getRidableFilename)
+
+-- diagnostics: what the husbandry asks the engine for (cluster age / visual index, add / swap / remove calls)
+local function wrapGlobal(name)
+    local orig = _G[name]
+    if orig == nil then return end
+    _G[name] = function(...)
+        local a = { ... }
+        local parts = {}
+        for i = 1, math.min(#a, 4) do parts[#parts + 1] = tostring(a[i]) end
+        Logging.info("[HorseFoal] %s(%s)", name, table.concat(parts, ", "))
+        return orig(...)
+    end
+end
+for _, name in ipairs({ "addHusbandryAnimal", "setAnimalSubType", "removeHusbandryAnimal", "setAnimalTextureTile" }) do wrapGlobal(name) end
+
+AnimalClusterHusbandry.updateVisuals = Utils.prependedFunction(AnimalClusterHusbandry.updateVisuals, function(self)
+    for _, cluster in ipairs(self.nextUpdateClusters or {}) do
+        local visual = cluster:getVisual()
+        Logging.info("[HorseFoal] updateVisuals cluster %s subType %s age %s -> visual index %s (minAge %s)", tostring(cluster.id), tostring(cluster.subTypeIndex), tostring(cluster.age), tostring(visual and visual.visualAnimalIndex), tostring(visual and visual.minAge))
+    end
+end)
