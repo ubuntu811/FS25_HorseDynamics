@@ -103,6 +103,8 @@ HorseLead.RIDE_GAIT_MARGIN_LEASH_M = 0.4
 -- (root distances: its nose is then 1.2 m from him, and 1.6 m when it stops).
 HorseLead.RIDE_BACKOFF_M = 2.7
 HorseLead.RIDE_BACKOFF_END_M = 3.1
+HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_M = 2.1       -- a foal on the rope of a RIDDEN horse: root distances at which the two bodies touch (the rider's half 1.25 m + the foal's half 0.65 m, plus a margin) ...
+HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_END_M = 2.7   -- ... and where it stops backing (just short of the 2.8 m at which it walks on again)
 HorseLead.RIDE_BACKOFF_CONE = 1.0           -- radians: "in front of it" is within this angle of the way it faces
 HorseLead.RIDE_KEEP_UP_MOUNTED_M = 6        -- a riding player does not wait for a pausing horse: the pause ends when it is this far behind
 HorseLead.RIDE_WALK_M = 6                   -- starts to walk when further away than this
@@ -1161,10 +1163,19 @@ function HorseLead.stepRide(ride, dt)
         ride.markX, ride.stuckMs = nil, 0
         return false
     end
-    -- walked into: a player who comes up to the horse (in front of it) makes it step back
-    if not mounted then
+    -- walked into: a player who comes up to the horse (in front of it) makes it step back. A rider only makes a FOAL step back (an adult follows 2.4 m behind the horse he sits on: closer than the
+    -- backing distance; a foal is short enough to stand clear of that, and only gets pinned when he reverses onto it)
+    local backM, backEndM = HorseLead.RIDE_BACKOFF_M, HorseLead.RIDE_BACKOFF_END_M
+    local backs = not mounted
+    if mounted then
+        local api = g_currentMission ~= nil and g_currentMission.horseFoal or nil
+        if api ~= nil and api.isFoal ~= nil and api.isFoal(vehicle) then
+            backs, backM, backEndM = true, HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_M, HorseLead.RIDE_BACKOFF_FOAL_MOUNTED_END_M
+        end
+    end
+    if backs then
         local inFront = math.abs(diff) < HorseLead.RIDE_BACKOFF_CONE
-        if inFront and (d < HorseLead.RIDE_BACKOFF_M or (ride.backingOff and d < HorseLead.RIDE_BACKOFF_END_M)) then
+        if inFront and (d < backM or (ride.backingOff and d < backEndM)) then
             ride.backingOff = true
             spec.inputValues.currentGait = gaits.BACKWARDS or gaits.STILL
             HorseLead.easeSteer(spec, 0, dt)
