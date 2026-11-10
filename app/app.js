@@ -276,6 +276,7 @@ const PRESETS = [
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
   ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_legacy: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['fav2',      'Favorite, fitted eyes', 'lids fitted to the ball',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_legacy: 0, eye_fit: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
+  ['fav3',      'Favorite 3 (Nov 10)', 'bigger (0.65), bigger head, nose forward', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 1.0, head_l: 1.0, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.0, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: 6, ear: 1.2, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
@@ -406,11 +407,11 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false, noeye: false } };
+  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
-  if (!adultRef.cache[id]) { adultRef.cache = {}; adultRef.cache[id] = skin(DEF, clip === 'rest' ? null : clip, key, ['body']); }
+  if (!adultRef.cache[id]) { adultRef.cache = {}; adultRef.cache[id] = skin(DEF, clip === 'rest' ? null : clip, key, ['body', 'maneTail']); }
   return adultRef.cache[id];
 }
 function keyFor() {
@@ -444,7 +445,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'beside', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -455,7 +456,7 @@ function writeUrl() {
     PARAMS.forEach(d => { if (Math.abs(state.P[d[0]] - DEF[d[0]]) > 1e-9) p.set(d[0], String(+state.P[d[0]].toFixed(4))); });
     if (state.clip !== 'rest') p.set('pose', state.clip);
     if (state.view !== 'side') p.set('view', state.view);
-    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false, noeye: false };
+    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false };
     Object.keys(dflt).forEach(k => { if (state.show[k] !== dflt[k]) p.set(k, state.show[k] ? '1' : '0'); });
     try { history.replaceState(null, '', p.toString() ? '?' + p.toString() : location.pathname); } catch (e) { /* file:// in some browsers */ }
   }, 150);
@@ -464,7 +465,7 @@ readUrl();
 
 // ====================== three.js scene ======================
 const wrap = document.getElementById('canvas-wrap');
-let renderer = null, scene, camera, meshes = {}, ghostMesh, dotGroup, gridHelper, boneSets = [];
+let renderer = null, scene, camera, meshes = {}, adultGrp, adultMeshes, sideOff = [0, 2.0, 0], ghostMesh, dotGroup, gridHelper, boneSets = [];
 const BONE_NODES = nodes.map((n, i) => i).filter(i => !/^(jtsSkinWire|jnts_|lid|lip|tongue)/.test(nodes[i].name) && nodes[i].parent >= 0);
 function makeBones(color) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BONE_NODES.length * 6), 3).setUsage(THREE.DynamicDrawUsage));
@@ -490,8 +491,8 @@ const VIEWS = {
 };
 function setView(name, keepTarget) { const v = VIEWS[name]; orbit.az = v.az; orbit.el = v.el; orbit.dist = v.dist; orbit.target = v.target.slice(); state.view = name; markView(); writeUrl(); }
 function placeCamera() {
-  const t = orbit.target, ce = Math.cos(orbit.el);
-  camera.position.set(t[0] + orbit.dist * ce * Math.cos(orbit.az), t[1] + orbit.dist * ce * Math.sin(orbit.az), t[2] + orbit.dist * Math.sin(orbit.el));
+  const bs = adultGrp && adultGrp.visible, t = bs ? [orbit.target[0] + sideOff[0] * 0.6, orbit.target[1] + sideOff[1] * 0.6, orbit.target[2]] : orbit.target, dist = orbit.dist * (bs ? 1.6 : 1), ce = Math.cos(orbit.el);   // both animals in frame when the adult stands beside
+  camera.position.set(t[0] + dist * ce * Math.cos(orbit.az), t[1] + dist * ce * Math.sin(orbit.az), t[2] + dist * Math.sin(orbit.el));
   camera.lookAt(t[0], t[1], t[2]);
 }
 function makeMesh(name, color) {
@@ -529,6 +530,9 @@ function initScene() {
   meshes.body = makeMesh('body', 0xD3CEC3); meshes.maneTail = makeMesh('maneTail', 0x5B5047); meshes.saddle = makeMesh('saddle', 0x7A4B2B); meshes.reins = makeMesh('reins', 0x3A2A1F);
   const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mesh.body.pos0), 3).setUsage(THREE.DynamicDrawUsage)); gg.setIndex(new THREE.BufferAttribute(mesh.body.idx, 1));
   ghostMesh = new THREE.Mesh(gg, new THREE.MeshBasicMaterial({ color: 0x6FA8A0, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })); ghostMesh.frustumCulled = false; scene.add(ghostMesh);
+  adultGrp = new THREE.Group(); scene.add(adultGrp);
+  adultMeshes = { body: makeMesh('body', 0xA9B8B4), maneTail: makeMesh('maneTail', 0x45504D) };
+  ['body', 'maneTail'].forEach(n => { adultMeshes[n].frustumCulled = false; adultGrp.add(adultMeshes[n]); });
   boneSets = [makeBones(0xB8E6DF), makeBones(0xE8A25C)];
   dotGroup = new THREE.Group(); scene.add(dotGroup);
   [[0xE05A4A, 'N'], [0x4A78E0, 'E'], [0xE0D04A, 'Y'], [0x4AE08A, 'K']].forEach(c => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), new THREE.MeshBasicMaterial({ color: c[0], depthTest: false })); s.name = c[1]; s.renderOrder = 10; dotGroup.add(s); });
@@ -553,7 +557,8 @@ function initScene() {
 
 // ====================== UI ======================
 const $ = id => document.getElementById(id);
-function markView() { document.querySelectorAll('#vpui [data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === state.view)); }
+function markView() { if (renderer) applyShow();
+  document.querySelectorAll('#vpui [data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === state.view)); }
 const fmt = (p, v) => p[7] === 'm' ? (v * 100).toFixed(1) + ' cm' : p[7] === '%' ? (v * 100).toFixed(0) + '%' : p[7] === '°' ? (+v.toFixed(1)) + '°' : v.toFixed(2) + '×';
 const sliderEls = {};
 function buildSliders() {
@@ -587,7 +592,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
+  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['beside', 'Game adult standing beside the foal (solid)'], ['ghost', 'Ghost of the game adult (wireframe, overlaid)'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -597,7 +602,10 @@ function applyShow() {
   if (!renderer) return;
   meshes.maneTail.visible = state.show.mane; meshes.saddle.visible = state.show.saddle; meshes.reins.visible = state.show.reins;
   ['body', 'maneTail', 'saddle', 'reins'].forEach(n => { meshes[n].material.wireframe = state.show.wire; });
-  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; }); { const b = meshes.body, want = state.show.noeye ? b.userData.idxNoEye : b.userData.idxFull; if (b.geometry.getIndex() !== want) b.geometry.setIndex(want); }
+  if (state.view === 'front') sideOff = [1.15, 0, 0]; else if (state.view === 'side' || state.view === 'three') sideOff = [0, 2.0, 0];
+  adultGrp.position.set(sideOff[0], sideOff[1], sideOff[2]);
+  const side = state.show.beside && state.view !== 'head'; adultGrp.visible = side; adultMeshes.maneTail.visible = state.show.mane;
+  ghostMesh.visible = state.show.ghost && !side; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; }); { const b = meshes.body, want = state.show.noeye ? b.userData.idxNoEye : b.userData.idxFull; if (b.geometry.getIndex() !== want) b.geometry.setIndex(want); }
   if (meshes.body.material.vertexColors !== state.show.dark) { meshes.body.material.vertexColors = state.show.dark; meshes.body.material.needsUpdate = true; }
 }
 function setStats(res, lm) {
@@ -620,6 +628,7 @@ function update() {
       const g = meshes[n].geometry, a = g.getAttribute('position'); a.array.set(res.pos[n]); a.needsUpdate = true; g.computeVertexNormals();
     });
     const gh = adultAt(state.clip, key), ga = ghostMesh.geometry.getAttribute('position'); ga.array.set(gh.pos.body); ga.needsUpdate = true;
+    ['body', 'maneTail'].forEach(n => { const g = adultMeshes[n].geometry, a = g.getAttribute('position'); a.array.set(gh.pos[n]); a.needsUpdate = true; g.computeVertexNormals(); });
     if (state.show.bones) { setBones(boneSets[0], gh.joints); setBones(boneSets[1], res.joints); }
   }
   const lm = landmarks(res);
