@@ -45,127 +45,127 @@
   <Scene>
     <Shape name="horse_main_component1" shapeId="1" kinematic="true" linearDamping="0.001" collisionFilterGroup="0x210004" collisionFilterMask="0xfffffbff" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="150" nodeId="1">
       <TransformGroup name="skeleton" nodeId="2">
-        <TransformGroup name="Root_M" translation="0.000000 0.757989 -0.425637" rotation="-90.00000 -74.44340 -90.00000" nodeId="3">
-          <TransformGroup name="backHip_R" translation="-0.043580 0.095835 -0.068262" rotation="180.00000 -0.00000 75.74854" nodeId="4">
-            <TransformGroup name="backKnee_R" translation="0.218472 0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="5">
-              <TransformGroup name="backAnkle_R" translation="0.195726 0.017556 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="6">
-                <TransformGroup name="backFoot_R" translation="0.190943 0.001159 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="7">
-                  <TransformGroup name="backToes_R" translation="0.048084 -0.003679 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="8">
-                    <TransformGroup name="hoofBackRight" translation="0.036401 -0.003723 0.000000" rotation="-76.65129 90.00000 0.00000" nodeId="9">
+        <TransformGroup name="Root_M" translation="0.000000 0.985386 -0.425637" rotation="-90.00000 -74.44340 -90.00000" nodeId="3">
+          <TransformGroup name="backHip_R" translation="-0.056654 0.124585 -0.088740" rotation="180.00000 -0.00000 75.74854" nodeId="4">
+            <TransformGroup name="backKnee_R" translation="0.284014 -0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="5">
+              <TransformGroup name="backAnkle_R" translation="0.254444 0.022823 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="6">
+                <TransformGroup name="backFoot_R" translation="0.248226 0.001507 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="7">
+                  <TransformGroup name="backToes_R" translation="0.062509 -0.004782 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="8">
+                    <TransformGroup name="hoofBackRight" translation="0.047322 -0.004840 0.000000" rotation="-76.65129 90.00000 0.00000" nodeId="9">
                       <Shape name="emitterShapeSlowBackRight" shapeId="2" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="10" />
                       <Shape name="emitterShapeFastBackRight" shapeId="3" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="11" />
                     </TransformGroup>
                   </TransformGroup>
                 </TransformGroup>
-                <TransformGroup name="backAnkleCorner1_R" translation="-0.028581 -0.024678 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="12" />
+                <TransformGroup name="backAnkleCorner1_R" translation="-0.037156 -0.032082 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="12" />
               </TransformGroup>
-              <TransformGroup name="backKneeCorner1_R" translation="-0.071808 0.017206 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="13" />
+              <TransformGroup name="backKneeCorner1_R" translation="-0.093351 0.022368 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="13" />
             </TransformGroup>
           </TransformGroup>
-          <TransformGroup name="Tail0_M" translation="-0.107750 -0.015087 0.000000" rotation="180.00000 -0.00000 145.29635" nodeId="14">
-            <TransformGroup name="Tail2_M" translation="0.064407 0.000000 0.000000" rotation="0.00000 -0.00000 20.11905" nodeId="15">
-              <TransformGroup name="Tail4_M" translation="0.071060 -0.000000 0.000000" rotation="0.00000 -0.00000 3.36015" nodeId="16">
-                <TransformGroup name="Tail6_M" translation="0.070984 -0.000000 0.000000" rotation="0.00000 -0.00000 1.18926" nodeId="17" />
+          <TransformGroup name="Tail0_M" translation="-0.140075 -0.019614 0.000000" rotation="180.00000 -0.00000 145.29635" nodeId="14">
+            <TransformGroup name="Tail2_M" translation="0.083729 -0.000000 0.000000" rotation="0.00000 -0.00000 20.11905" nodeId="15">
+              <TransformGroup name="Tail4_M" translation="0.092378 0.000000 0.000000" rotation="0.00000 -0.00000 3.36015" nodeId="16">
+                <TransformGroup name="Tail6_M" translation="0.092280 0.000000 0.000000" rotation="0.00000 -0.00000 1.18926" nodeId="17" />
               </TransformGroup>
             </TransformGroup>
           </TransformGroup>
-          <TransformGroup name="RootPart1_M" translation="0.127166 -0.000000 0.000000" nodeId="18" rotation="0.00000 -0.00000 0.00000">
-            <TransformGroup name="Spine1_M" translation="0.101733 0.000000 0.000000" rotation="0.00000 -0.00000 52.00113" nodeId="19">
-              <TransformGroup name="Chest_M" translation="0.049120 -0.178422 0.000000" rotation="0.00000 -0.00000 -60.70822" nodeId="20">
-                <TransformGroup name="frontRump_R" translation="-0.021982 -0.039156 -0.052585" rotation="180.00000 -0.00000 44.39090" nodeId="21">
-                  <TransformGroup name="frontHip_R" translation="0.166807 -0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="22">
-                    <TransformGroup name="frontKnee_R" translation="0.172408 0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="23">
-                      <TransformGroup name="frontAnkle_R" translation="0.197659 -0.014788 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="24">
-                        <TransformGroup name="frontFoot_R" translation="0.156628 -0.009729 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="25">
-                          <TransformGroup name="frontToes_R" translation="0.047641 -0.005765 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="26">
-                            <TransformGroup name="hoofFrontRight" translation="0.032321 -0.009167 0.002635" rotation="-69.22777 90.00000 0.00000" nodeId="27">
+          <TransformGroup name="RootPart1_M" translation="0.165315 -0.000000 0.000000" nodeId="18" rotation="0.00000 -0.00000 0.00000">
+            <TransformGroup name="Spine1_M" translation="0.132252 0.000000 0.000000" rotation="0.00000 -0.00000 52.00113" nodeId="19">
+              <TransformGroup name="Chest_M" translation="0.063856 -0.231948 0.000000" rotation="0.00000 -0.00000 -60.70822" nodeId="20">
+                <TransformGroup name="frontRump_R" translation="-0.028577 -0.050903 -0.068361" rotation="180.00000 -0.00000 44.39090" nodeId="21">
+                  <TransformGroup name="frontHip_R" translation="0.216849 0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="22">
+                    <TransformGroup name="frontKnee_R" translation="0.224130 -0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="23">
+                      <TransformGroup name="frontAnkle_R" translation="0.256956 -0.019224 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="24">
+                        <TransformGroup name="frontFoot_R" translation="0.203616 -0.012648 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="25">
+                          <TransformGroup name="frontToes_R" translation="0.061934 -0.007495 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="26">
+                            <TransformGroup name="hoofFrontRight" translation="0.042018 -0.011917 0.003426" rotation="-69.22777 90.00000 0.00000" nodeId="27">
                               <Shape name="emitterShapeFastFrontRight" shapeId="4" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="28" />
                               <Shape name="emitterShapeSlowFrontRight" shapeId="5" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="29" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
                       </TransformGroup>
-                      <TransformGroup name="frKneeCorner1_R" translation="-0.046514 -0.039895 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="30" />
+                      <TransformGroup name="frKneeCorner1_R" translation="-0.060468 -0.051864 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="30" />
                     </TransformGroup>
                   </TransformGroup>
                 </TransformGroup>
-                <TransformGroup name="Neck_M" translation="0.056598 -0.000000 0.000000" rotation="0.00000 -0.00000 -55.79116" nodeId="31">
-                  <TransformGroup name="Neck2_M" translation="0.119562 -0.000000 0.000000" rotation="0.00000 -0.00000 -6.50460" nodeId="32">
-                    <TransformGroup name="Neck4_M" translation="0.123623 -0.000564 0.000000" rotation="0.00000 -0.00000 0.72607" nodeId="33">
-                      <TransformGroup name="Head_M" translation="0.046954 -0.000191 0.000000" rotation="0.00000 -0.00000 -2.85055" nodeId="34">
-                        <TransformGroup name="Jaw_M" translation="-0.014076 0.045267 0.000000" rotation="0.00000 -0.00000 104.43674" nodeId="35">
-                          <TransformGroup name="tongue3_M" translation="0.134676 0.003010 0.000000" rotation="0.00000 -0.00000 -2.89415" nodeId="36" />
+                <TransformGroup name="Neck_M" translation="0.073578 0.000000 0.000000" rotation="0.00000 -0.00000 -55.79116" nodeId="31">
+                  <TransformGroup name="Neck2_M" translation="0.155430 -0.000000 0.000000" rotation="0.00000 -0.00000 -6.50460" nodeId="32">
+                    <TransformGroup name="Neck4_M" translation="0.160710 -0.000733 0.000000" rotation="0.00000 -0.00000 0.72607" nodeId="33">
+                      <TransformGroup name="Head_M" translation="0.061041 -0.000248 0.000000" rotation="0.00000 -0.00000 -18.85055" nodeId="34">
+                        <TransformGroup name="Jaw_M" translation="-0.020321 0.074209 0.000000" rotation="0.00000 -0.00000 104.43674" nodeId="35">
+                          <TransformGroup name="tongue3_M" translation="0.219008 -0.001777 0.000000" rotation="0.00000 -0.00000 -2.89415" nodeId="36" />
                         </TransformGroup>
-                        <TransformGroup name="Eye_R" translation="0.021037 0.095353 -0.050880" rotation="-0.00010 53.71846 67.57044" nodeId="37" />
-                        <TransformGroup name="ear1_R" translation="0.031166 0.018179 -0.048913" rotation="180.00000 -0.00000 -21.12520" nodeId="38" />
-                        <TransformGroup name="lidUpper1_R" translation="0.014084 0.093158 -0.049128" rotation="-39.04668 40.36390 16.17579" nodeId="39" />
-                        <TransformGroup name="lidBottom1_R" translation="0.021140 0.093116 -0.049128" rotation="38.35516 41.00827 117.90476" nodeId="40" />
-                        <TransformGroup name="lipCorner_R" translation="-0.043937 0.171288 -0.034840" rotation="0.00000 89.27525 -112.42733" nodeId="41" />
-                        <TransformGroup name="lipMidBot_M" translation="-0.058295 0.215742 0.000000" rotation="0.00000 -0.00000 42.90604" nodeId="42" />
-                        <TransformGroup name="lipMidUp_M" translation="-0.027140 0.221358 0.000573" rotation="0.00000 -0.00000 113.24488" nodeId="43" />
-                        <TransformGroup name="Eye_L" translation="0.021060 0.095401 0.050824" rotation="0.00010 -53.71846 67.57044" nodeId="44" />
-                        <TransformGroup name="ear1_L" translation="0.031166 0.018179 0.048913" rotation="180.00000 -0.00000 158.87480" nodeId="45" />
-                        <TransformGroup name="lidUpper1_L" translation="0.014074 0.093137 0.049153" rotation="-39.04668 40.36390 -163.82421" nodeId="46" />
-                        <TransformGroup name="lidBottom1_L" translation="0.021130 0.093095 0.049153" rotation="38.35516 41.00827 -62.09524" nodeId="47" />
-                        <TransformGroup name="lipCorner_L" translation="-0.048921 0.185877 0.032071" rotation="0.00000 89.27525 67.57267" nodeId="48" />
-                        <TransformGroup name="jtsSkinWire_L_1" translation="-0.054632 0.160087 0.042488" rotation="90.00000 -78.06255 82.62359" nodeId="49">
-                          <TransformGroup name="jtsSkinWire_L_2" translation="0.016430 0.172595 -0.003118" rotation="0.26184 0.01186 9.34588" nodeId="50">
-                            <TransformGroup name="jtsSkinWire_L_3" translation="0.004275 0.197253 -0.003540" nodeId="51" rotation="0.00000 -0.00000 0.00000">
-                              <TransformGroup name="jtsSkinWire_L_4" translation="-0.019784 0.082928 -0.000873" nodeId="52" rotation="0.00000 -0.00000 0.00000" />
+                        <TransformGroup name="Eye_R" translation="0.027719 0.155739 -0.056533" rotation="-0.00010 53.71846 67.57044" nodeId="37" />
+                        <TransformGroup name="ear1_R" translation="0.043067 0.029381 -0.054348" rotation="180.00000 -0.00000 -5.12524" nodeId="38" />
+                        <TransformGroup name="lidUpper1_R" translation="0.018141 0.152349 -0.054782" rotation="-39.04668 40.36390 16.17579" nodeId="39" />
+                        <TransformGroup name="lidBottom1_R" translation="0.027959 0.152200 -0.054782" rotation="38.35516 41.00827 117.90476" nodeId="40" />
+                        <TransformGroup name="lipCorner_R" translation="-0.063917 0.280694 -0.038711" rotation="0.00000 89.27525 -112.42733" nodeId="41" />
+                        <TransformGroup name="lipMidBot_M" translation="-0.084616 0.353576 0.000000" rotation="0.00000 -0.00000 42.90604" nodeId="42" />
+                        <TransformGroup name="lipMidUp_M" translation="-0.041361 0.362408 0.000636" rotation="0.00000 -0.00000 113.24488" nodeId="43" />
+                        <TransformGroup name="Eye_L" translation="0.027750 0.155817 0.056471" rotation="0.00010 -53.71846 67.57044" nodeId="44" />
+                        <TransformGroup name="ear1_L" translation="0.043067 0.029381 0.054348" rotation="180.00000 -0.00000 174.87476" nodeId="45" />
+                        <TransformGroup name="lidUpper1_L" translation="0.018128 0.152318 0.054807" rotation="-39.04668 40.36390 -163.82421" nodeId="46" />
+                        <TransformGroup name="lidBottom1_L" translation="0.027947 0.152168 0.054807" rotation="38.35516 41.00827 -62.09524" nodeId="47" />
+                        <TransformGroup name="lipCorner_L" translation="-0.071089 0.304616 0.035634" rotation="0.00000 89.27525 67.57267" nodeId="48" />
+                        <TransformGroup name="jtsSkinWire_L_1" translation="-0.078616 0.262493 0.047209" rotation="90.00000 -78.06255 82.62359" nodeId="49">
+                          <TransformGroup name="jtsSkinWire_L_2" translation="0.000583 0.275362 0.003403" rotation="0.26184 0.01186 9.34588" nodeId="50">
+                            <TransformGroup name="jtsSkinWire_L_3" translation="0.000150 0.320803 0.004080" nodeId="51" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_L_4" translation="-0.023940 0.135400 0.002621" nodeId="52" rotation="0.00000 -0.00000 0.00000" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
-                        <TransformGroup name="jtsSkinWire_R_1" translation="-0.054632 0.160087 -0.042488" rotation="-90.00000 -78.06255 -97.37641" nodeId="53">
-                          <TransformGroup name="jtsSkinWire_R_2" translation="-0.016430 0.172595 -0.003118" rotation="0.26184 -0.01186 -9.34588" nodeId="54">
-                            <TransformGroup name="jtsSkinWire_R_3" translation="-0.004275 0.197253 -0.003540" nodeId="55" rotation="0.00000 -0.00000 0.00000">
-                              <TransformGroup name="jtsSkinWire_R_4" translation="0.019962 0.082920 -0.000873" rotation="0.00000 -0.00000 -5.18305" nodeId="56" />
+                        <TransformGroup name="jtsSkinWire_R_1" translation="-0.078616 0.262493 -0.047209" rotation="-90.00000 -78.06255 -97.37641" nodeId="53">
+                          <TransformGroup name="jtsSkinWire_R_2" translation="-0.000583 0.275362 0.003403" rotation="0.26184 -0.01186 -9.34588" nodeId="54">
+                            <TransformGroup name="jtsSkinWire_R_3" translation="-0.000150 0.320803 0.004080" nodeId="55" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_R_4" translation="0.024138 0.135391 0.002621" rotation="0.00000 -0.00000 -5.18305" nodeId="56" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
-                        <TransformGroup name="jtsSkinWire_M_1" translation="-0.125414 -0.345595 0.000000" rotation="167.57063 -90.00000 0.00000" nodeId="57" />
+                        <TransformGroup name="jtsSkinWire_M_1" translation="-0.168875 -0.563897 0.000000" rotation="167.57063 -90.00000 0.00000" nodeId="57" />
                       </TransformGroup>
                     </TransformGroup>
                   </TransformGroup>
                 </TransformGroup>
-                <TransformGroup name="frontRump_L" translation="-0.021982 -0.039156 0.052585" rotation="180.00000 -0.00000 -135.60910" nodeId="58">
-                  <TransformGroup name="frontHip_L" translation="-0.166807 0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="59">
-                    <TransformGroup name="frontKnee_L" translation="-0.172408 -0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="60">
-                      <TransformGroup name="frontAnkle_L" translation="-0.197659 0.014788 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="61">
-                        <TransformGroup name="frontFoot_L" translation="-0.156628 0.009729 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="62">
-                          <TransformGroup name="frontToes_L" translation="-0.047641 0.005765 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="63">
-                            <TransformGroup name="hoofFrontLeft" translation="-0.032321 0.009167 -0.000859" rotation="110.77223 90.00000 0.00000" nodeId="64">
+                <TransformGroup name="frontRump_L" translation="-0.028577 -0.050903 0.068361" rotation="180.00000 -0.00000 -135.60910" nodeId="58">
+                  <TransformGroup name="frontHip_L" translation="-0.216849 -0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="59">
+                    <TransformGroup name="frontKnee_L" translation="-0.224130 0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="60">
+                      <TransformGroup name="frontAnkle_L" translation="-0.256956 0.019224 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="61">
+                        <TransformGroup name="frontFoot_L" translation="-0.203616 0.012648 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="62">
+                          <TransformGroup name="frontToes_L" translation="-0.061934 0.007495 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="63">
+                            <TransformGroup name="hoofFrontLeft" translation="-0.042017 0.011917 -0.001117" rotation="110.77223 90.00000 0.00000" nodeId="64">
                               <Shape name="emitterShapeSlowFrontLeft" shapeId="6" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="65" />
                               <Shape name="emitterShapeFastFrontLeft" shapeId="7" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="66" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
                       </TransformGroup>
-                      <TransformGroup name="frKneeCorner1_L" translation="0.046514 0.039895 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="67" />
+                      <TransformGroup name="frKneeCorner1_L" translation="0.060468 0.051864 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="67" />
                     </TransformGroup>
                   </TransformGroup>
                 </TransformGroup>
               </TransformGroup>
-              <TransformGroup name="Spine1Part1_M" translation="0.055189 -0.000000 0.000000" nodeId="68" rotation="0.00000 -0.00000 0.00000">
-                <TransformGroup name="belly1_M" translation="0.055189 -0.000000 0.000000" rotation="0.00000 -0.00000 4.46379" nodeId="69" />
+              <TransformGroup name="Spine1Part1_M" translation="0.071746 -0.000000 0.000000" nodeId="68" rotation="0.00000 -0.00000 0.00000">
+                <TransformGroup name="belly1_M" translation="0.071746 -0.000000 0.000000" rotation="0.00000 -0.00000 4.46379" nodeId="69" />
               </TransformGroup>
-              <TransformGroup name="jnts_forLeg_R" translation="0.102910 -0.021672 -0.126800" rotation="112.44219 -90.00000 0.00000" nodeId="70" />
-              <TransformGroup name="jnts_forLeg_L" translation="0.102910 -0.021672 0.126850" rotation="112.44219 -90.00000 0.00000" nodeId="71" />
+              <TransformGroup name="jnts_forLeg_R" translation="0.133783 -0.028174 -0.164840" rotation="112.44219 -90.00000 0.00000" nodeId="70" />
+              <TransformGroup name="jnts_forLeg_L" translation="0.133783 -0.028174 0.164905" rotation="112.44219 -90.00000 0.00000" nodeId="71" />
             </TransformGroup>
           </TransformGroup>
-          <TransformGroup name="backHip_L" translation="-0.043580 0.095835 0.068262" rotation="180.00000 -0.00000 -104.25146" nodeId="72">
-            <TransformGroup name="backKnee_L" translation="-0.218472 -0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="73">
-              <TransformGroup name="backAnkle_L" translation="-0.195726 -0.017556 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="74">
-                <TransformGroup name="backFoot_L" translation="-0.190943 -0.001159 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="75">
-                  <TransformGroup name="backToes_L" translation="-0.048084 0.003679 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="76">
-                    <TransformGroup name="hoofBackLeft" translation="-0.036401 0.003723 0.001038" rotation="103.34871 90.00000 0.00000" nodeId="77">
+          <TransformGroup name="backHip_L" translation="-0.056654 0.124585 0.088740" rotation="180.00000 -0.00000 -104.25146" nodeId="72">
+            <TransformGroup name="backKnee_L" translation="-0.284014 0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="73">
+              <TransformGroup name="backAnkle_L" translation="-0.254444 -0.022823 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="74">
+                <TransformGroup name="backFoot_L" translation="-0.248226 -0.001507 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="75">
+                  <TransformGroup name="backToes_L" translation="-0.062509 0.004782 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="76">
+                    <TransformGroup name="hoofBackLeft" translation="-0.047322 0.004840 0.001350" rotation="103.34871 90.00000 0.00000" nodeId="77">
                       <Shape name="emitterShapeSlowBackLeft" shapeId="8" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="78" />
                       <Shape name="emitterShapeFastBackLeft" shapeId="9" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="79" />
                     </TransformGroup>
                   </TransformGroup>
                 </TransformGroup>
-                <TransformGroup name="backAnkleCorner1_L" translation="0.028581 0.024678 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="80" />
+                <TransformGroup name="backAnkleCorner1_L" translation="0.037156 0.032082 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="80" />
               </TransformGroup>
-              <TransformGroup name="backKneeCorner1_L" translation="0.071808 -0.017206 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="81" />
+              <TransformGroup name="backKneeCorner1_L" translation="0.093351 -0.022368 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="81" />
             </TransformGroup>
           </TransformGroup>
         </TransformGroup>

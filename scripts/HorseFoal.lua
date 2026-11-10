@@ -102,14 +102,14 @@ function HorseFoal.hideEnterPrompt(vehicle)
 end
 
 -- The foal's bone regions against the adult's, per axis of the bone, about the bone's origin: the least-squares fit of the baked horseFoal.i3d.shapes to horse.i3d.shapes, in each bone's own space
--- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm, the head 1 cm; the foal head is as long as 0.38 of the adult's but 0.56 as wide). Re-measure after a re-bake with another shape.
+-- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm; Favorite 3: overall size 0.65, the head 0.55 to 0.63 of the adult's). Re-measure after a re-bake with another shape.
 -- Gear built for the adult (HorseDynamics' halter and harness) scales its points with these.
 HorseFoal.BONE_SCALE = {
-    Head_M = { 0.387, 0.384, 0.562 },
-    Chest_M = { 0.397, 0.419, 0.399 },
-    Spine1_M = { 0.405, 0.406, 0.401 },
-    RootPart1_M = { 0.460, 0.413, 0.406 },
-    Root_M = { 0.412, 0.454, 0.411 },
+    Head_M = { 0.551, 0.629, 0.625 },
+    Chest_M = { 0.517, 0.545, 0.518 },
+    Spine1_M = { 0.527, 0.527, 0.522 },
+    RootPart1_M = { 0.598, 0.537, 0.528 },
+    Root_M = { 0.536, 0.590, 0.534 },
 }
 
 -- published for other mods (mod globals are invisible across mods): g_currentMission.horseFoal.getBoneScale(vehicle, boneName) -> x, y, z for a foal, nothing for any other horse or bone
