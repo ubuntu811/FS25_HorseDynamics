@@ -44,6 +44,13 @@ function HorseFoal.prepareConfig(animalSystem, animalType, baseDirectory)
         Logging.info("[HorseFoal] native entry %d (visual %d) model: %s", i, i + 1, tostring(path))
         n = n + 1
     end
+    -- PROBE 2: does the engine read this file at all? entries 0 and 4 (two adult coats) get the foal model: those adults must show as foals in a pasture
+    for _, i in ipairs({ 0, 4 }) do
+        local key = string.format("animalHusbandry.animals.animal(%d).assets", i)
+        xml:setString(key .. "#filename", rel .. "/model/horseFoal.i3d")
+        xml:setString(key .. "#animation", rel .. "/model/horseFoal.i3d")
+        Logging.info("[HorseFoal] PROBE: native entry %d (coat %d adult) now uses the foal model", i, i + 1)
+    end
     local outDir = getUserProfileAppPath() .. "modSettings/FS25_HorseFoalMod/"
     createFolder(getUserProfileAppPath() .. "modSettings/")
     createFolder(outDir)
@@ -166,5 +173,12 @@ AnimalClusterHusbandry.updateVisuals = Utils.prependedFunction(AnimalClusterHusb
     for _, cluster in ipairs(self.nextUpdateClusters or {}) do
         local visual = cluster:getVisual()
         Logging.info("[HorseFoal] updateVisuals cluster %s subType %s age %s -> visual index %s (minAge %s)", tostring(cluster.id), tostring(cluster.subTypeIndex), tostring(cluster.age), tostring(visual and visual.visualAnimalIndex), tostring(visual and visual.minAge))
+    end
+end)
+
+-- what the engine is handed when a pasture's husbandry is made
+AnimalClusterHusbandry.create = Utils.prependedFunction(AnimalClusterHusbandry.create, function(self, xmlFilename)
+    if self.animalTypeName == "HORSE" then
+        Logging.info("[HorseFoal] husbandry for HORSE created with config %s (exists: %s)", tostring(xmlFilename), tostring(xmlFilename ~= nil and fileExists(xmlFilename)))
     end
 end)
