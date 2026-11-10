@@ -161,7 +161,7 @@ const PARAMS = [
   ['eyes',      'Eye size',            0.80, 2.20, 0.01, 1,     'Eyes',  'x'],
   ['eye_down',  'Eyes down',           -0.02, 0.07, 0.002, 0,   'Eyes',  'm'],
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
-  ['eye_out',   'Eyes outward',        -0.01, 0.03, 0.002, 0,   'Eyes',  'm'],
+  ['eye_out',   'Eyes outward',        -0.02, 0.03, 0.002, 0,   'Eyes',  'm'],
   ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.09, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
