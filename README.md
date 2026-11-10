@@ -7,3 +7,12 @@ Experiment: what does a horse look like with the goat kid's proportions?
 Result (skeleton positions, not yet looked at in the editor or the game): withers 1.46 m -> 1.08 m, head 2.06 m -> 1.39 m, head to tail 2.60 m -> 1.88 m. `age` 0 is the kid, 1 the adult; in between is a growing foal.
 
 Open: look at it in the GIANTS Editor; the collision proxy, camera nodes and the rideable vehicle XML are not changed; stride and speed need a locomotion file of their own (the goat kid has one); how the game would show it (a new animal entry with a model of its own) is not worked out.
+
+
+## foal-scale (the sliders)
+
+`out/foal-scale.html` is a single-file web app (a sibling of terra-scale): drag sliders for overall size, torso, neck, head (depth / length / width), jaw, nose width, nose forward, ears (size, tilt, forward, closer), eyes (size, down, forward, outward), legs, hooves and tail, and watch the foal (and a ghost of the game adult) change live. Presets, Rest / Idle / Walk poses, side / 3/4 / front / head views, measures (height, ear-eye-nose relation), state in the URL, copy link / parameters, export `.obj`, save `.png`.
+The skinning is the Blender maths ported to JavaScript; `?test=1` runs a self-test against the Blender numbers (heights within 1 cm).
+
+Build: `blender.exe --background --python tools/export_for_app.py -- <horse.i3d> <game folder> app/horse_app.json`, then `python3 tools/build_app.py`.
+The page embeds the game's own horse mesh: keep it local, do not publish it. `app/horse_app.json` and `app/vendor/` (three.js r128) are not in git.
