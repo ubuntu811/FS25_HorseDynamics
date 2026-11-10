@@ -14,8 +14,9 @@ import shapes_io as S
 WHEEL_R, TYRE_R, TRACK = 0.46, 0.026, 0.64        # wheel radius (tyre outside), tyre tube radius, x of the wheel centres
 RAIL_X, RAIL_Y = 0.40, 0.56                       # the side rails
 TUBE = 0.017
-EYE = (0.0, 0.70, 1.92)                           # the drawbar eye (apex of the shafts)
-MASS = 45.0
+EYE = (0.0, 0.65, 1.92)                           # the drawbar eye (apex of the shafts), at the unscaled size
+K = 1.25                                          # everything is built at the size above and scaled by this (the eye then rests at 0.81 m: the height the hitch holds an eye at, HorseHitch.EYE_HEIGHT_M)
+MASS = 60.0
 
 # ---------- vector helpers
 def sub(a, b): return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
@@ -113,6 +114,10 @@ def seg_box(p0, p1, half_a, half_b):
 def aabb_box(c, hx, hy, hz):
     return c, ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (hx, hy, hz)
 
+def scale_mesh(m, k=None):
+    k = k or K
+    m.p = [(x * k, y * k, z * k) for x, y, z in m.p]
+
 # ---------- the sulky body
 def body():
     frame, seat, boxes = H.Mesh(), H.Mesh(), []
@@ -189,9 +194,12 @@ def write(out):
     os.makedirs(out, exist_ok=True)
     name = "horseSulky"
     frame, seat, boxes = body()
+    boxes = [((c[0] * K, c[1] * K, c[2] * K), axes, (h[0] * K, h[1] * K, h[2] * K)) for c, axes, h in boxes]
+    scale_mesh(frame); scale_mesh(seat)
     P, N, U, T, subsets = H.merge([(frame, 1), (seat, 2)])
     ents = [H.shape_entity("sulky_vis", 1, P, N, U, T, subsets, ["frame", "seat"])]
     tyre, rim = wheel()
+    scale_mesh(tyre); scale_mesh(rim)
     P, N, U, T, subsets = H.merge([(tyre, 3), (rim, 4)])
     ents.append(H.shape_entity("sulky_wheel", 2, P, N, U, T, subsets, ["tyre", "rim"]))
     for i, (c, axes, h) in enumerate(boxes):
@@ -207,7 +215,8 @@ def write(out):
     n = len(boxes)
     kids = "\n".join('      <Shape name="sulky_col%d" shapeId="%d" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="%d"/>' % (i, i + 2, 20 + i) for i in range(2, n + 1))
     mats = "\n".join('    <Material name="%s" materialId="%d" diffuseColor="%s" specularColor="%s"/>' % (nm, k + 1, d, s) for k, (nm, d, s) in enumerate(MATERIALS))
-    ex, ey, ez = EYE
+    ex, ey, ez = EYE[0] * K, EYE[1] * K, EYE[2] * K
+    WR, TR = WHEEL_R * K, TRACK * K
     xml = f'''<?xml version="1.0" encoding="iso-8859-1"?>
 
 <i3D name="{name}" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
@@ -225,10 +234,10 @@ def write(out):
       <Shape name="sulky_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1,2" nodeId="2"/>
 {kids}
       <TransformGroup name="attacherJoint" translation="{ex} {ey} {ez}" rotation="0 90 0" nodeId="3"/>
-      <TransformGroup name="wheelLeft" translation="{TRACK} {WHEEL_R} 0" nodeId="4">
+      <TransformGroup name="wheelLeft" translation="{TR} {WR} 0" nodeId="4">
         <Shape name="sulky_wheelL" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="5"/>
       </TransformGroup>
-      <TransformGroup name="wheelRight" translation="{-TRACK} {WHEEL_R} 0" nodeId="6">
+      <TransformGroup name="wheelRight" translation="{-TR} {WR} 0" nodeId="6">
         <Shape name="sulky_wheelR" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="7"/>
       </TransformGroup>
     </Shape>
@@ -273,9 +282,9 @@ def write(out):
     <base>
         <typeDesc>Sulky</typeDesc>
         <filename>vehicles/horseSulky/{name}.i3d</filename>
-        <size width="1.4" length="2.9" height="1.1" lengthOffset="0.6"/>
+        <size width="{1.4 * K:.2f}" length="{2.9 * K:.2f}" height="{1.1 * K:.2f}" lengthOffset="{0.6 * K:.2f}"/>
         <components maxMass="400">
-            <component centerOfMass="0 0.50 -0.12" solverIterationCount="10" mass="{MASS:g}"/>
+            <component centerOfMass="0 {0.50 * K:.3f} {-0.12 * K:.3f}" solverIterationCount="10" mass="{MASS:g}"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
         <mapHotspot type="TOOL_TRAILED" />
@@ -286,10 +295,10 @@ def write(out):
             <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
                 <wheels>
                     <wheel isLeft="true">
-                        <physics repr="wheelLeft" radius="{WHEEL_R}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelLeft" radius="{WR:.3f}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
                     </wheel>
                     <wheel isLeft="false">
-                        <physics repr="wheelRight" radius="{WHEEL_R}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelRight" radius="{WR:.3f}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
                     </wheel>
                 </wheels>
             </wheelConfiguration>
@@ -302,6 +311,10 @@ def write(out):
         </inputAttacherJoints>
         <brakeForce force="0.05" maxForce="0.15" maxForceMass="400"/>
     </attachable>
+
+    <ai>
+        <agentAttachment jointNode="attacherJoint" rotCenterWheelIndices="1 2" width="{1.5 * K:.2f}" height="{1.1 * K:.2f}" length="{2.6 * K:.2f}" lengthOffset="{0.4 * K:.2f}"/>
+    </ai>
 
     <i3dMappings>
         <i3dMapping id="{name}_main_component1" node="0>" />

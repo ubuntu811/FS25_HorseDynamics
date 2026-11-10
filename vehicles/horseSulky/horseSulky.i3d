@@ -21,11 +21,11 @@
       <Shape name="sulky_col4" shapeId="6" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="24"/>
       <Shape name="sulky_col5" shapeId="7" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="25"/>
       <Shape name="sulky_col6" shapeId="8" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="26"/>
-      <TransformGroup name="attacherJoint" translation="0.0 0.7 1.92" rotation="0 90 0" nodeId="3"/>
-      <TransformGroup name="wheelLeft" translation="0.64 0.46 0" nodeId="4">
+      <TransformGroup name="attacherJoint" translation="0.0 0.8125 2.4" rotation="0 90 0" nodeId="3"/>
+      <TransformGroup name="wheelLeft" translation="0.8 0.5750000000000001 0" nodeId="4">
         <Shape name="sulky_wheelL" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="5"/>
       </TransformGroup>
-      <TransformGroup name="wheelRight" translation="-0.64 0.46 0" nodeId="6">
+      <TransformGroup name="wheelRight" translation="-0.8 0.5750000000000001 0" nodeId="6">
         <Shape name="sulky_wheelR" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="7"/>
       </TransformGroup>
     </Shape>

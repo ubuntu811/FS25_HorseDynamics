@@ -33,9 +33,9 @@
     <base>
         <typeDesc>Sulky</typeDesc>
         <filename>vehicles/horseSulky/horseSulky.i3d</filename>
-        <size width="1.4" length="2.9" height="1.1" lengthOffset="0.6"/>
+        <size width="1.75" length="3.62" height="1.38" lengthOffset="0.75"/>
         <components maxMass="400">
-            <component centerOfMass="0 0.50 -0.12" solverIterationCount="10" mass="45"/>
+            <component centerOfMass="0 0.625 -0.150" solverIterationCount="10" mass="60"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
         <mapHotspot type="TOOL_TRAILED" />
@@ -46,10 +46,10 @@
             <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
                 <wheels>
                     <wheel isLeft="true">
-                        <physics repr="wheelLeft" radius="0.46" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelLeft" radius="0.575" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
                     </wheel>
                     <wheel isLeft="false">
-                        <physics repr="wheelRight" radius="0.46" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelRight" radius="0.575" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
                     </wheel>
                 </wheels>
             </wheelConfiguration>
@@ -58,10 +58,14 @@
 
     <attachable>
         <inputAttacherJoints>
-            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="0.7" />
+            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="0.8125" />
         </inputAttacherJoints>
         <brakeForce force="0.05" maxForce="0.15" maxForceMass="400"/>
     </attachable>
+
+    <ai>
+        <agentAttachment jointNode="attacherJoint" rotCenterWheelIndices="1 2" width="1.88" height="1.38" length="3.25" lengthOffset="0.50"/>
+    </ai>
 
     <i3dMappings>
         <i3dMapping id="horseSulky_main_component1" node="0>" />
