@@ -115,21 +115,26 @@ const headLine = (() => {
     let hw = 0, ew = 0, side = 'R';
     for (let k = 0; k < 4; k++) { const j = b.jn[v*4+k], w = b.wt[v*4+k]; if (head[j]) hw += w; if (eyeLid[j]) ew += w; }
     if (hw < 0.02) continue;
-    let s = sOf(b.pos0[v*3], b.pos0[v*3+1], b.pos0[v*3+2]);
-    if (ew > 0.5) { const e = b.pos0[v*3] < 0 ? eyeC.R : eyeC.L; s = sOf(e[0], e[1], e[2]); }   // eyeball and lids move as one piece
-    list.push({ v, s, hw: Math.min(1, hw) });
+    let x = b.pos0[v*3], y = b.pos0[v*3+1], z = b.pos0[v*3+2];
+    if (ew > 0.5) { const e = x < 0 ? eyeC.R : eyeC.L; x = e[0]; y = e[1]; z = e[2]; }   // eyeball and lids move as one piece
+    const s = sOf(x, y, z), a = ((x - E[0]) * ch[0] + (y - E[1]) * ch[1] + (z - E[2]) * ch[2]) / cl;
+    list.push({ v, s, a, hw: Math.min(1, hw) });
   }
-  return { list, up, E };
+  return { list, up, E, ch, cl };
 })();
 function applyHeadLine(P, pos, Db) {
-  if (!P.head_top && !P.head_bot) return 0;
-  const d = Db[idxOf.Head_M], u = headLine.up;
+  const prof = P.top_a1 || P.top_a2;
+  if (!P.head_top && !P.head_bot && !prof) return 0;
+  const d = Db[idxOf.Head_M], u = headLine.up, c = headLine.ch;
+  const Lw = headLine.cl * Math.hypot(d[0]*c[0] + d[1]*c[1] + d[2]*c[2], d[4]*c[0] + d[5]*c[1] + d[6]*c[2], d[8]*c[0] + d[9]*c[1] + d[10]*c[2]);   // current ear-to-nose length
+  const m1 = Math.tan(rad(P.top_a1)), m2 = Math.tan(rad(P.top_a1 + P.top_a2)), kb = P.top_break;
   let x = d[0]*u[0] + d[1]*u[1] + d[2]*u[2], y = d[4]*u[0] + d[5]*u[1] + d[6]*u[2], z = d[8]*u[0] + d[9]*u[1] + d[10]*u[2];
   const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
   let maxZ = -Infinity;
   for (const e of headLine.list) {
     const t = Math.max(-1, Math.min(1, e.s / 0.04)), up = t > 0, a = Math.abs(t), f = a * a * (3 - 2 * a);
-    const amt = (up ? P.head_top : P.head_bot) * f * e.hw;
+    let amt = (up ? P.head_top : P.head_bot) * f * e.hw;
+    if (prof && up) { const a = Math.min(1, e.a); if (a > 0) amt += Lw * (m1 * Math.min(a, kb) + m2 * Math.max(0, a - kb)) * f * e.hw; }   // two-line top profile
     pos[e.v*3] += x * amt; pos[e.v*3+1] += y * amt; pos[e.v*3+2] += z * amt;
     if (pos[e.v*3+2] > maxZ) maxZ = pos[e.v*3+2];
   }
@@ -148,6 +153,9 @@ const PARAMS = [
   ['head_l',    'Head length',         0.40, 1.50, 0.01, 1,     'Head',  'x'],
   ['head_top',  'Top line (forehead) up/down', -0.05, 0.08, 0.002, 0, 'Head', 'm'],
   ['head_bot',  'Bottom line (jaw) up/down',  -0.08, 0.05, 0.002, 0, 'Head', 'm'],
+  ['top_break', 'Top profile: break point (ear → nose)', 0.15, 0.85, 0.01, 0.45, 'Head', '%'],
+  ['top_a1',    'Top profile: upper line angle (+ up)', -30, 30, 0.5, 0, 'Head', '°'],
+  ['top_a2',    'Top profile: bend at the break (+ nose up)', -40, 40, 0.5, 0, 'Head', '°'],
   ['head_w',    'Head width',          0.70, 1.70, 0.01, 1,     'Head',  'x'],
   ['jaw_d',     'Jaw depth (cheek)',   0.70, 1.30, 0.01, 1,     'Head',  'x'],
   ['jaw_l',     'Jaw length',          0.70, 1.30, 0.01, 1,     'Head',  'x'],
@@ -278,6 +286,11 @@ function skin(P, clip, key, want) {
   const joints = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11] - minZ]; });
   return { pos: out, joints, height: maxZ - minZ, minZ };
 }
+function breakPoint(res) {   // top surface of the head at the break point of the top profile
+  const b = res.pos.body, kb = state.P.top_break, up = headLine.up; let best = -Infinity, bv = headLine.list[0].v;
+  for (const e of headLine.list) if (e.hw > 0.9 && Math.abs(e.a - kb) < 0.025 && e.s > best) { best = e.s; bv = e.v; }
+  return [b[bv*3], b[bv*3+1], b[bv*3+2]];
+}
 function landmarks(res) {
   const j = res.joints, E = [0,1,2].map(a => (j[idxOf.ear1_R][a] + j[idxOf.ear1_L][a]) / 2), Y = [0,1,2].map(a => (j[idxOf.Eye_R][a] + j[idxOf.Eye_L][a]) / 2);
   const b = res.pos.body; let ni = headIdx[0];
@@ -404,7 +417,7 @@ function initScene() {
   ghostMesh = new THREE.Mesh(gg, new THREE.MeshBasicMaterial({ color: 0x6FA8A0, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })); ghostMesh.frustumCulled = false; scene.add(ghostMesh);
   boneSets = [makeBones(0xB8E6DF), makeBones(0xE8A25C)];
   dotGroup = new THREE.Group(); scene.add(dotGroup);
-  [[0xE05A4A, 'N'], [0x4A78E0, 'E'], [0xE0D04A, 'Y']].forEach(c => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), new THREE.MeshBasicMaterial({ color: c[0], depthTest: false })); s.name = c[1]; s.renderOrder = 10; dotGroup.add(s); });
+  [[0xE05A4A, 'N'], [0x4A78E0, 'E'], [0xE0D04A, 'Y'], [0x4AE08A, 'K']].forEach(c => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), new THREE.MeshBasicMaterial({ color: c[0], depthTest: false })); s.name = c[1]; s.renderOrder = 10; dotGroup.add(s); });
   // orbit controls: left drag orbit, right drag / shift-drag pan, wheel zoom
   const el = renderer.domElement; let drag = null;
   el.addEventListener('contextmenu', e => e.preventDefault());
@@ -427,7 +440,7 @@ function initScene() {
 // ====================== UI ======================
 const $ = id => document.getElementById(id);
 function markView() { document.querySelectorAll('#vpui [data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === state.view)); }
-const fmt = (p, v) => p[7] === 'm' ? (v * 100).toFixed(1) + ' cm' : p[7] === '°' ? v.toFixed(0) + '°' : v.toFixed(2) + '×';
+const fmt = (p, v) => p[7] === 'm' ? (v * 100).toFixed(1) + ' cm' : p[7] === '%' ? (v * 100).toFixed(0) + '%' : p[7] === '°' ? (+v.toFixed(1)) + '°' : v.toFixed(2) + '×';
 const sliderEls = {};
 function buildSliders() {
   const host = $('sliders'); let group = null, body = null;
@@ -460,7 +473,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip'], ['bones', 'Bones (adult teal, foal orange)']].forEach(t => {
+  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -495,7 +508,7 @@ function update() {
     if (state.show.bones) { setBones(boneSets[0], gh.joints); setBones(boneSets[1], res.joints); }
   }
   const lm = landmarks(res);
-  if (renderer) { dotGroup.children.forEach(s => { const p = s.name === 'N' ? lm.N : s.name === 'E' ? lm.E : lm.Y; s.position.set(p[0] + 0.12, p[1], p[2]); }); }
+  if (renderer) { const K = breakPoint(res); dotGroup.children.forEach(s => { const p = s.name === 'N' ? lm.N : s.name === 'E' ? lm.E : s.name === 'K' ? K : lm.Y; s.position.set(p[0] + 0.12, p[1], p[2]); }); }
   setStats(res, lm);
   current = res; curLm = lm;
 }
