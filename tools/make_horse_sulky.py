@@ -253,7 +253,7 @@ def write(out):
         <image>vehicles/horseSulky/store_horseSulky.dds</image>
         <price>650</price>
         <lifetime>1000</lifetime>
-        <category>trailer</category>
+        <category>objectAnimal</category>
         <brand>NONE</brand>
         <showInStore>true</showInStore>
         <canBeSold>true</canBeSold>
