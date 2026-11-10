@@ -101,6 +101,7 @@ function applySocket(P, pos, jointsNow, jointsBase) {
 const PARAMS = [
   ['B',         'Overall size',        0.40, 1.10, 0.01, 1,     'Body',  'x'],
   ['torso',     'Torso',               0.80, 1.10, 0.01, 1,     'Body',  'x'],
+  ['rump',      'Rump (hindquarter) size', 0.60, 1.20, 0.01, 1, 'Body',  'x'],
   ['neck_len',  'Neck length',         0.60, 1.80, 0.01, 1,     'Neck',  'x'],
   ['neck_th',   'Neck thickness',      0.60, 1.30, 0.01, 1,     'Neck',  'x'],
   ['head_d',    'Head depth',          0.70, 1.70, 0.01, 1,     'Head',  'x'],
@@ -122,8 +123,7 @@ const PARAMS = [
   ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.12, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
-  ['hip_th',    'Thigh / rump thickness', 0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
-  ['hip_len',   'Thigh / rump length',    0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
+  ['hip_th',    'Hind thigh thickness',   0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
   ['hoof',      'Hooves',              0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
   ['tail',      'Tail',                0.40, 1.30, 0.01, 1,     'Legs & tail', 'x'],
 ];
@@ -135,10 +135,10 @@ const Q = Object.assign({}, A_BODY, { head_d: 1.5, head_l: 1.25, head_w: 1.5, ja
 const PRESETS = [
   ['adult',     'Game adult',       'as it ships',           mk({})],
   ['adult15',   'Adult, bigger head', 'head +15%',            adultHead(1.15)],
-  ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, hip_th: 0.75, hip_len: 0.75, hoof: 1.2, tail: 0.85 })],
-  ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, hip_th: 0.75, hip_len: 0.75, hoof: 1.2 }))],
+  ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2, tail: 0.85 })],
+  ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2 }))],
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
-  ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, hip_th: 0.75, hip_len: 0.75, hoof: 1.1, tail: 0.9 })],
+  ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
 const LEGACY = [
@@ -155,7 +155,7 @@ const TORSO = new Set(['RootPart1_M', 'Spine1_M', 'Chest_M', 'Spine1Part1_M', 'b
 function localScales(P) {
   const B = P.B;
   const rule = name => {
-    if (name === 'Root_M') return [B, B, B];
+    if (name === 'Root_M') { const r = B * P.rump; return [r, r, r]; }
     if (TORSO.has(name)) { const s = B * P.torso; return [s, s, s]; }
     if (name === 'Neck_M') return [B * P.neck_len, B * P.neck_th, B * P.neck_th];
     if (name === 'Head_M') return [B * P.head_d, B * P.head_l, B * P.head_w];
@@ -163,7 +163,7 @@ function localScales(P) {
     if (name.startsWith('lipMid') || name.startsWith('lipCorner')) return [B * P.head_d, B * P.head_l, B * P.head_w * P.lipw];
     if (name === 'Jaw_M') return [B * P.head_d * P.jaw_d, B * P.head_l * P.jaw_l, B * P.head_w * P.jaw_w];
     if (name.startsWith('Eye_') || name.startsWith('lid')) { const s = B * P.eyes; return [s, s, s]; }
-    if (name.startsWith('backHip')) return [B * P.leg_len * P.hip_len, B * P.leg_th * P.hip_th, B * P.leg_th * P.hip_th];
+    if (name.startsWith('backHip')) return [B * P.leg_len, B * P.leg_th, B * P.leg_th];
     if (HIPS.has(name) || LOWER_BACK.has(name)) return [B * P.leg_len, B * P.leg_th, B * P.leg_th];
     if (name.includes('Toes') || name.startsWith('hoof')) { const s = B * P.hoof; return [s, s, s]; }
     if (name === 'Tail0_M') { const s = B * P.tail; return [s, s, s]; }
@@ -196,9 +196,11 @@ function skinMatrices(P, clip, key) {
     if (name.startsWith('Eye_') || name.startsWith('lid')) {
       if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
     }
+    if (P.rump !== 1 && nodes[i].parent === idxOf.Root_M) { const k = 1 / P.rump; L = L.slice(); L[3] *= k; L[7] *= k; L[11] *= k; }   // keep hips, spine and tail where they were
     const s = sc[i];
     return (s[0] === 1 && s[1] === 1 && s[2] === 1) ? L : mul(L, Sm(s[0], s[1], s[2]));
   });
+  if (P.hip_th !== 1) ['backHip_R', 'backHip_L'].forEach(n => { const i = idxOf[n]; W[i] = mul(W[i], Sm(1, P.hip_th, P.hip_th)); });   // thigh skin only: the leg below keeps its pose
   return W.map((w, i) => mul(MX, mul(mul(w, WrestInv[i]), MXI)));
 }
 function skin(P, clip, key, want) {
@@ -246,7 +248,7 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false } };
+  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
@@ -284,7 +286,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -295,7 +297,7 @@ function writeUrl() {
     PARAMS.forEach(d => { if (Math.abs(state.P[d[0]] - DEF[d[0]]) > 1e-9) p.set(d[0], String(+state.P[d[0]].toFixed(4))); });
     if (state.clip !== 'rest') p.set('pose', state.clip);
     if (state.view !== 'side') p.set('view', state.view);
-    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false };
+    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false };
     Object.keys(dflt).forEach(k => { if (state.show[k] !== dflt[k]) p.set(k, state.show[k] ? '1' : '0'); });
     try { history.replaceState(null, '', p.toString() ? '?' + p.toString() : location.pathname); } catch (e) { /* file:// in some browsers */ }
   }, 150);
@@ -304,7 +306,23 @@ readUrl();
 
 // ====================== three.js scene ======================
 const wrap = document.getElementById('canvas-wrap');
-let renderer = null, scene, camera, meshes = {}, ghostMesh, dotGroup, gridHelper;
+let renderer = null, scene, camera, meshes = {}, ghostMesh, dotGroup, gridHelper, boneSets = [];
+const BONE_NODES = nodes.map((n, i) => i).filter(i => !/^(jtsSkinWire|jnts_|lid|lip|tongue)/.test(nodes[i].name) && nodes[i].parent >= 0);
+function makeBones(color) {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BONE_NODES.length * 6), 3).setUsage(THREE.DynamicDrawUsage));
+  const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 })); lines.renderOrder = 5; lines.frustumCulled = false;
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BONE_NODES.length * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  const pts = new THREE.Points(pg, new THREE.PointsMaterial({ color, size: 5, sizeAttenuation: false, depthTest: false })); pts.renderOrder = 6; pts.frustumCulled = false;
+  const grp = new THREE.Group(); grp.add(lines); grp.add(pts); scene.add(grp); return { grp, lines, pts };
+}
+function setBones(set, joints) {
+  const la = set.lines.geometry.getAttribute('position').array, pa = set.pts.geometry.getAttribute('position').array;
+  BONE_NODES.forEach((i, k) => {
+    const a = joints[nodes[i].parent], b = joints[i];
+    la.set(a, k * 6); la.set(b, k * 6 + 3); pa.set(b, k * 3);
+  });
+  set.lines.geometry.getAttribute('position').needsUpdate = true; set.pts.geometry.getAttribute('position').needsUpdate = true;
+}
 const orbit = { az: 0, el: 0.12, dist: 5.2, target: [0, -0.55, 0.95] };
 const VIEWS = {
   side:  { az: 0,    el: 0.10, dist: 5.2, target: [0, -0.55, 0.95] },
@@ -341,6 +359,7 @@ function initScene() {
   meshes.body = makeMesh('body', 0xD3CEC3); meshes.maneTail = makeMesh('maneTail', 0x5B5047); meshes.saddle = makeMesh('saddle', 0x7A4B2B); meshes.reins = makeMesh('reins', 0x3A2A1F);
   const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mesh.body.pos0), 3).setUsage(THREE.DynamicDrawUsage)); gg.setIndex(new THREE.BufferAttribute(mesh.body.idx, 1));
   ghostMesh = new THREE.Mesh(gg, new THREE.MeshBasicMaterial({ color: 0x6FA8A0, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })); ghostMesh.frustumCulled = false; scene.add(ghostMesh);
+  boneSets = [makeBones(0xB8E6DF), makeBones(0xE8A25C)];
   dotGroup = new THREE.Group(); scene.add(dotGroup);
   [[0xE05A4A, 'N'], [0x4A78E0, 'E'], [0xE0D04A, 'Y']].forEach(c => { const s = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), new THREE.MeshBasicMaterial({ color: c[0], depthTest: false })); s.name = c[1]; s.renderOrder = 10; dotGroup.add(s); });
   // orbit controls: left drag orbit, right drag / shift-drag pan, wheel zoom
@@ -398,7 +417,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip']].forEach(t => {
+  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip'], ['bones', 'Bones (adult teal, foal orange)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -408,7 +427,7 @@ function applyShow() {
   if (!renderer) return;
   meshes.maneTail.visible = state.show.mane; meshes.saddle.visible = state.show.saddle; meshes.reins.visible = state.show.reins;
   ['body', 'maneTail', 'saddle', 'reins'].forEach(n => { meshes[n].material.wireframe = state.show.wire; });
-  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots;
+  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; });
 }
 function setStats(res, lm) {
   const pct = (res.height / 2.28 * 100).toFixed(0);
@@ -430,6 +449,7 @@ function update() {
       const g = meshes[n].geometry, a = g.getAttribute('position'); a.array.set(res.pos[n]); a.needsUpdate = true; g.computeVertexNormals();
     });
     const gh = adultAt(state.clip, key), ga = ghostMesh.geometry.getAttribute('position'); ga.array.set(gh.pos.body); ga.needsUpdate = true;
+    if (state.show.bones) { setBones(boneSets[0], gh.joints); setBones(boneSets[1], res.joints); }
   }
   const lm = landmarks(res);
   if (renderer) { dotGroup.children.forEach(s => { const p = s.name === 'N' ? lm.N : s.name === 'E' ? lm.E : lm.Y; s.position.set(p[0] + 0.12, p[1], p[2]); }); }
@@ -489,3 +509,4 @@ $('exportPng').addEventListener('click', () => { if (!renderer) return; renderer
 window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF };
 requestAnimationFrame(frame);
 })();
+
