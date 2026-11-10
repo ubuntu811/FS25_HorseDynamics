@@ -7,7 +7,9 @@ HorseFoal.NUM_COATS = 8             -- animals.xml holds the 8 adult coats, then
 -- game base path -> mod directory as a "$" path (the game resolves "$x" as <game folder>x, in Lua and in the animal config alike)
 local function relativeToGame(path)
     local function split(p) local t = {} for part in string.gmatch((p:gsub("\\", "/")), "[^/]+") do t[#t + 1] = part end return t end
-    local g, m = split(g_gameBasePath), split(path)
+    local base = (g_gameBasePath ~= nil and g_gameBasePath ~= "") and g_gameBasePath or getAppBasePath()   -- g_gameBasePath is empty: the game runs from its own folder
+    Logging.info("[HorseFoal] game folder %s, mod folder %s", tostring(base), tostring(path))
+    local g, m = split(base), split(path)
     local n = 0
     while n < #g and n < #m and string.lower(g[n + 1]) == string.lower(m[n + 1]) do n = n + 1 end
     if n == 0 then return nil end

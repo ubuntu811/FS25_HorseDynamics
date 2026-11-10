@@ -9,6 +9,10 @@
         <en>Every ridden horse uses the foal model from the foal-scale web app (baked skinned mesh, skeleton and animation). Test build.</en>
     </description>
     <multiplayer supported="false"/>
+    <storeItems>
+        <storeItem xmlFilename="horseFoal.xml" />
+    </storeItems>
+
     <extraSourceFiles>
         <sourceFile filename="scripts/HorseFoal.lua" />
     </extraSourceFiles>
