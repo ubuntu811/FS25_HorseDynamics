@@ -41,6 +41,8 @@ Single player only for now.
         <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
         <storeItem xmlFilename="vehicles/horseBall/horseBall.xml"/>
         <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
+        <storeItem xmlFilename="placeables/jumps/jumpCross.xml"/>
+        <storeItem xmlFilename="placeables/jumps/jumpStandards.xml"/>
     </storeItems>
     <!-- the horse ball: its own vehicle type (the game's base vehicle plus a specialization that lets horses kick it) -->
     <specializations>

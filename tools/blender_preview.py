@@ -13,16 +13,21 @@ for o in objs:
     if o.type == "MESH" and o.name.endswith(":col"): o.hide_render = True; o.hide_set(True)
     if o.type in ("CAMERA", "LIGHT"): o.hide_render = True
 print("meshes", [(o.name, len(o.data.vertices), [m.name if m else None for m in o.data.materials]) for o in meshes])
-cols = {"wood": (0.42, 0.27, 0.14, 1), "steel": (0.55, 0.56, 0.6, 1)}
+import re as _re
+xml_text = open(model, encoding="iso-8859-1").read()
+cols = {m.group(1): tuple(float(x) for x in m.group(2).split()) for m in _re.finditer(r'<Material name="([^"]+)"[^>]*diffuseColor="([^"]+)"', xml_text)}
 for o in meshes:
     for m in o.data.materials:
         if m is None: continue
         m.use_nodes = True
         bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-        key = "steel" if "steel" in m.name else "wood"
-        bsdf.inputs["Base Color"].default_value = cols[key]
-        bsdf.inputs["Roughness"].default_value = 0.3 if key == "steel" else 0.75
-        bsdf.inputs["Metallic"].default_value = 0.9 if key == "steel" else 0.0
+        key = next((k for k in cols if k in m.name), None)
+        if key is None: continue
+        c = cols[key]
+        bsdf.inputs["Base Color"].default_value = (c[0], c[1], c[2], 1)
+        steel = "steel" in key
+        bsdf.inputs["Roughness"].default_value = 0.3 if steel else 0.7
+        bsdf.inputs["Metallic"].default_value = 0.9 if steel else 0.0
 bpy.context.view_layer.update()
 dg = bpy.context.evaluated_depsgraph_get()
 pts = []
