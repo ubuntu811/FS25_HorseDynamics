@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="93">
+    <author>ubuntu811</author>
+    <version>0.1.0.0</version>
+    <title>
+        <en>Horse Foal (test)</en>
+    </title>
+    <description>
+        <en>Every ridden horse uses the foal model from the foal-scale web app (baked skinned mesh, skeleton and animation). Test build.</en>
+    </description>
+    <multiplayer supported="false"/>
+    <extraSourceFiles>
+        <sourceFile filename="scripts/HorseFoal.lua" />
+    </extraSourceFiles>
+</modDesc>
