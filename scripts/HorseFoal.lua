@@ -6,19 +6,6 @@ HorseFoal.ADULT_AGE = 12            -- months: from here on the game's own horse
 HorseFoal.COATS = { "Gray", "Pinto", "Palomino", "Chestnut", "Bay", "Black", "SealBrown", "Dun" }
 HorseFoal.NUM_COATS = 8             -- animals.xml holds the 8 adult coats, then the same 8 as foals
 
--- path of `target` relative to the directory `from` (both absolute, same drive): "../../x/y"
-function HorseFoal.relativePath(from, target)
-    local function split(p) local t = {} for part in string.gmatch((p:gsub("\\", "/")), "[^/]+") do t[#t + 1] = part end return t end
-    local g, m = split(from), split(target)
-    local n = 0
-    while n < #g and n < #m and string.lower(g[n + 1]) == string.lower(m[n + 1]) do n = n + 1 end
-    if n == 0 then return target end
-    local parts = {}
-    for _ = n + 1, #g do parts[#parts + 1] = ".." end
-    for i = n + 1, #m do parts[#parts + 1] = m[i] end
-    return table.concat(parts, "/")
-end
-
 function HorseFoal.prepareConfig(animalSystem, animalType, baseDirectory)
     if animalType == nil or animalType.name ~= "HORSE" then return end
     local rel = HorseFoal.dir:gsub("\\", "/"):gsub("/$", "")          -- absolute: the engine loads the mods' own files that way
@@ -26,32 +13,11 @@ function HorseFoal.prepareConfig(animalSystem, animalType, baseDirectory)
     local xml = XMLFile.load("horseFoalAnimals", HorseFoal.dir .. "animals.xml")
     if xml == nil then return end
     local n = 0
-    -- EXPERIMENT (which path form does the engine's own animal loader accept? it rejects every foal entry so far): entry index 8..15 gets
-    --   8, 9: the adult horse model as "$dataS/..." (control: if these still fail it is the config, not the path), 10, 11: absolute,
-    --   12, 13: relative to the game folder, 14, 15: relative to the config file
-    local game = (g_gameBasePath ~= nil and g_gameBasePath ~= "") and g_gameBasePath or getAppBasePath()
-    local gameRel = "$" .. HorseFoal.relativePath(game, rel .. "/model/horseFoal.i3d")
-    local outDirTmp = getUserProfileAppPath() .. "modSettings/FS25_HorseFoalMod/"
-    local cfgRel = HorseFoal.relativePath(outDirTmp, rel .. "/model/horseFoal.i3d")
-    local forms = {
-        [8] = "$dataS/character/animals/domesticated/horse/horse.i3d", [9] = "$dataS/character/animals/domesticated/horse/horse.i3d",
-        [10] = rel .. "/model/horseFoal.i3d", [11] = rel .. "/model/horseFoal.i3d",
-        [12] = gameRel, [13] = gameRel, [14] = cfgRel, [15] = cfgRel,
-    }
     for i = HorseFoal.NUM_COATS, 2 * HorseFoal.NUM_COATS - 1 do
-        local key = string.format("animalHusbandry.animals.animal(%d).assets", i)
-        local path = forms[i] or (rel .. "/model/horseFoal.i3d")
-        xml:setString(key .. "#filename", path)
-        xml:setString(key .. "#animation", path)
-        Logging.info("[HorseFoal] native entry %d (visual %d) model: %s", i, i + 1, tostring(path))
-        n = n + 1
-    end
-    -- PROBE 2: does the engine read this file at all? entries 0 and 4 (two adult coats) get the foal model: those adults must show as foals in a pasture
-    for _, i in ipairs({ 0, 4 }) do
         local key = string.format("animalHusbandry.animals.animal(%d).assets", i)
         xml:setString(key .. "#filename", rel .. "/model/horseFoal.i3d")
         xml:setString(key .. "#animation", rel .. "/model/horseFoal.i3d")
-        Logging.info("[HorseFoal] PROBE: native entry %d (coat %d adult) now uses the foal model", i, i + 1)
+        n = n + 1
     end
     local outDir = getUserProfileAppPath() .. "modSettings/FS25_HorseFoalMod/"
     createFolder(getUserProfileAppPath() .. "modSettings/")
@@ -161,32 +127,4 @@ Player.requestToEnterVehicle = Utils.overwrittenFunction(Player.requestToEnterVe
 Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, function(vehicle, ...)
     if g_currentMission ~= nil and g_currentMission.horseFoal == nil then publish() end
     HorseFoal.hideEnterPrompt(vehicle)
-end)
-
--- diagnostics: what the husbandry asks the engine for (cluster age / visual index, add / swap / remove calls)
-local function wrapGlobal(name)
-    local orig = _G[name]
-    if orig == nil then return end
-    _G[name] = function(...)
-        local a = { ... }
-        local parts = {}
-        for i = 1, math.min(#a, 4) do parts[#parts + 1] = tostring(a[i]) end
-        Logging.info("[HorseFoal] %s(%s)", name, table.concat(parts, ", "))
-        return orig(...)
-    end
-end
-for _, name in ipairs({ "addHusbandryAnimal", "setAnimalSubType", "removeHusbandryAnimal", "setAnimalTextureTile" }) do wrapGlobal(name) end
-
-AnimalClusterHusbandry.updateVisuals = Utils.prependedFunction(AnimalClusterHusbandry.updateVisuals, function(self)
-    for _, cluster in ipairs(self.nextUpdateClusters or {}) do
-        local visual = cluster:getVisual()
-        Logging.info("[HorseFoal] updateVisuals cluster %s subType %s age %s -> visual index %s (minAge %s)", tostring(cluster.id), tostring(cluster.subTypeIndex), tostring(cluster.age), tostring(visual and visual.visualAnimalIndex), tostring(visual and visual.minAge))
-    end
-end)
-
--- what the engine is handed when a pasture's husbandry is made
-AnimalClusterHusbandry.create = Utils.prependedFunction(AnimalClusterHusbandry.create, function(self, xmlFilename)
-    if self.animalTypeName == "HORSE" then
-        Logging.info("[HorseFoal] husbandry for HORSE created with config %s (exists: %s)", tostring(xmlFilename), tostring(xmlFilename ~= nil and fileExists(xmlFilename)))
-    end
 end)
