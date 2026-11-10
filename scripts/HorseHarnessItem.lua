@@ -2,7 +2,7 @@
     HorseHarnessItem.lua -- the harness as an object (vehicles/horseHarness: a dynamic shop vehicle you pick up with your hands and set down anywhere, like the ball). Bring a horse you ride next to it and
     press the game's own attach key (Q): the harness goes on the horse (the scripted harness HorseHarness draws on the horse is this one), the object is hidden and out of the physics while it is worn. The key again
     (with nothing hitched) takes it off: the object is put down beside the horse. A wagon is still hitched with the same key (HorseHitch): the key does that when a wagon is in reach.
-    Hooks: the game's AttacherJoints.actionEventAttach (the Q handler on the horse's own attach event) is wrapped; HorseHitch shows the prompt (updateSaddle / silenceAttachKey).
+    Hooks: HorseHitch.onSaddleAttach (the Q handler on the horse's own attach event, via HorseJoint) calls handleAttach; HorseHitch shows the prompt (updateSaddle / silenceAttachKey).
     Worn state is not saved: after a reload the object lies where it was put on and the horse is bare.
 ]]
 HorseHarnessItem = {}
@@ -126,10 +126,6 @@ function HorseHarnessItem.handleAttach(horse)
     if horse == nil or horse.spec_rideable == nil then
         return false
     end
-    local info = horse.spec_attacherJoints ~= nil and horse.spec_attacherJoints.attachableInfo or nil
-    if info ~= nil and info.attachable ~= nil then
-        return false                              -- a wagon is in reach: the key hitches it
-    end
     local ride = HorseHarnessItem.rideOf(horse)
     if ride ~= nil and ride.harness and ride.harnessItem ~= nil then
         if ride.hitch ~= nil or ride.joined ~= nil then
@@ -175,15 +171,4 @@ function HorseHarnessItem.update(_)
             end
         end
     end
-end
-
--- the game's attach key on a horse: the harness first
-if AttacherJoints ~= nil and AttacherJoints.actionEventAttach ~= nil and Utils ~= nil and not HorseHarnessItem.hooked then
-    HorseHarnessItem.hooked = true
-    AttacherJoints.actionEventAttach = Utils.overwrittenFunction(AttacherJoints.actionEventAttach, function(self, superFunc, ...)
-        if HorseHarnessItem.handleAttach(self) then
-            return
-        end
-        return superFunc(self, ...)
-    end)
 end

@@ -1088,16 +1088,16 @@ end
 -- The key's callback (the horse is self): hitches the vehicle behind, or lets it go.
 function HorseHitch.onSaddleAttach(horse, actionName, inputValue)
     local ride = HorseHitch.ridden(horse)
-    if ride == nil then
-        return
-    end
-    if ride.hitch ~= nil or ride.joined ~= nil then
+    if ride ~= nil and (ride.hitch ~= nil or ride.joined ~= nil) then
         HorseHitch.release(ride)
         tell("unhitched")
         return
     end
-    local target = HorseHitch.joinable(ride)
+    local target = ride ~= nil and HorseHitch.joinable(ride) or nil
     if target == nil then
+        if HorseHarnessItem ~= nil then
+            HorseHarnessItem.handleAttach(horse)         -- (nothing to hitch: the key puts a harness object on or takes it off)
+        end
         return
     end
     if HorseHitch.start(ride, target) then
