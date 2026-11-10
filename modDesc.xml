@@ -41,8 +41,8 @@ Single player only for now.
         <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
         <storeItem xmlFilename="vehicles/horseBall/horseBall.xml"/>
         <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
-        <storeItem xmlFilename="placeables/jumps/jumpCross.xml"/>
-        <storeItem xmlFilename="placeables/jumps/jumpStandards.xml"/>
+        <storeItem xmlFilename="vehicles/horseJumps/jumpCross.xml"/>
+        <storeItem xmlFilename="vehicles/horseJumps/jumpStandards.xml"/>
     </storeItems>
     <!-- the horse ball: its own vehicle type (the game's base vehicle plus a specialization that lets horses kick it) -->
     <specializations>
@@ -52,6 +52,8 @@ Single player only for now.
         <type name="horseBall" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
             <specialization name="horseBallVehicle"/>
         </type>
+        <!-- the horse jumps: the game's base vehicle (dynamic objects: picked up with the hands, knocked over by a horse), no specialization needed -->
+        <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua"/>
     </vehicleTypes>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>

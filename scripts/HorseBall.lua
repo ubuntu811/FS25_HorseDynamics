@@ -19,10 +19,10 @@ HorseBall.MAX_SPEED = 7                      -- the ball is never faster than th
 -- Rolling resistance follows the ground under the ball. The engine has one friction for every terrain, so it is set from the game's own measure of how soft the ground is (the depth that
 -- getTerrainAttributesAtWorldPos returns: what WheelsUtil.getGroundType sorts into road / hard / soft terrain for the wheels; about 0 on a road, 0.6 on meadow): damping = base + gain * softness.
 -- A road: the ball rolls a long way and stops in the end; grass: it slows down at once.
-HorseBall.ROLL_ANGULAR_BASE = 0.35          -- angular damping on the hardest ground ...
-HorseBall.ROLL_ANGULAR_GAIN = 3.0           -- ... plus this times the softness (meadow 0.6: 2.2)
-HorseBall.ROLL_LINEAR_BASE = 0.03
-HorseBall.ROLL_LINEAR_GAIN = 0.7
+HorseBall.ROLL_ANGULAR_BASE = 0.05          -- the spin is damped lightly (a ball that is hit slides a moment, the ground's friction then spins it up: it rolls; a strong angular damping made it skid)
+HorseBall.ROLL_ANGULAR_GAIN = 0.4           -- ... plus this times the softness (meadow 0.6: 0.29)
+HorseBall.ROLL_LINEAR_BASE = 0.04           -- the rolling resistance is the slowing of the ball itself
+HorseBall.ROLL_LINEAR_GAIN = 0.9            -- ... plus this times the softness (meadow: 0.58)
 HorseBall.REST_SPEED = 0.08                 -- m/s: slower than this on the ground the ball is stopped (it would creep for ever)
 HorseBall.CHECK_MS = 100                    -- the ground is read this often
 -- How each weight option of the shop feels (the number is the option's place in horseBallWeightConfigurations, see tools/make_horse_ball.py WEIGHTS): how hard a horse kicks it, how soon it stops rolling
@@ -142,7 +142,7 @@ function HorseBall.kick(vehicle, dt)
             local v = math.min((h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE) * prof.kick, prof.max)
             local along = vx * h.fx + vz * h.fz                  -- (what the horse's body already gave it along the way)
             if along < v then
-                addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, cy, bz, false)
+                addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, cy + 0.4 * radius, bz, false)
             end
             HorseBall.lastKick[vehicle] = now
             say("kick: horse at %.1f m/s, ball leaves at about %.1f m/s", h.speed, v)

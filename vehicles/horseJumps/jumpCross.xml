@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseJump" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>Horse jump: cross-pole (FS25_HorseDynamics), made by tools/make_horse_jumps.py.</annotation>
+
+    <storeData>
+        <name>
+            <en>Horse jump: cross-pole</en>
+        </name>
+        <functions>
+            <function>A low cross-pole jump (bar at 55 cm). Pick it up with your hands, set it down where you want; a horse that hits it knocks it over.</function>
+        </functions>
+        <image>vehicles/horseJumps/store_jumpCross.dds</image>
+        <price>90</price>
+        <lifetime>1000</lifetime>
+        <category>objectAnimal</category>
+        <brand>NONE</brand>
+        <showInStore>true</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>OTHER</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <base>
+        <typeDesc>Horse jump</typeDesc>
+        <filename>vehicles/horseJumps/jumpCross.i3d</filename>
+        <size width="3.2" length="1.0" height="0.7" />
+        <canBeReset>true</canBeReset>
+        <components maxMass="200">
+            <component centerOfMass="0 0.25 0" solverIterationCount="10" mass="12"/>
+        </components>
+        <showInVehicleMenu>true</showInVehicleMenu>
+        <mapHotspot available="false" />
+        <input allowed="false"/>
+    </base>
+
+    <i3dMappings>
+        <i3dMapping id="jumpCross_main_component1" node="0>" />
+    </i3dMappings>
+</vehicle>

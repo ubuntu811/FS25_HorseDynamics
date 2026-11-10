@@ -175,7 +175,7 @@ def build(out, radius, name="horseBall"):
   <Shapes externalShapesFile="{name}.i3d.shapes">
   </Shapes>
   <Scene>
-    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe1ffb83" linearDamping="0.15" angularDamping="1.0" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
+    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe1ffb83" linearDamping="0.15" angularDamping="0.15" staticFriction="1" dynamicFriction="1" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
       <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1,2" nodeId="2"/>
     </Shape>
   </Scene>
