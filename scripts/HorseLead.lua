@@ -670,7 +670,7 @@ function HorseLead.harness(gear)
         end
         return "harness on: the horse stands where it is, without a halter (the leash tool takes it along)"
     end
-    if ride.stay and not ride.leash and not ride.carrot and not ride.halterOn then
+    if ride.stay and not ride.leash and not ride.carrot and not ride.halterOn and not ride.tied then
         HorseLead.releaseRide(ride)
         for i = #HorseLead.rides, 1, -1 do
             if HorseLead.rides[i] == ride then
@@ -720,6 +720,13 @@ function HorseLead.leash(gear)
     end
     if HorseHitch ~= nil and HorseHitch.releaseHandedOver ~= nil and HorseHitch.releaseHandedOver() then
         return "let go: what the leash handed to the horse is unhitched"
+    end
+    -- a hitching post's ring looked at: a leashed horse is tied to it, a horse tied to it is untied (HorseTie)
+    if HorseTie ~= nil then
+        local tieMessage = HorseTie.click(gear)
+        if tieMessage ~= nil then
+            return tieMessage
+        end
     end
     if HorseLead.hasFlagged("leash") then
         local gate = HorseLead.gateAtPlayer()
@@ -1344,6 +1351,8 @@ function HorseLead.updateRide(dt)
             -- a mass of orphaned ropes stretching across the yard)
             if HorseRope ~= nil and ride.leash and ride.vehicle ~= nil then
                 HorseRope.sync(ride, HorseLead.ropeSource())
+            elseif HorseRope ~= nil and ride.tied ~= nil and ride.vehicle ~= nil then
+                HorseRope.sync(ride, HorseTie.sourceOf(ride))                   -- (tied to a hitching post: the rope runs from the ring)
             elseif HorseRope ~= nil and ride.halterOn and ride.vehicle ~= nil then
                 HorseRope.halterSync(ride)                                  -- (let go outside a pasture: the halter stays on, no rope)
             end

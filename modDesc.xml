@@ -19,6 +19,7 @@ Single player only for now.
 
     <extraSourceFiles>
         <sourceFile filename="scripts/HorseGate.lua" />
+        <sourceFile filename="scripts/HorseTie.lua" />
         <sourceFile filename="scripts/HorseRope.lua" />
         <sourceFile filename="scripts/HorseHarness.lua" />
         <sourceFile filename="scripts/HorseHitch.lua" />
@@ -37,6 +38,7 @@ Single player only for now.
         <storeItem xmlFilename="handTools/leash/leash_leather.xml"/>
         <storeItem xmlFilename="handTools/harness/harness.xml"/>
         <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
+        <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
     </storeItems>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
