@@ -13,7 +13,7 @@
         <image>store/ball.dds</image>
         <price>25</price>
         <lifetime>1000</lifetime>
-        <category>objectMisc</category>
+        <category>objectAnimal</category>
         <brand>NONE</brand>
         <showInStore>true</showInStore>
         <canBeSold>true</canBeSold>
