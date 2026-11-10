@@ -25,6 +25,19 @@ HorseBall.ROLL_LINEAR_BASE = 0.03
 HorseBall.ROLL_LINEAR_GAIN = 0.7
 HorseBall.REST_SPEED = 0.08                 -- m/s: slower than this on the ground the ball is stopped (it would creep for ever)
 HorseBall.CHECK_MS = 100                    -- the ground is read this often
+-- How each weight option of the shop feels (the number is the option's place in horseBallWeightConfigurations, see tools/make_horse_ball.py WEIGHTS): how hard a horse kicks it, how soon it stops rolling
+-- (a multiplier of the ground's damping), its top speed (m/s).
+HorseBall.PROFILES = {
+    { kick = 1.0, roll = 1.0, max = 7.0 },      -- 1 normal
+    { kick = 1.4, roll = 1.5, max = 9.0 },      -- 2 beach ball: light, flies off at a touch, but the air stops it
+    { kick = 0.85, roll = 0.9, max = 6.5 },     -- 3 medium
+    { kick = 0.6, roll = 0.7, max = 5.0 },      -- 4 heavy
+    { kick = 0.4, roll = 0.5, max = 3.5 },      -- 5 medicine ball: hardly moves, and once it does it keeps going
+}
+function HorseBall.profile(vehicle)
+    local id = vehicle.configurations ~= nil and vehicle.configurations.horseBallWeight or 1
+    return HorseBall.PROFILES[id] or HorseBall.PROFILES[1]
+end
 HorseBall.horses = {}                        -- vehicle -> { x, z } at the last frame
 HorseBall.moving = {}                        -- the horses that move now (worked out once per frame)
 HorseBall.frame = -1
@@ -76,6 +89,7 @@ function HorseBall.kick(vehicle, dt)
     end
     HorseBall.updateHorses(dt)
     local radius = HorseBall.radiusOf(vehicle)
+    local prof = HorseBall.profile(vehicle)
     local now = g_time or 0
     local bx, by, bz = getWorldTranslation(node)         -- (the origin of the ball is its bottom: the centre is one radius up)
     local cy = by + radius
@@ -90,8 +104,8 @@ function HorseBall.kick(vehicle, dt)
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
     local speed = math.sqrt(vx * vx + vy * vy + vz * vz)
-    if speed > HorseBall.MAX_SPEED then
-        local k = HorseBall.MAX_SPEED / speed
+    if speed > prof.max then
+        local k = prof.max / speed
         setLinearVelocity(node, vx * k, vy * k, vz * k)
     end
     -- the ground under it: damping from its softness while it rolls on it (not while it flies)
@@ -108,8 +122,8 @@ function HorseBall.kick(vehicle, dt)
             local soft = math.max(0, math.min(1, depth or 0))
             if st.soft == nil or math.abs(st.soft - soft) > 0.02 then
                 st.soft = soft
-                pcall(setAngularDamping, node, HorseBall.ROLL_ANGULAR_BASE + HorseBall.ROLL_ANGULAR_GAIN * soft)
-                pcall(setLinearDamping, node, HorseBall.ROLL_LINEAR_BASE + HorseBall.ROLL_LINEAR_GAIN * soft)
+                pcall(setAngularDamping, node, (HorseBall.ROLL_ANGULAR_BASE + HorseBall.ROLL_ANGULAR_GAIN * soft) * prof.roll)
+                pcall(setLinearDamping, node, (HorseBall.ROLL_LINEAR_BASE + HorseBall.ROLL_LINEAR_GAIN * soft) * prof.roll)
             end
             if speed < HorseBall.REST_SPEED then
                 setLinearVelocity(node, 0, math.min(vy, 0), 0)
@@ -125,7 +139,7 @@ function HorseBall.kick(vehicle, dt)
         local ahead = (bx - h.x) * h.fx + (bz - h.z) * h.fz
         if h.forward and d < radius + HorseBall.REACH_M and ahead > 0 then
             local mass = getMass(node)
-            local v = math.min(h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE, HorseBall.MAX_SPEED)
+            local v = math.min((h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE) * prof.kick, prof.max)
             local along = vx * h.fx + vz * h.fz                  -- (what the horse's body already gave it along the way)
             if along < v then
                 addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, cy, bz, false)
@@ -212,16 +226,16 @@ function HorseBall.consoleSet(_, argument)
     local rows = { { "horseBallSmall.xml", 0.25 }, { "horseBall.xml", 0.45 }, { "horseBallLarge.xml", 0.70 } }
     local count = 0
     for r, row in ipairs(rows) do
-        for weight = 1, 3 do
-            local x, y, z = spot(4 + (r - 1) * 2.6, (weight - 2) * 2.2)
+        for weight = 1, 5 do
+            local x, y, z = spot(4 + (r - 1) * 2.6, (weight - 3) * 2.2)
             HorseBall.spawn(row[1], x, y + 0.3, z, weight)
             count = count + 1
         end
     end
-    return string.format("%d balls in front of you: rows small / normal / large, columns light 3 kg / medium +7 / heavy +22 (gsBall remove deletes them)", count)
+    return string.format("%d balls in front of you: rows small / normal / large, columns normal / beach ball / medium / heavy / medicine ball (gsBall remove deletes them)", count)
 end
 
 if addConsoleCommand ~= nil then
     addConsoleCommand("hdBall", "HorseDynamics: put a horse ball 5 m in front of you [remove]", "console", HorseBall)
-    addConsoleCommand("gsBall", "HorseDynamics: a test set of horse balls in front of you: 3 sizes x 3 weights [remove]", "consoleSet", HorseBall)
+    addConsoleCommand("gsBall", "HorseDynamics: a test set of horse balls in front of you: 3 sizes x 5 weights [remove]", "consoleSet", HorseBall)
 end

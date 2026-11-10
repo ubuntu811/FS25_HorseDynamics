@@ -40,12 +40,18 @@
 
     <!-- the weight: a shop option (the game's additionalMass configuration data) on top of the 3 kg of the component; the ball does not roll on for ever: damping is set on its shape (the i3d) -->
     <horseBallWeightConfigurations>
-        <horseBallWeightConfiguration name="Light (3 kg)" price="0"/>
+        <horseBallWeightConfiguration name="Normal (3 kg)" price="0"/>
+        <horseBallWeightConfiguration name="Beach ball (0.5 kg)" price="0">
+            <component node="horseBall_main_component1" additionalMass="-2.5"/>
+        </horseBallWeightConfiguration>
         <horseBallWeightConfiguration name="Medium (10 kg)" price="10">
             <component node="horseBall_main_component1" additionalMass="7"/>
         </horseBallWeightConfiguration>
         <horseBallWeightConfiguration name="Heavy (25 kg)" price="25">
             <component node="horseBall_main_component1" additionalMass="22"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Medicine ball (60 kg)" price="60">
+            <component node="horseBall_main_component1" additionalMass="57"/>
         </horseBallWeightConfiguration>
     </horseBallWeightConfigurations>
 

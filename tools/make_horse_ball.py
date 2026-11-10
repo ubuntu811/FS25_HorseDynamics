@@ -175,7 +175,7 @@ def build(out, radius, name="horseBall"):
   <Shapes externalShapesFile="{name}.i3d.shapes">
   </Shapes>
   <Scene>
-    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe3ffb83" linearDamping="0.15" angularDamping="1.0" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
+    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe1ffb83" linearDamping="0.15" angularDamping="1.0" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
       <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1,2" nodeId="2"/>
     </Shape>
   </Scene>
@@ -190,8 +190,31 @@ import re
 # the test sizes (gsBall): { file name: (radius m, component mass kg, label) }; the main ball is vehicles/horseBall/horseBall.xml (hand-written: the shop item), the others are made from it
 SIZES = { "horseBallSmall": (0.25, 1.5, "small"), "horseBallLarge": (0.70, 8.0, "large") }
 
+# the weight options, as multiples of the ball's own (base) mass: (name, factor, price). The order is the option's number in the shop (HorseBall.PROFILES has the feel of each).
+WEIGHTS = [("Normal", 1.0, 0), ("Beach ball", 1 / 6.0, 0), ("Medium", 10 / 3.0, 10), ("Heavy", 25 / 3.0, 25), ("Medicine ball", 20.0, 60)]
+
+def weights_block(base_kg):
+    out = ["    <horseBallWeightConfigurations>"]
+    for name, factor, price in WEIGHTS:
+        kg = base_kg * factor
+        label = "%s (%s kg)" % (name, ("%.2f" % kg).rstrip("0").rstrip("."))
+        extra = kg - base_kg
+        if abs(extra) < 1e-6:
+            out.append('        <horseBallWeightConfiguration name="%s" price="%d"/>' % (label, price))
+        else:
+            out.append('        <horseBallWeightConfiguration name="%s" price="%d">' % (label, price))
+            out.append('            <component node="horseBall_main_component1" additionalMass="%g"/>' % extra)
+            out.append('        </horseBallWeightConfiguration>')
+    out.append("    </horseBallWeightConfigurations>")
+    return "\n".join(out)
+
+def with_weights(xml_text, base_kg):
+    return re.sub(r"    <horseBallWeightConfigurations>.*?</horseBallWeightConfigurations>", lambda m: weights_block(base_kg), xml_text, count=1, flags=re.S)
+
 def variants(out):
     main = open(os.path.join(out, "horseBall.xml"), encoding="utf-8").read()
+    main = with_weights(main, 3.0)
+    open(os.path.join(out, "horseBall.xml"), "w", encoding="utf-8").write(main)
     for name, (radius, mass, label) in SIZES.items():
         build(out, radius, name)
         x = main.replace("vehicles/horseBall/horseBall.i3d", "vehicles/horseBall/%s.i3d" % name)
@@ -199,6 +222,7 @@ def variants(out):
         x = re.sub(r'<component centerOfMass="[^"]*" solverIterationCount="10" mass="[^"]*"', '<component centerOfMass="0 %g 0" solverIterationCount="10" mass="%g"' % (radius, mass), x)
         x = x.replace("<en>Horse ball</en>", "<en>Horse ball (%s, test)</en>" % label).replace("<de>Pferdeball</de>", "<de>Pferdeball (%s, Test)</de>" % label)
         x = x.replace("<showInStore>true</showInStore>", "<showInStore>false</showInStore>")
+        x = with_weights(x, mass)
         open(os.path.join(out, name + ".xml"), "w", encoding="utf-8").write(x)
         print("wrote", name + ".xml", "radius", radius, "mass", mass)
 
