@@ -21,11 +21,8 @@ end
 
 function HorseFoal.prepareConfig(animalSystem, animalType, baseDirectory)
     if animalType == nil or animalType.name ~= "HORSE" then return end
-    local rel = relativeToGame(HorseFoal.dir)
-    if rel == nil then
-        Logging.warning("[HorseFoal] mod folder is not on the game's drive, foals not available")
-        return
-    end
+    local rel = HorseFoal.dir:gsub("\\", "/"):gsub("/$", "")          -- absolute: the engine loads the mods' own files that way
+    Logging.info("[HorseFoal] baseDirectory %q, model path %s/model/horseFoal.i3d (exists: %s)", tostring(baseDirectory), rel, tostring(fileExists(rel .. "/model/horseFoal.i3d")))
     local xml = XMLFile.load("horseFoalAnimals", HorseFoal.dir .. "animals.xml")
     if xml == nil then return end
     local n = 0
