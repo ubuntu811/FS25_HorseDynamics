@@ -17,7 +17,7 @@ SEAT_Y = 0.84                                     # the top of the seat deck (th
 TUBE = 0.017
 EYE = (0.0, 0.65, 1.92)                           # the drawbar eye (apex of the shafts), at the unscaled size
 K = 1.25                                          # everything is built at the size above and scaled by this (the eye then rests at 0.81 m: the height the hitch holds an eye at, HorseHitch.EYE_HEIGHT_M)
-MASS = 60.0
+MASS = 250.0                                      # kg: a real sulky is lighter, but 60 kg on a trailer's springs went flying; 250 also keeps it out of the hands' 200 kg limit (nobody lifts a cart)
 
 # ---------- vector helpers
 def sub(a, b): return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
@@ -292,7 +292,7 @@ def write(out):
         <typeDesc>Sulky</typeDesc>
         <filename>vehicles/horseSulky/{name}.i3d</filename>
         <size width="{1.4 * K:.2f}" length="{2.9 * K:.2f}" height="{1.1 * K:.2f}" lengthOffset="{0.6 * K:.2f}"/>
-        <components maxMass="400">
+        <components maxMass="700">
             <component centerOfMass="0 {0.70 * K:.3f} {-0.12 * K:.3f}" solverIterationCount="10" mass="{MASS:g}"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
@@ -304,10 +304,10 @@ def write(out):
             <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
                 <wheels>
                     <wheel isLeft="true">
-                        <physics repr="wheelLeft" radius="{WR:.3f}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelLeft" radius="{WR:.3f}" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
                     </wheel>
                     <wheel isLeft="false">
-                        <physics repr="wheelRight" radius="{WR:.3f}" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelRight" radius="{WR:.3f}" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
                     </wheel>
                 </wheels>
             </wheelConfiguration>
@@ -318,7 +318,7 @@ def write(out):
         <inputAttacherJoints>
             <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="{ey:g}" />
         </inputAttacherJoints>
-        <brakeForce force="0.05" maxForce="0.15" maxForceMass="400"/>
+        <brakeForce force="0.05" maxForce="0.15" maxForceMass="700"/>
     </attachable>
 
     <ai>

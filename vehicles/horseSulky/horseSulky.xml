@@ -34,8 +34,8 @@
         <typeDesc>Sulky</typeDesc>
         <filename>vehicles/horseSulky/horseSulky.i3d</filename>
         <size width="1.75" length="3.62" height="1.38" lengthOffset="0.75"/>
-        <components maxMass="400">
-            <component centerOfMass="0 0.875 -0.150" solverIterationCount="10" mass="60"/>
+        <components maxMass="700">
+            <component centerOfMass="0 0.875 -0.150" solverIterationCount="10" mass="250"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
         <mapHotspot type="TOOL_TRAILED" />
@@ -46,10 +46,10 @@
             <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
                 <wheels>
                     <wheel isLeft="true">
-                        <physics repr="wheelLeft" radius="0.575" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelLeft" radius="0.575" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
                     </wheel>
                     <wheel isLeft="false">
-                        <physics repr="wheelRight" radius="0.575" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                        <physics repr="wheelRight" radius="0.575" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
                     </wheel>
                 </wheels>
             </wheelConfiguration>
@@ -60,7 +60,7 @@
         <inputAttacherJoints>
             <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="0.8125" />
         </inputAttacherJoints>
-        <brakeForce force="0.05" maxForce="0.15" maxForceMass="400"/>
+        <brakeForce force="0.05" maxForce="0.15" maxForceMass="700"/>
     </attachable>
 
     <ai>
