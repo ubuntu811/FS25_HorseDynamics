@@ -238,6 +238,9 @@ function HorseLead.startHorse(entry, item, distanceToPlayer)
     if clusterId == nil then
         return nil, "the horse's cluster has no id (cannot call startRiding)"
     end
+    if cluster.getRidableFilename ~= nil and cluster:getRidableFilename() == nil then
+        return nil, "this horse cannot be ridden (a foal): startRiding would remove it from the pasture and spawn nothing"
+    end
     local known = {}
     for _, vehicle in ipairs(HorseLead.rideables()) do
         known[vehicle] = true
