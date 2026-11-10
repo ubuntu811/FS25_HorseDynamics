@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseSulky" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>Sulky (FS25_HorseDynamics), made by tools/make_horse_sulky.py.</annotation>
+
+    <storeData>
+        <name>
+            <en>Sulky</en>
+            <de>Sulky</de>
+        </name>
+        <functions>
+            <function>A plain, modern two-wheeled cart for one horse. Hitch it to a horse in its harness at the drawbar eye, like a wagon.</function>
+        </functions>
+        <image>vehicles/horseSulky/store_horseSulky.dds</image>
+        <price>650</price>
+        <lifetime>1000</lifetime>
+        <category>trailer</category>
+        <brand>NONE</brand>
+        <showInStore>true</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>TRAILERS</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <base>
+        <typeDesc>Sulky</typeDesc>
+        <filename>vehicles/horseSulky/horseSulky.i3d</filename>
+        <size width="1.4" length="2.9" height="1.1" lengthOffset="0.6"/>
+        <components maxMass="400">
+            <component centerOfMass="0 0.50 -0.12" solverIterationCount="10" mass="45"/>
+        </components>
+        <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
+        <mapHotspot type="TOOL_TRAILED" />
+    </base>
+
+    <wheels>
+        <wheelConfigurations>
+            <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
+                <wheels>
+                    <wheel isLeft="true">
+                        <physics repr="wheelLeft" radius="0.46" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                    </wheel>
+                    <wheel isLeft="false">
+                        <physics repr="wheelRight" radius="0.46" width="0.05" mass="0.012" restLoad="0.1" forcePointRatio="0.15" initialCompression="5" suspTravel="0.04" spring="40" damper="15"/>
+                    </wheel>
+                </wheels>
+            </wheelConfiguration>
+        </wheelConfigurations>
+    </wheels>
+
+    <attachable>
+        <inputAttacherJoints>
+            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="0.7" />
+        </inputAttacherJoints>
+        <brakeForce force="0.05" maxForce="0.15" maxForceMass="400"/>
+    </attachable>
+
+    <i3dMappings>
+        <i3dMapping id="horseSulky_main_component1" node="0>" />
+        <i3dMapping id="attacherJoint" node="0>6" />
+        <i3dMapping id="wheelLeft" node="0>7" />
+        <i3dMapping id="wheelRight" node="0>8" />
+    </i3dMappings>
+</vehicle>

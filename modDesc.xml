@@ -46,6 +46,7 @@ Single player only for now.
         <storeItem xmlFilename="vehicles/horseHarness/horseHarnessItem.xml"/>
         <storeItem xmlFilename="vehicles/horseJumps/jumpCross.xml"/>
         <storeItem xmlFilename="vehicles/horseJumps/jumpStandards.xml"/>
+        <storeItem xmlFilename="vehicles/horseSulky/horseSulky.xml"/>
     </storeItems>
     <!-- the horse ball: its own vehicle type (the game's base vehicle plus a specialization that lets horses kick it) -->
     <specializations>
@@ -66,6 +67,8 @@ Single player only for now.
         <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
             <specialization name="horseObjectInfo"/>
         </type>
+        <!-- the sulky: a trailed, wheeled vehicle (the game's attachable base: wheels, an input attacher joint) -->
+        <type name="horseSulky" parent="baseAttachable" filename="$dataS/scripts/vehicles/Vehicle.lua"/>
     </vehicleTypes>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
