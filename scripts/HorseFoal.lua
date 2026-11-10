@@ -108,12 +108,33 @@ function HorseFoal.hideEnterPrompt(vehicle)
     end
 end
 
+-- The foal head against the adult's, per axis of the Head_M bone (x up, y along the face, z sideways), about the bone's origin: measured on the baked horseFoal.i3d.shapes against horse.i3d.shapes (776 head
+-- vertices, fit error under 1 cm). Re-measure after a re-bake with another head. Gear built for the adult head (HorseDynamics' halter) scales its points with this.
+HorseFoal.HEAD_SCALE = { 0.387, 0.384, 0.562 }
+
+-- published for other mods (mod globals are invisible across mods): g_currentMission.horseFoal.getHeadScale(vehicle) -> x, y, z of a foal's head, nothing for any other horse
+local function publish()
+    if g_currentMission == nil then return end
+    g_currentMission.horseFoal = {
+        adultAge = HorseFoal.ADULT_AGE,
+        isFoal = function(vehicle) return vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) end,
+        getHeadScale = function(vehicle)
+            if vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) then
+                return HorseFoal.HEAD_SCALE[1], HorseFoal.HEAD_SCALE[2], HorseFoal.HEAD_SCALE[3]
+            end
+        end,
+    }
+end
+
 AnimalSystem.loadAnimalConfig = Utils.prependedFunction(AnimalSystem.loadAnimalConfig, HorseFoal.prepareConfig)
 AnimalSystem.loadAnimals = Utils.appendedFunction(AnimalSystem.loadAnimals, HorseFoal.patchVisuals)
 AnimalCluster.getRidableFilename = Utils.overwrittenFunction(AnimalCluster.getRidableFilename, HorseFoal.getRidableFilename)
 PlaceableHusbandryAnimals.getAnimalSupportsRiding = Utils.overwrittenFunction(PlaceableHusbandryAnimals.getAnimalSupportsRiding, HorseFoal.getAnimalSupportsRiding)
 Player.requestToEnterVehicle = Utils.overwrittenFunction(Player.requestToEnterVehicle, HorseFoal.requestToEnterVehicle)
-Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, HorseFoal.hideEnterPrompt)
+Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, function(vehicle, ...)
+    if g_currentMission ~= nil and g_currentMission.horseFoal == nil then publish() end
+    HorseFoal.hideEnterPrompt(vehicle)
+end)
 
 -- diagnostics: what the husbandry asks the engine for (cluster age / visual index, add / swap / remove calls)
 local function wrapGlobal(name)
