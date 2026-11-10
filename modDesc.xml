@@ -21,6 +21,7 @@ Single player only for now.
         <sourceFile filename="scripts/HorseGate.lua" />
         <sourceFile filename="scripts/HorseTie.lua" />
         <sourceFile filename="scripts/HorseBall.lua" />
+        <sourceFile filename="scripts/HorseHarnessItem.lua" />
         <sourceFile filename="scripts/HorseRope.lua" />
         <sourceFile filename="scripts/HorseHarness.lua" />
         <sourceFile filename="scripts/HorseHitch.lua" />
@@ -41,16 +42,21 @@ Single player only for now.
         <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
         <storeItem xmlFilename="vehicles/horseBall/horseBall.xml"/>
         <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
+        <storeItem xmlFilename="vehicles/horseHarness/horseHarnessItem.xml"/>
         <storeItem xmlFilename="vehicles/horseJumps/jumpCross.xml"/>
         <storeItem xmlFilename="vehicles/horseJumps/jumpStandards.xml"/>
     </storeItems>
     <!-- the horse ball: its own vehicle type (the game's base vehicle plus a specialization that lets horses kick it) -->
     <specializations>
         <specialization name="horseBallVehicle" className="HorseBallVehicle" filename="scripts/HorseBallVehicle.lua"/>
+        <specialization name="horseHarnessItemVehicle" className="HorseHarnessItemVehicle" filename="scripts/HorseHarnessItemVehicle.lua"/>
     </specializations>
     <vehicleTypes>
         <type name="horseBall" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
             <specialization name="horseBallVehicle"/>
+        </type>
+        <type name="horseHarnessItem" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseHarnessItemVehicle"/>
         </type>
         <!-- the horse jumps: the game's base vehicle (dynamic objects: picked up with the hands, knocked over by a horse), no specialization needed -->
         <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua"/>
@@ -122,6 +128,14 @@ Single player only for now.
         <text name="configuration_horseBallWeight">
             <en>Weight</en>
             <de>Gewicht</de>
+        </text>
+        <text name="hd_putHarnessOn">
+            <en>Put the harness on the horse</en>
+            <de>Geschirr anlegen</de>
+        </text>
+        <text name="hd_takeHarnessOff">
+            <en>Take the harness off the horse</en>
+            <de>Geschirr abnehmen</de>
         </text>
         <text name="action_horseHarness">
             <en>Put the harness on the horse / take it off</en>

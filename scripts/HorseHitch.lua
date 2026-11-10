@@ -1391,6 +1391,8 @@ function HorseHitch.updateSaddle()
                     text = g_i18n:getText("action_detach")
                 elseif HorseHitch.joinable(ride) ~= nil then
                     text = g_i18n:getText("action_attach")
+                elseif ride.harnessItem ~= nil and HorseHarnessItem ~= nil then
+                    text = HorseHarnessItem.promptFor(horse)             -- (a harness from the object: the key takes it off)
                 end
                 pcall(g_inputBinding.setActionEventActive, g_inputBinding, entry.id, text ~= nil)
                 if g_inputBinding.setActionEventTextVisibility ~= nil then
@@ -1425,9 +1427,14 @@ function HorseHitch.silenceAttachKey()
     end
     local entry = HorseHitch.gameEvent(vehicle)
     if entry ~= nil then
-        pcall(g_inputBinding.setActionEventActive, g_inputBinding, entry.id, false)
+        -- a bare horse with a harness object beside it: the key puts the harness on (HorseHarnessItem), else the key is off
+        local text = HorseHarnessItem ~= nil and HorseHarnessItem.promptFor(vehicle) or nil
+        pcall(g_inputBinding.setActionEventActive, g_inputBinding, entry.id, text ~= nil)
         if g_inputBinding.setActionEventTextVisibility ~= nil then
-            pcall(g_inputBinding.setActionEventTextVisibility, g_inputBinding, entry.id, false)
+            pcall(g_inputBinding.setActionEventTextVisibility, g_inputBinding, entry.id, text ~= nil)
+        end
+        if text ~= nil then
+            pcall(g_inputBinding.setActionEventText, g_inputBinding, entry.id, text)
         end
     end
 end
