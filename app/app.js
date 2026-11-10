@@ -201,14 +201,18 @@ const headLine = (() => {
 })();
 function applyHeadLine(P, pos, Db) {
   const prof = P.top_a1 || P.top_a2;
-  if (!P.head_top && !P.head_bot && !prof) return 0;
+  if (!P.head_top && !P.head_bot && !prof && !P.muzzle) return 0;
   const d = Db[idxOf.Head_M], u = headLine.up, c = headLine.ch;
   const Lw = headLine.cl * Math.hypot(d[0]*c[0] + d[1]*c[1] + d[2]*c[2], d[4]*c[0] + d[5]*c[1] + d[6]*c[2], d[8]*c[0] + d[9]*c[1] + d[10]*c[2]);   // current ear-to-nose length
   const m1 = Math.tan(rad(P.top_a1)), m2 = Math.tan(rad(P.top_a1 + P.top_a2)), kb = P.top_break;
   let x = d[0]*u[0] + d[1]*u[1] + d[2]*u[2], y = d[4]*u[0] + d[5]*u[1] + d[6]*u[2], z = d[8]*u[0] + d[9]*u[1] + d[10]*u[2];
   const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
+  // muzzle shorter: everything ahead of the eye (a > 0.55 of the way from the ear base to the nose tip) is pulled back along the ear-to-nose line, 0 at a = 0.55 to the whole cut at a = 0.8 and beyond
+  let cx = d[0]*c[0] + d[1]*c[1] + d[2]*c[2], cy = d[4]*c[0] + d[5]*c[1] + d[6]*c[2], cz = d[8]*c[0] + d[9]*c[1] + d[10]*c[2];
+  const cn = Math.hypot(cx, cy, cz); cx /= cn; cy /= cn; cz /= cn;
   let maxZ = -Infinity;
   for (const e of headLine.list) {
+    if (P.muzzle) { const r = Math.max(0, Math.min(1, (e.a - 0.55) / 0.25)), f2 = r * r * (3 - 2 * r), sh = -P.muzzle * Lw * f2 * e.hw; pos[e.v*3] += cx * sh; pos[e.v*3+1] += cy * sh; pos[e.v*3+2] += cz * sh; }
     const t = Math.max(-1, Math.min(1, e.s / 0.04)), up = t > 0, a = Math.abs(t), f = a * a * (3 - 2 * a);
     let amt = (up ? P.head_top : P.head_bot) * f * e.hw;
     if (prof && up) { const a = Math.min(1, e.a); if (a > 0) amt += Lw * (m1 * Math.min(a, kb) + m2 * Math.max(0, a - kb)) * f * e.hw; }   // two-line top profile
@@ -231,6 +235,7 @@ const PARAMS = [
   ['head_top',  'Top line (forehead) up/down', -0.05, 0.08, 0.002, 0, 'Head', 'm'],
   ['head_bot',  'Bottom line (jaw) up/down',  -0.08, 0.05, 0.002, 0, 'Head', 'm'],
   ['top_break', 'Top profile: break point (ear → nose)', 0.15, 0.85, 0.01, 0.45, 'Head', '%'],
+  ['muzzle',   'Muzzle shorter (nose end, of ear-to-nose length)', 0, 0.40, 0.005, 0, 'Head', 'x'],
   ['top_a1',    'Top profile: upper line angle (+ up)', -30, 30, 0.5, 0, 'Head', '°'],
   ['top_a2',    'Top profile: bend at the break (+ nose up)', -40, 40, 0.5, 0, 'Head', '°'],
   ['head_w',    'Head width',          0.70, 1.70, 0.01, 1,     'Head',  'x'],
@@ -278,6 +283,7 @@ const PRESETS = [
   ['fav2',      'Favorite, fitted eyes', 'lids fitted to the ball',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_legacy: 0, eye_fit: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['fav3',      'Favorite 3 (Nov 10)', 'bigger (0.65), bigger head, nose forward', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 1.0, head_l: 1.0, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.0, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: 6, ear: 1.2, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['fav4',      'Favorite 4 (Nov 10)', 'fav3 with a shorter head (0.85)', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 1.0, head_l: 0.85, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.0, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: 6, ear: 1.2, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
+  ['fav5',      'Favorite 5 (Nov 10)', 'fav4 with a shorter nose (muzzle 0.12)', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 1.0, head_l: 0.92, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.0, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: 6, ear: 1.2, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4, muzzle: 0.12 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
