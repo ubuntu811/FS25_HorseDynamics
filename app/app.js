@@ -86,6 +86,8 @@ const PARAMS = [
   ['eye_out',   'Eyes outward',        -0.01, 0.03, 0.002, 0,   'Eyes',  'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
+  ['hip_th',    'Thigh / rump thickness', 0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
+  ['hip_len',   'Thigh / rump length',    0.50, 1.30, 0.01, 1,  'Legs & tail', 'x'],
   ['hoof',      'Hooves',              0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
   ['tail',      'Tail',                0.40, 1.30, 0.01, 1,     'Legs & tail', 'x'],
 ];
@@ -97,10 +99,10 @@ const Q = Object.assign({}, A_BODY, { head_d: 1.5, head_l: 1.25, head_w: 1.5, ja
 const PRESETS = [
   ['adult',     'Game adult',       'as it ships',           mk({})],
   ['adult15',   'Adult, bigger head', 'head +15%',            adultHead(1.15)],
-  ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, hoof: 1.2, tail: 0.85 })],
-  ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, hoof: 1.2 }))],
+  ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, hip_th: 0.75, hip_len: 0.75, hoof: 1.2, tail: 0.85 })],
+  ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, hip_th: 0.75, hip_len: 0.75, hoof: 1.2 }))],
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
-  ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, hoof: 1.1, tail: 0.9 })],
+  ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, hip_th: 0.75, hip_len: 0.75, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
 const LEGACY = [
@@ -112,6 +114,7 @@ const LEGACY = [
 
 // ====================== posing ======================
 const HIPS = new Set(['frontHip_R', 'frontHip_L', 'backHip_R', 'backHip_L']);
+const LOWER_BACK = new Set(['backKnee_R', 'backKnee_L', 'backAnkle_R', 'backAnkle_L', 'backFoot_R', 'backFoot_L', 'backAnkleCorner1_R', 'backAnkleCorner1_L', 'backKneeCorner1_R', 'backKneeCorner1_L']);
 const TORSO = new Set(['RootPart1_M', 'Spine1_M', 'Chest_M', 'Spine1Part1_M', 'belly1_M']);
 function localScales(P) {
   const B = P.B;
@@ -124,7 +127,8 @@ function localScales(P) {
     if (name.startsWith('lipMid') || name.startsWith('lipCorner')) return [B * P.head_d, B * P.head_l, B * P.head_w * P.lipw];
     if (name === 'Jaw_M') return [B * P.head_d * P.jaw_d, B * P.head_l * P.jaw_l, B * P.head_w * P.jaw_w];
     if (name.startsWith('Eye_') || name.startsWith('lid')) { const s = B * P.eyes; return [s, s, s]; }
-    if (HIPS.has(name)) return [B * P.leg_len, B * P.leg_th, B * P.leg_th];
+    if (name.startsWith('backHip')) return [B * P.leg_len * P.hip_len, B * P.leg_th * P.hip_th, B * P.leg_th * P.hip_th];
+    if (HIPS.has(name) || LOWER_BACK.has(name)) return [B * P.leg_len, B * P.leg_th, B * P.leg_th];
     if (name.includes('Toes') || name.startsWith('hoof')) { const s = B * P.hoof; return [s, s, s]; }
     if (name === 'Tail0_M') { const s = B * P.tail; return [s, s, s]; }
     return null;
