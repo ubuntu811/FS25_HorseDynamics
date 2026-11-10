@@ -2,6 +2,8 @@
 HorseFoal = {}
 HorseFoal.dir = g_currentModDirectory
 HorseFoal.ADULT_AGE = 12            -- months: from here on the game's own horse is shown
+-- animals.xml entry -> coat name (the game's store_horse<Coat> pictures; atlas tiles 0:0 .. 3:1 in this order)
+HorseFoal.COATS = { "Gray", "Pinto", "Palomino", "Chestnut", "Bay", "Black", "SealBrown", "Dun" }
 HorseFoal.NUM_COATS = 8             -- animals.xml holds the 8 adult coats, then the same 8 as foals
 
 -- path of `target` relative to the directory `from` (both absolute, same drive): "../../x/y"
@@ -80,6 +82,12 @@ function HorseFoal.patchVisuals(animalSystem)
             foal.visualAnimalIndex = adult.visualAnimalIndex + HorseFoal.NUM_COATS
             foal.visualAnimal = animalType.animals[foal.visualAnimalIndex]
             foal.minAge = 0
+            -- the shop / animal screen picture: the foal rendered in its coat (icons/store_foal<Coat>.dds), not the adult's icon
+            local coat = HorseFoal.COATS[adult.visualAnimalIndex]
+            if coat ~= nil and adult.store ~= nil then
+                foal.store = copyVisual(adult.store)
+                foal.store.imageFilename = HorseFoal.dir .. "icons/store_foal" .. coat .. ".dds"
+            end
             local grown = copyVisual(adult)
             grown.minAge = HorseFoal.ADULT_AGE
             subType.visuals = { foal, grown }
