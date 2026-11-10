@@ -101,19 +101,27 @@ function HorseFoal.hideEnterPrompt(vehicle)
     end
 end
 
--- The foal head against the adult's, per axis of the Head_M bone (x up, y along the face, z sideways), about the bone's origin: measured on the baked horseFoal.i3d.shapes against horse.i3d.shapes (776 head
--- vertices, fit error under 1 cm). Re-measure after a re-bake with another head. Gear built for the adult head (HorseDynamics' halter) scales its points with this.
-HorseFoal.HEAD_SCALE = { 0.387, 0.384, 0.562 }
+-- The foal's bone regions against the adult's, per axis of the bone, about the bone's origin: the least-squares fit of the baked horseFoal.i3d.shapes to horse.i3d.shapes, in each bone's own space
+-- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm, the head 1 cm; the foal head is as long as 0.38 of the adult's but 0.56 as wide). Re-measure after a re-bake with another shape.
+-- Gear built for the adult (HorseDynamics' halter and harness) scales its points with these.
+HorseFoal.BONE_SCALE = {
+    Head_M = { 0.387, 0.384, 0.562 },
+    Chest_M = { 0.397, 0.419, 0.399 },
+    Spine1_M = { 0.405, 0.406, 0.401 },
+    RootPart1_M = { 0.460, 0.413, 0.406 },
+    Root_M = { 0.412, 0.454, 0.411 },
+}
 
--- published for other mods (mod globals are invisible across mods): g_currentMission.horseFoal.getHeadScale(vehicle) -> x, y, z of a foal's head, nothing for any other horse
+-- published for other mods (mod globals are invisible across mods): g_currentMission.horseFoal.getBoneScale(vehicle, boneName) -> x, y, z for a foal, nothing for any other horse or bone
 local function publish()
     if g_currentMission == nil then return end
     g_currentMission.horseFoal = {
         adultAge = HorseFoal.ADULT_AGE,
         isFoal = function(vehicle) return vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) end,
-        getHeadScale = function(vehicle)
-            if vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) then
-                return HorseFoal.HEAD_SCALE[1], HorseFoal.HEAD_SCALE[2], HorseFoal.HEAD_SCALE[3]
+        getBoneScale = function(vehicle, boneName)
+            local scale = HorseFoal.BONE_SCALE[boneName]
+            if scale ~= nil and vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) then
+                return scale[1], scale[2], scale[3]
             end
         end,
     }
