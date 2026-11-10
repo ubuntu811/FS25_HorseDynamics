@@ -21,14 +21,20 @@
       <Shape name="sulky_col4" shapeId="6" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="24"/>
       <Shape name="sulky_col5" shapeId="7" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="25"/>
       <Shape name="sulky_col6" shapeId="8" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="26"/>
-      <Shape name="sulky_col7" shapeId="9" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="27"/>
-      <Shape name="sulky_col8" shapeId="10" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="28"/>
-      <TransformGroup name="attacherJoint" translation="0.0 0.8125 2.4" rotation="0 90 0" nodeId="3"/>
+      <TransformGroup name="attacherJoint" translation="0.0 1.0 2.4" rotation="0 90 0" nodeId="3"/>
       <TransformGroup name="wheelLeft" translation="0.8 0.5750000000000001 0" nodeId="4">
         <Shape name="sulky_wheelL" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="5"/>
       </TransformGroup>
       <TransformGroup name="wheelRight" translation="-0.8 0.5750000000000001 0" nodeId="6">
         <Shape name="sulky_wheelR" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="7"/>
+      </TransformGroup>
+      <TransformGroup name="skidPivotL" translation="-0.275 0.8250000000000001 -0.725" nodeId="30">
+        <Shape name="sulky_skidL" shapeId="9" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="31"/>
+        <Shape name="sulky_skidcolL" shapeId="10" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="32"/>
+      </TransformGroup>
+      <TransformGroup name="skidPivotR" translation="0.275 0.8250000000000001 -0.725" nodeId="33">
+        <Shape name="sulky_skidR" shapeId="9" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="34"/>
+        <Shape name="sulky_skidcolR" shapeId="10" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="35"/>
       </TransformGroup>
     </Shape>
   </Scene>

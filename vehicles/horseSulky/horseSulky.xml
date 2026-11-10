@@ -58,10 +58,19 @@
 
     <attachable>
         <inputAttacherJoints>
-            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="0.8125" />
+            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="1" />
         </inputAttacherJoints>
         <brakeForce force="0.05" maxForce="0.15" maxForceMass="700"/>
+        <support animationName="moveSupport" />
     </attachable>
+
+    <!-- the rear support legs: down (end of the animation) while nobody pulls, folded up backwards (its start) while hitched, like every trailer's support leg -->
+    <animations>
+        <animation name="moveSupport">
+            <part node="skidPivotL" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+            <part node="skidPivotR" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+        </animation>
+    </animations>
 
     <ai>
         <agentAttachment jointNode="attacherJoint" rotCenterWheelIndices="1 2" width="1.88" height="1.38" length="3.25" lengthOffset="0.50"/>
@@ -69,8 +78,10 @@
 
     <i3dMappings>
         <i3dMapping id="horseSulky_main_component1" node="0>" />
-        <i3dMapping id="attacherJoint" node="0>8" />
-        <i3dMapping id="wheelLeft" node="0>9" />
-        <i3dMapping id="wheelRight" node="0>10" />
+        <i3dMapping id="attacherJoint" node="0>6" />
+        <i3dMapping id="wheelLeft" node="0>7" />
+        <i3dMapping id="wheelRight" node="0>8" />
+        <i3dMapping id="skidPivotL" node="0>9" />
+        <i3dMapping id="skidPivotR" node="0>10" />
     </i3dMappings>
 </vehicle>

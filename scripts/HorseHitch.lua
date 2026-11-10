@@ -1171,10 +1171,19 @@ end
 -- Second result: where the eye is now, third: the hinge's reach (log only).
 HorseHitch.REACH_SHARE = 0.9
 HorseHitch.EYE_HEIGHT_M = 0.81
+HorseHitch.EYE_HEIGHT_BY_FILE = { horseSulky = 1.0 }       -- vehicles of ours that are made for a higher eye (the sulky's shafts rise to it), by a part of the vehicle's xml file name
 function HorseHitch.eyeHeight(target, wanted)
     local x, y, z = getWorldTranslation(target.node)
     local now = y - HorseHitch.groundY(x, z)
     local reach = HorseHitch.liftReach(target)
+    local file = target.vehicle ~= nil and target.vehicle.configFileName or nil
+    if file ~= nil then
+        for part, height in pairs(HorseHitch.EYE_HEIGHT_BY_FILE) do
+            if string.find(file, part, 1, true) ~= nil then
+                return height, now, reach
+            end
+        end
+    end
     if HorseHitch.EYE_HEIGHT_M ~= nil then
         return HorseHitch.EYE_HEIGHT_M, now, reach
     end

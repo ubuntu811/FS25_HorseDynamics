@@ -15,7 +15,9 @@ WHEEL_R, TYRE_R, TRACK = 0.46, 0.026, 0.64        # wheel radius (tyre outside),
 RAIL_X, RAIL_Y = 0.40, 0.66                       # the side rails (high: the footboard sits on them, legs hang down onto it)
 SEAT_Y = 0.84                                     # the top of the seat deck (the cushion sits on it): 1.05 m above the ground once scaled
 TUBE = 0.017
-EYE = (0.0, 0.65, 1.92)                           # the drawbar eye (apex of the shafts), at the unscaled size
+EYE = (0.0, 0.80, 1.92)                           # the drawbar eye (apex of the shafts), at the unscaled size: 1.0 m once scaled, higher than the frame, the shafts rise to it
+SHAFT_Y = 0.54                                    # where the shafts start (the front corners of the frame, a strut below the rails)
+SKID_X, SKID_Z = 0.22, -0.58                      # the pivots of the two rear support legs
 K = 1.25                                          # everything is built at the size above and scaled by this (the eye then rests at 0.81 m: the height the hitch holds an eye at, HorseHitch.EYE_HEIGHT_M)
 MASS = 250.0                                      # kg: a real sulky is lighter, but 60 kg on a trailer's springs went flying; 250 also keeps it out of the hands' 200 kg limit (nobody lifts a cart)
 
@@ -137,21 +139,18 @@ def body():
         rail((sx * 0.30, WHEEL_R, 0), (sx * RAIL_X, RAIL_Y, 0.10))
     # the shafts: from the front corners to the one eye, two tubes meeting at the apex
     for sx in (-1, 1):
-        rail((sx * RAIL_X, RAIL_Y, 0.46), EYE, r=0.019)
+        rail((sx * RAIL_X, SHAFT_Y, 0.46), EYE, r=0.019)
+        rail((sx * RAIL_X, RAIL_Y, 0.46), (sx * RAIL_X, SHAFT_Y, 0.46), r=0.017)
     # a brace between the shafts, a third of the way along
     t = 0.45
     bx = RAIL_X * (1 - t)
-    by = RAIL_Y + (EYE[1] - RAIL_Y) * t
+    by = SHAFT_Y + (EYE[1] - SHAFT_Y) * t
     bz = 0.46 + (EYE[2] - 0.46) * t
     rail((-bx, by, bz), (bx, by, bz), r=0.013)
     # the footboard: a plate on the rails in front of the seat, a front rail up from it
     rail((-0.32, RAIL_Y + 0.03, 0.62), (0.32, RAIL_Y + 0.03, 0.62), r=0.014)
     for sx in (-1, 1):
         rail((sx * 0.32, RAIL_Y, 0.62), (sx * 0.32, RAIL_Y + 0.03, 0.62), r=0.014)
-    # the rear skid: two legs down to a small shoe each
-    for sx in (-1, 1):
-        rail((sx * 0.22, RAIL_Y, -0.58), (sx * 0.22, 0.05, -0.64), r=0.014)
-        H.box(frame, sx * 0.22, 0.02, -0.67, 0.03, 0.02, 0.10)
     # the eye: a steel ring on the apex, lying flat
     torus_ring(frame, (EYE[0], EYE[1], EYE[2] + 0.045), (0, 1, 0), 0.040, 0.008, major=24, minor=6)
     # the seat: a bench (a deck on four posts, a cushion on it) and a leaning back, all in material 2 (brown); the footboard is frame material
@@ -168,15 +167,22 @@ def body():
         rail((sx * 0.37, SEAT_Y, -0.55), (sx * 0.37, SEAT_Y + 0.40, -0.63), r=0.013)
     rail((-0.37, SEAT_Y + 0.40, -0.63), (0.37, SEAT_Y + 0.40, -0.63), r=0.013)
 
-    # collision: the frame as one block, the seat back, the shafts (oriented), the skid shoes
+    # collision: the frame as one block, the bench, the back, the footboard, the shafts (oriented); the support legs are their own (skid())
     boxes.append(aabb_box((0, RAIL_Y, -0.06), RAIL_X + 0.02, 0.06, 0.54))
     boxes.append(aabb_box((0, SEAT_Y + 0.05, -0.30), 0.39, 0.06, 0.27))                  # the bench
     boxes.append(aabb_box((0, SEAT_Y + 0.27, -0.60), 0.38, 0.18, 0.05))                  # the back
     boxes.append(aabb_box((0, RAIL_Y + 0.035, 0.32), 0.34, 0.02, 0.32))                  # the footboard
     for sx in (-1, 1):
-        boxes.append(seg_box((sx * RAIL_X, RAIL_Y, 0.46), EYE, 0.02, 0.02))
-        boxes.append(aabb_box((sx * 0.22, 0.12, -0.65), 0.03, 0.12, 0.11))
+        boxes.append(seg_box((sx * RAIL_X, SHAFT_Y, 0.46), EYE, 0.02, 0.02))
     return frame, seat, boxes
+
+def skid():
+    """One rear support leg, in the pivot's frame (the pivot is on the rear rail, the leg hangs down): a tube and a shoe, and its collision box. The game folds it up when the sulky is hitched (the support animation)."""
+    m = H.Mesh()
+    drop = RAIL_Y - 0.05
+    tube(m, (0, 0, 0), (0, -drop, -0.06), 0.014)
+    H.box(m, 0, -drop - 0.02, -0.09, 0.03, 0.02, 0.10)
+    return m, aabb_box((0, -(RAIL_Y - 0.12), -0.08), 0.03, 0.12, 0.11)
 
 def wheel():
     """The wheel, axis along x, centred on the origin: thin tyre, rim, hub, crossed spokes."""
@@ -217,6 +223,14 @@ def write(out):
         obox(m, c, axes, h)
         cp, cn, cu, ct, csub = H.merge([(m, 1)])
         ents.append(H.shape_entity("sulky_col%d" % (i + 1), i + 3, cp, cn, cu, ct, csub, ["frame"], attachments=[(2, hull_block(c, axes, h))]))
+    leg, (lc, laxes, lh) = skid()
+    scale_mesh(leg)
+    P, N, U, T, subsets = H.merge([(leg, 1)])
+    ents.append(H.shape_entity("sulky_skid", len(boxes) + 3, P, N, U, T, subsets, ["frame"]))
+    lc, lh = (lc[0] * K, lc[1] * K, lc[2] * K), (lh[0] * K, lh[1] * K, lh[2] * K)
+    m = H.Mesh(); obox(m, lc, laxes, lh)
+    cp, cn, cu, ct, csub = H.merge([(m, 1)])
+    ents.append(H.shape_entity("sulky_skidcol", len(boxes) + 4, cp, cn, cu, ct, csub, ["frame"], attachments=[(2, hull_block(lc, laxes, lh))]))
     hdr = type("Hd", (), {"version": 10, "seed": 73})()
     sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, e) for e in ents]})()
     S.write(os.path.join(out, name + ".i3d.shapes"), sf)
@@ -225,6 +239,11 @@ def write(out):
     kids = "\n".join('      <Shape name="sulky_col%d" shapeId="%d" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="%d"/>' % (i, i + 2, 20 + i) for i in range(2, n + 1))
     mats = "\n".join('    <Material name="%s" materialId="%d" diffuseColor="%s" specularColor="%s"/>' % (nm, k + 1, d, s) for k, (nm, d, s) in enumerate(MATERIALS))
     ex, ey, ez = EYE[0] * K, EYE[1] * K, EYE[2] * K
+    sx_, sy_, sz_ = SKID_X * K, RAIL_Y * K, SKID_Z * K
+    skids = "\n".join(f'''      <TransformGroup name="skidPivot{nm}" translation="{sgn * sx_} {sy_} {sz_}" nodeId="{30 + 3 * i}">
+        <Shape name="sulky_skid{nm}" shapeId="{n + 3}" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="{31 + 3 * i}"/>
+        <Shape name="sulky_skidcol{nm}" shapeId="{n + 4}" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="{32 + 3 * i}"/>
+      </TransformGroup>''' for i, (nm, sgn) in enumerate((('L', -1), ('R', 1))))
     WR, TR = WHEEL_R * K, TRACK * K
     xml = f'''<?xml version="1.0" encoding="iso-8859-1"?>
 
@@ -249,6 +268,7 @@ def write(out):
       <TransformGroup name="wheelRight" translation="{-TR} {WR} 0" nodeId="6">
         <Shape name="sulky_wheelR" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="7"/>
       </TransformGroup>
+{skids}
     </Shape>
   </Scene>
 
@@ -319,7 +339,16 @@ def write(out):
             <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="{ey:g}" />
         </inputAttacherJoints>
         <brakeForce force="0.05" maxForce="0.15" maxForceMass="700"/>
+        <support animationName="moveSupport" />
     </attachable>
+
+    <!-- the rear support legs: down (end of the animation) while nobody pulls, folded up backwards (its start) while hitched, like every trailer's support leg -->
+    <animations>
+        <animation name="moveSupport">
+            <part node="skidPivotL" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+            <part node="skidPivotR" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+        </animation>
+    </animations>
 
     <ai>
         <agentAttachment jointNode="attacherJoint" rotCenterWheelIndices="1 2" width="{1.5 * K:.2f}" height="{1.1 * K:.2f}" length="{2.6 * K:.2f}" lengthOffset="{0.4 * K:.2f}"/>
@@ -330,6 +359,8 @@ def write(out):
         <i3dMapping id="attacherJoint" node="0>{n}" />
         <i3dMapping id="wheelLeft" node="0>{n + 1}" />
         <i3dMapping id="wheelRight" node="0>{n + 2}" />
+        <i3dMapping id="skidPivotL" node="0>{n + 3}" />
+        <i3dMapping id="skidPivotR" node="0>{n + 4}" />
     </i3dMappings>
 </vehicle>
 '''
