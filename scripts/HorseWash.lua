@@ -40,6 +40,11 @@ function HorseWash.cleanVehicle(self, amount)
     if cluster == nil or amount == nil or amount <= 0 then
         return
     end
+    local now = g_time or 0
+    if now - (self.horseWashLogAt or -1e9) > 2000 then              -- (one line per 2 s: what the washer asks for and what is left)
+        self.horseWashLogAt = now
+        print(string.format("[HorseDynamics] wash: dirt %d, asked %.4f of a full wash this call", cluster.dirt or -1, amount))
+    end
     self.horseWashCarry = (self.horseWashCarry or 0) + amount * 100
     local whole = math.floor(self.horseWashCarry)
     if whole >= 1 then
