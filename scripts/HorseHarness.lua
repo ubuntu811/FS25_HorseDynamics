@@ -107,6 +107,14 @@ function HorseHarness.build(vehicle, gear)
         bones[name] = node
     end
     local s = HorseHarness.spec
+    -- a smaller horse (a foal, FS25_HorseFoalMod): every point is scaled in its bone's space by that bone's factor, the straps get thinner
+    local boneScale, thin = {}, 1
+    for name in pairs(bones) do
+        local sx, sy, sz = HorseRope.boneScaleOf(vehicle, name)
+        boneScale[name] = { sx, sy, sz }
+        thin = math.min(thin, (sx + sy + sz) / 3)
+    end
+    thin = math.max(0.5, thin)
     local rig = { nodes = {}, bone = {}, locals = {}, slack = {}, pieces = {}, targets = {}, tied = {}, bones = bones, frames = 0, model = {} }
     local function point(boneName, x, y, z, slack)
         local node = createTransformGroup("horseHarnessPoint")
@@ -116,7 +124,8 @@ function HorseHarness.build(vehicle, gear)
         rig.nodes[n] = node
         rig.bone[n] = bones[boneName]
         local lx, ly, lz = HorseHarness.toLocal(boneName, x, y, z)
-        rig.locals[n] = { lx, ly, lz }
+        local sc = boneScale[boneName]
+        rig.locals[n] = { lx * sc[1], ly * sc[2], lz * sc[3] }
         rig.slack[n] = slack or 0
         return node
     end
@@ -129,12 +138,12 @@ function HorseHarness.build(vehicle, gear)
             if strapWidth ~= nil then
                 local nx, ny, nz = (normalFn or HorseHarness.bodyNormal)((a[1] + b[1]) / 2, (a[2] + b[2]) / 2, (a[3] + b[3]) / 2)
                 local lx, ly, lz = HorseHarness.toLocalDirection(a[4], nx, ny, nz)
-                options = HorseRope.gearOptions(strapWidth, bone, lx, ly, lz, gear)
+                options = HorseRope.gearOptions(strapWidth * thin, bone, lx, ly, lz, gear)
             else
                 options = HorseRope.gearOptions(nil, nil, nil, nil, nil, gear)
             end
         end
-        local rope = HorseRope.createSegment(from, diameter, options)
+        local rope = HorseRope.createSegment(from, diameter * thin, options)
         if rope ~= nil then
             rope.rfMaterialDone = steel or nil                   -- (the hemp is put on a piece whose shape has loaded, unless it is a ring)
             rig.pieces[#rig.pieces + 1] = rope

@@ -418,17 +418,20 @@ function HorseRope.setJawAngle(degrees)
 end
 HorseRope.setJawAngle(HorseRope.halter.crown.jawAngle)
 
--- How much smaller than the adult's this horse's head is, per axis of the head bone (x up, y along the face, z sideways): 1, 1, 1 unless a mod that makes smaller horses (FS25_HorseFoalMod publishes
--- g_currentMission.horseFoal.getHeadScale(vehicle), mod globals are not visible across mods) says so.
-function HorseRope.headScaleOf(vehicle)
+-- How much smaller than the adult's this horse's bone region is, per axis of that bone (the head bone: x up, y along the face, z sideways): 1, 1, 1 unless a mod that makes smaller horses
+-- (FS25_HorseFoalMod publishes g_currentMission.horseFoal.getBoneScale(vehicle, boneName); mod globals are not visible across mods) says so.
+function HorseRope.boneScaleOf(vehicle, boneName)
     local api = g_currentMission ~= nil and g_currentMission.horseFoal or nil
-    if api ~= nil and api.getHeadScale ~= nil then
-        local ok, x, y, z = pcall(api.getHeadScale, vehicle)
+    if api ~= nil and api.getBoneScale ~= nil then
+        local ok, x, y, z = pcall(api.getBoneScale, vehicle, boneName)
         if ok and x ~= nil then
             return x, y, z
         end
     end
     return 1, 1, 1
+end
+function HorseRope.headScaleOf(vehicle)
+    return HorseRope.boneScaleOf(vehicle, HorseRope.HEAD_BONE)
 end
 
 -- Builds the halter on a horse's head bone: nodes (children of the bone) and the rope pieces between them. Returns { nodes, pieces, tied } with the chin knot registered in HorseRope.chins, or nil.
