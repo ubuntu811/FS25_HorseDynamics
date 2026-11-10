@@ -250,6 +250,7 @@ const PARAMS = [
   ['socket_smooth', 'Socket smoothing', 0, 1, 0.05, 0.5, 'Eyes', '%'],
   ['eye_legacy','Classic eyes (Nov 10 look: no fit, no skin push, no relaxing)', 0, 1, 1, 0, 'Eyes', 'x'],
   ['eye_fit',    'Fit the lids to the eyeball', 0, 1, 0.05, 0, 'Eyes', '%'],
+  ['eye_sink',   'Eyeball in (sunk into the socket)', -0.01, 0.03, 0.001, 0, 'Eyes', 'm'],
   ['eye_fit_size', 'Fit: socket size vs eyeball', 0.80, 1.60, 0.01, 1.18, 'Eyes', 'x'],
   ['eye_fit_fwd',  'Fit: eyeball forward in socket', -0.015, 0.015, 0.001, 0, 'Eyes', 'm'],
   ['eye_fit_up',   'Fit: eyeball up in socket', -0.015, 0.015, 0.001, 0, 'Eyes', 'm'],
@@ -339,6 +340,7 @@ function skinMatrices(P, clip, key) {
     if (name.startsWith('Eye_') || name.startsWith('lid')) {
       if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
     }
+    if (P.eye_sink && name.startsWith('Eye_')) L = mul(Tm(0, 0, name.endsWith('_R') ? P.eye_sink : -P.eye_sink), L);   // eyeball only sinks into the socket; lids and skin stay
     if (P.rump !== 1 && nodes[i].parent === idxOf.Root_M) { const k = 1 / P.rump; L = L.slice(); L[3] *= k; L[7] *= k; L[11] *= k; }   // keep hips, spine and tail where they were
     const s = sc[i];
     return (s[0] === 1 && s[1] === 1 && s[2] === 1) ? L : mul(L, Sm(s[0], s[1], s[2]));
@@ -370,9 +372,10 @@ function skin(P, clip, key, want) {
   if (out.body) { const mz = applyHeadLine(P, out.body, Db); if (mz > maxZ) maxZ = mz; }
   let jointsBase = null;
   if (out.body && socketActive(P)) {
-    const D0 = skinMatrices(Object.assign({}, P, { eye_down: 0, eye_fwd: 0, eye_out: 0 }), clip, key);
+    const D0 = skinMatrices(Object.assign({}, P, { eye_down: 0, eye_fwd: 0, eye_out: 0, eye_sink: 0 }), clip, key);
     const jb = nodes.map((n, i) => { const d = D0[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
-    const jn = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
+    const Dj = P.eye_sink ? skinMatrices(Object.assign({}, P, { eye_sink: 0 }), clip, key) : Db;   // the socket follows the eye position, not the sinking
+    const jn = nodes.map((n, i) => { const d = Dj[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
     applySocket(P, out.body, jn, jb);
   }
   if (out.body) fitLids(P, out.body);
@@ -675,7 +678,7 @@ $('exportObj').addEventListener('click', exportObj);
 $('exportPng').addEventListener('click', () => { if (!renderer) return; renderer.render(scene, camera); const a = document.createElement('a'); a.download = 'foal.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
 window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF,
   eyeGap(P) { const r = skin(P, null, 0, ['body']), pos = r.pos.body, o = eyeFit.R;
-    const bb = vs => { const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const v of vs) for (let a = 0; a < 3; a++) { const x = pos[v*3+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: mn.map((m, a) => +((m + mx[a]) / 2).toFixed(4)), e: mn.map((m, a) => +(mx[a] - m).toFixed(4)) }; };
+    const bb = vs => { const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const v of vs) for (let a = 0; a < 3; a++) { const x = pos[v*3+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: mn.map((m, a) => +((m + mx[a]) / 2).toFixed(4)), e: mn.map((m, a) => +(mx[a] - m).toFixed(4)), mx: +(vs.reduce((t, v) => t + pos[v*3], 0) / vs.length).toFixed(4), lo: +mn[0].toFixed(4), hi: +mx[0].toFixed(4) }; };
     return { ring: bb(o.ring), ball: bb(o.ball) }; } };
 requestAnimationFrame(frame);
 if (/[?&]gap=1/.test(location.search)) document.getElementById('testout').textContent = 'GAP ' + JSON.stringify(window.__foal.eyeGap(state.P));
