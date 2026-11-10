@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseBall" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>A big red ball for the horses to kick around (FS25_HorseDynamics).</annotation>
+
+    <storeData>
+        <name>
+            <en>Horse ball (large, test)</en>
+            <de>Pferdeball (large, Test)</de>
+        </name>
+        <functions>
+            <function>A big red ball for the horses to kick around: ride or lead a horse into it.</function>
+        </functions>
+        <image>store/ball.dds</image>
+        <price>25</price>
+        <lifetime>1000</lifetime>
+        <category>objectAnimal</category>
+        <brand>NONE</brand>
+        <showInStore>false</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>OTHER</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <!-- the colour: the game's own palette (35 colours) as a configuration in the shop; the i3d's material "ball_mat" takes it (a vehicle shader material, colorScale) -->
+    <designColorConfigurations useDefaultColors="true" defaultColorIndex="13" price="0">
+        <material materialSlotName="ball_mat" materialTemplateUseColorOnly="true"/>
+    </designColorConfigurations>
+
+    <!-- the weight: a shop option (the game's additionalMass configuration data) on top of the 3 kg of the component; the ball does not roll on for ever: damping is set on its shape (the i3d) -->
+    <horseBallWeightConfigurations>
+        <horseBallWeightConfiguration name="Light (3 kg)" price="0"/>
+        <horseBallWeightConfiguration name="Medium (10 kg)" price="10">
+            <component node="horseBall_main_component1" additionalMass="7"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Heavy (25 kg)" price="25">
+            <component node="horseBall_main_component1" additionalMass="22"/>
+        </horseBallWeightConfiguration>
+    </horseBallWeightConfigurations>
+
+    <base>
+        <typeDesc>Horse toy</typeDesc>
+        <filename>vehicles/horseBall/horseBallLarge.i3d</filename>
+        <size width="1.40" length="1.40" height="1.40" />
+        <canBeReset>true</canBeReset>
+        <components maxMass="50">
+            <component centerOfMass="0 0 0" solverIterationCount="10" mass="8"/>
+        </components>
+        <showInVehicleMenu>false</showInVehicleMenu>
+        <mapHotspot available="false" />
+        <input allowed="false"/>
+    </base>
+
+    <i3dMappings>
+        <i3dMapping id="horseBall_main_component1" node="0>" />
+    </i3dMappings>
+</vehicle>

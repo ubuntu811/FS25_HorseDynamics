@@ -8,6 +8,7 @@ HorseBall = {}
 HorseBall.dir = g_currentModDirectory
 HorseBall.XML = "vehicles/horseBall/horseBall.xml"
 HorseBall.RADIUS = 0.45
+HorseBall.RADII = { horseball = 0.45, horseballsmall = 0.25, horseballlarge = 0.70 }      -- by the vehicle's xml name (the test sizes of gsBall are vehicles/horseBall/horseBallSmall.xml and ...Large.xml)
 HorseBall.MIN_SPEED = 0.35                  -- m/s a horse needs to kick (a standing horse only nudges)
 HorseBall.CHEST_M = 0.9                     -- the horse's chest: this far ahead of its root
 HorseBall.REACH_M = 0.55                    -- a ball whose surface is this close to the chest is kicked
@@ -62,6 +63,11 @@ function HorseBall.updateHorses(dt)
     HorseBall.moving = moving
 end
 
+function HorseBall.radiusOf(vehicle)
+    local name = vehicle.configFileName ~= nil and string.match(string.lower(vehicle.configFileName), "([^/\\]+)%.xml$") or nil
+    return HorseBall.RADII[name or ""] or HorseBall.RADIUS
+end
+
 -- One ball, one frame (called from the vehicle specialization on the server).
 function HorseBall.kick(vehicle, dt)
     local node = vehicle.components ~= nil and vehicle.components[1] ~= nil and vehicle.components[1].node or nil
@@ -69,6 +75,7 @@ function HorseBall.kick(vehicle, dt)
         return
     end
     HorseBall.updateHorses(dt)
+    local radius = HorseBall.radiusOf(vehicle)
     local now = g_time or 0
     local bx, by, bz = getWorldTranslation(node)
     -- what the physics did with it: 3 s after it appeared, how high its centre is above the ground (a ball that fell and rests shows its collision radius)
@@ -77,7 +84,7 @@ function HorseBall.kick(vehicle, dt)
     if age >= 3000 and age - dt < 3000 then
         local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
         local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
-        say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, HorseBall.RADIUS, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
+        say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, radius, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
     end
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
@@ -95,7 +102,7 @@ function HorseBall.kick(vehicle, dt)
     if now >= st.nextCheck then
         st.nextCheck = now + HorseBall.CHECK_MS
         local terrainY = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
-        if by - terrainY < HorseBall.RADIUS + 0.2 then
+        if by - terrainY < radius + 0.2 then
             local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
             local soft = math.max(0, math.min(1, depth or 0))
             if st.soft == nil or math.abs(st.soft - soft) > 0.02 then
@@ -115,7 +122,7 @@ function HorseBall.kick(vehicle, dt)
         local cx, cz = h.x + h.fx * HorseBall.CHEST_M, h.z + h.fz * HorseBall.CHEST_M
         local d = math.sqrt((bx - cx) ^ 2 + (bz - cz) ^ 2)
         local ahead = (bx - h.x) * h.fx + (bz - h.z) * h.fz
-        if h.forward and d < HorseBall.RADIUS + HorseBall.REACH_M and ahead > 0 then
+        if h.forward and d < radius + HorseBall.REACH_M and ahead > 0 then
             local mass = getMass(node)
             local v = math.min(h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE, HorseBall.MAX_SPEED)
             local along = vx * h.fx + vz * h.fz                  -- (what the horse's body already gave it along the way)
@@ -134,11 +141,44 @@ local function balls()
     local list = {}
     local vehicles = g_currentMission ~= nil and g_currentMission.vehicleSystem ~= nil and g_currentMission.vehicleSystem.vehicles or {}
     for _, vehicle in ipairs(vehicles) do
-        if vehicle.configFileName ~= nil and string.find(string.lower(vehicle.configFileName), "horseball.xml", 1, true) ~= nil then
+        if vehicle.configFileName ~= nil and string.find(string.lower(vehicle.configFileName), "/horseball[a-z]*%.xml$") ~= nil then
             list[#list + 1] = vehicle
         end
     end
     return list
+end
+
+-- a point in front of the player: forward distance, sideways offset (to the right), on the ground
+local function spot(forward, side)
+    local px, _, pz = HorseLead.playerPosition()
+    if px == nil then
+        return nil
+    end
+    local ray = HorseLead.viewRay()
+    local dx, dz = 0, 1
+    if ray ~= nil then
+        local l = math.sqrt(ray[4] * ray[4] + ray[6] * ray[6])
+        if l > 1e-4 then dx, dz = ray[4] / l, ray[6] / l end
+    end
+    local x, z = px + dx * forward + dz * side, pz + dz * forward - dx * side
+    return x, getTerrainHeightAtWorldPos(g_terrainNode, x, 0, z), z
+end
+
+function HorseBall.spawn(xml, x, y, z, weight)
+    local data = VehicleLoadingData.new()
+    data:setFilename(HorseBall.dir .. "vehicles/horseBall/" .. xml)
+    data:setPosition(x, y, z)
+    data:setRotation(0, 0, 0)
+    data:setPropertyState(VehiclePropertyState.OWNED)
+    data:setOwnerFarmId(g_localPlayer.farmId)
+    if weight ~= nil then
+        data:setConfigurations({ horseBallWeight = weight })
+    end
+    data:load(function(_, vehicles, state)
+        if state ~= VehicleLoadingState.OK then
+            say("%s (weight %s) was NOT loaded: state %s", xml, tostring(weight), tostring(state))
+        end
+    end, HorseBall)
 end
 
 function HorseBall.console(_, argument)
@@ -149,30 +189,38 @@ function HorseBall.console(_, argument)
         end
         return string.format("%d ball(s) removed", #list)
     end
-    local px, _, pz = HorseLead.playerPosition()
-    if px == nil or g_localPlayer == nil then
+    if g_localPlayer == nil then
+        return "no player"
+    end
+    local x, y, z = spot(5, 0)
+    if x == nil then
         return "no player position"
     end
-    local ray = HorseLead.viewRay()
-    local dx, dz = 0, 1
-    if ray ~= nil then
-        local l = math.sqrt(ray[4] * ray[4] + ray[6] * ray[6])
-        if l > 1e-4 then dx, dz = ray[4] / l, ray[6] / l end
-    end
-    local x, z = px + dx * 5, pz + dz * 5
-    local y = getTerrainHeightAtWorldPos(g_terrainNode, x, 0, z) + HorseBall.RADIUS + 0.3
-    local data = VehicleLoadingData.new()
-    data:setFilename(HorseBall.dir .. HorseBall.XML)
-    data:setPosition(x, y, z)
-    data:setRotation(0, 0, 0)
-    data:setPropertyState(VehiclePropertyState.OWNED)
-    data:setOwnerFarmId(g_localPlayer.farmId)
-    data:load(function(_, vehicles, state)
-        say("the ball was %s (%d vehicle(s))", state == VehicleLoadingState.OK and "loaded" or "NOT loaded: state " .. tostring(state), #(vehicles or {}))
-    end, HorseBall)
+    HorseBall.spawn("horseBall.xml", x, y + HorseBall.RADIUS + 0.3, z, nil)
     return "a ball is put 5 m in front of you (or look at the log)"
+end
+
+-- gsBall: a test set, 3 sizes (rows: small, normal, large) x 3 weights (columns: light, medium, heavy), in front of you; gsBall remove deletes every ball
+function HorseBall.consoleSet(_, argument)
+    if argument == "remove" then
+        return HorseBall.console(nil, "remove")
+    end
+    if g_localPlayer == nil or HorseLead.playerPosition() == nil then
+        return "no player"
+    end
+    local rows = { { "horseBallSmall.xml", 0.25 }, { "horseBall.xml", 0.45 }, { "horseBallLarge.xml", 0.70 } }
+    local count = 0
+    for r, row in ipairs(rows) do
+        for weight = 1, 3 do
+            local x, y, z = spot(4 + (r - 1) * 2.6, (weight - 2) * 2.2)
+            HorseBall.spawn(row[1], x, y + row[2] + 0.3, z, weight)
+            count = count + 1
+        end
+    end
+    return string.format("%d balls in front of you: rows small / normal / large, columns light 3 kg / medium +7 / heavy +22 (gsBall remove deletes them)", count)
 end
 
 if addConsoleCommand ~= nil then
     addConsoleCommand("hdBall", "HorseDynamics: put a horse ball 5 m in front of you [remove]", "console", HorseBall)
+    addConsoleCommand("gsBall", "HorseDynamics: a test set of horse balls in front of you: 3 sizes x 3 weights [remove]", "consoleSet", HorseBall)
 end

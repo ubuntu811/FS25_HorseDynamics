@@ -56,7 +56,7 @@ def convex_hull_block(P, T, margin=0.04, n=103):
         b += struct.pack("<3f", *p)
     return b
 
-def build(out, radius):
+def build(out, radius, name="horseBall"):
     os.makedirs(out, exist_ok=True)
     m = sphere(radius)
     P, N, U, T, subsets = H.merge([(m, 1)])
@@ -73,10 +73,10 @@ def build(out, radius):
     col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["ball_mat"], attachments=[(2, convex_hull_block(P, T))])
     hdr = type("Hd", (), {"version": 10, "seed": 91})()
     sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, vis), H.Raw(1, col)]})()
-    S.write(os.path.join(out, "horseBall.i3d.shapes"), sf)
+    S.write(os.path.join(out, name + ".i3d.shapes"), sf)
     xml = f'''<?xml version="1.0" encoding="iso-8859-1"?>
 
-<i3D name="horseBall" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
+<i3D name="{name}" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
   <Asset>
     <Export program="make_horse_ball.py" version="1"/>
   </Asset>
@@ -97,7 +97,7 @@ def build(out, radius):
       <Glossmap fileId="4"/>
     </Material>
   </Materials>
-  <Shapes externalShapesFile="horseBall.i3d.shapes">
+  <Shapes externalShapesFile="{name}.i3d.shapes">
   </Shapes>
   <Scene>
     <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe3ffb83" linearDamping="0.15" angularDamping="1.0" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
@@ -107,8 +107,27 @@ def build(out, radius):
 
 </i3D>
 '''
-    open(os.path.join(out, "horseBall.i3d"), "w", encoding="iso-8859-1").write(xml)
-    print("wrote", out, "verts", len(P), "tris", len(T) // 3, "radius", radius)
+    open(os.path.join(out, name + ".i3d"), "w", encoding="iso-8859-1").write(xml)
+    print("wrote", name, "in", out, "verts", len(P), "tris", len(T) // 3, "radius", radius)
+
+import re
+
+# the test sizes (gsBall): { file name: (radius m, component mass kg, label) }; the main ball is vehicles/horseBall/horseBall.xml (hand-written: the shop item), the others are made from it
+SIZES = { "horseBallSmall": (0.25, 1.5, "small"), "horseBallLarge": (0.70, 8.0, "large") }
+
+def variants(out):
+    main = open(os.path.join(out, "horseBall.xml"), encoding="utf-8").read()
+    for name, (radius, mass, label) in SIZES.items():
+        build(out, radius, name)
+        x = main.replace("vehicles/horseBall/horseBall.i3d", "vehicles/horseBall/%s.i3d" % name)
+        x = re.sub(r'<size width="[^"]*" length="[^"]*" height="[^"]*" />', '<size width="%.2f" length="%.2f" height="%.2f" />' % (2 * radius, 2 * radius, 2 * radius), x)
+        x = re.sub(r'(<component centerOfMass="0 0 0" solverIterationCount="10" mass=")[^"]*(")', r'\g<1>%g\g<2>' % mass, x)
+        x = x.replace("<en>Horse ball</en>", "<en>Horse ball (%s, test)</en>" % label).replace("<de>Pferdeball</de>", "<de>Pferdeball (%s, Test)</de>" % label)
+        x = x.replace("<showInStore>true</showInStore>", "<showInStore>false</showInStore>")
+        open(os.path.join(out, name + ".xml"), "w", encoding="utf-8").write(x)
+        print("wrote", name + ".xml", "radius", radius, "mass", mass)
 
 if __name__ == "__main__":
-    build(sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "..", "vehicles", "horseBall"), float(sys.argv[2]) if len(sys.argv) > 2 else 0.45)
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "..", "vehicles", "horseBall")
+    build(out, float(sys.argv[2]) if len(sys.argv) > 2 else 0.45)
+    variants(out)
