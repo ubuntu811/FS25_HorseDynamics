@@ -7,7 +7,7 @@
   <Files/>
   <Materials>
     <Material name="frame" materialId="1" diffuseColor="0.13 0.14 0.16 1" specularColor="0.5 0.5 0.5"/>
-    <Material name="seat" materialId="2" diffuseColor="0.04 0.04 0.05 1" specularColor="0.2 0.2 0.2"/>
+    <Material name="seat" materialId="2" diffuseColor="0.38 0.21 0.09 1" specularColor="0.25 0.25 0.25"/>
     <Material name="tyre" materialId="3" diffuseColor="0.03 0.03 0.03 1" specularColor="0.1 0.1 0.1"/>
     <Material name="rim" materialId="4" diffuseColor="0.78 0.80 0.83 1" specularColor="0.7 0.7 0.7"/>
   </Materials>
@@ -21,6 +21,8 @@
       <Shape name="sulky_col4" shapeId="6" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="24"/>
       <Shape name="sulky_col5" shapeId="7" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="25"/>
       <Shape name="sulky_col6" shapeId="8" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="26"/>
+      <Shape name="sulky_col7" shapeId="9" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="27"/>
+      <Shape name="sulky_col8" shapeId="10" compoundChild="true" static="false" density="0.0005" collisionFilterGroup="0x10000" collisionFilterMask="0xfe1ffb83" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="28"/>
       <TransformGroup name="attacherJoint" translation="0.0 0.8125 2.4" rotation="0 90 0" nodeId="3"/>
       <TransformGroup name="wheelLeft" translation="0.8 0.5750000000000001 0" nodeId="4">
         <Shape name="sulky_wheelL" shapeId="2" castsShadows="true" receiveShadows="true" materialIds="3,4" nodeId="5"/>

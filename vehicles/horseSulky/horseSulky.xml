@@ -35,7 +35,7 @@
         <filename>vehicles/horseSulky/horseSulky.i3d</filename>
         <size width="1.75" length="3.62" height="1.38" lengthOffset="0.75"/>
         <components maxMass="400">
-            <component centerOfMass="0 0.625 -0.150" solverIterationCount="10" mass="60"/>
+            <component centerOfMass="0 0.875 -0.150" solverIterationCount="10" mass="60"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
         <mapHotspot type="TOOL_TRAILED" />
@@ -69,8 +69,8 @@
 
     <i3dMappings>
         <i3dMapping id="horseSulky_main_component1" node="0>" />
-        <i3dMapping id="attacherJoint" node="0>6" />
-        <i3dMapping id="wheelLeft" node="0>7" />
-        <i3dMapping id="wheelRight" node="0>8" />
+        <i3dMapping id="attacherJoint" node="0>8" />
+        <i3dMapping id="wheelLeft" node="0>9" />
+        <i3dMapping id="wheelRight" node="0>10" />
     </i3dMappings>
 </vehicle>

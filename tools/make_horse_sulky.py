@@ -4,7 +4,7 @@ make_hitching_post's shape builder; the two spoked wheels are generated here (a 
   python3 tools/make_horse_sulky.py [out dir]     -> vehicles/horseSulky/horseSulky.i3d, .i3d.shapes, .xml
 Frame: y up, +z forward (to the horse), the origin on the ground under the axle. The axle is at y = WHEEL_R; the shafts run from the front of the side rails to ONE eye at the apex (an A-frame), where the node
 "attacherJoint" sits (turned 90 degrees about y like the game's own trailers' eyes). The weight is just behind the axle and a skid at the back keeps the shafts about level when nobody holds them.
-Materials: 1 frame (dark steel), 2 seat (black), 3 tyre, 4 rim (bright metal).
+Materials: 1 frame (dark steel), 2 seat (brown leather), 3 tyre, 4 rim (bright metal).
 """
 import math, os, struct, sys
 here = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, here)
@@ -12,7 +12,8 @@ import make_hitching_post as H
 import shapes_io as S
 
 WHEEL_R, TYRE_R, TRACK = 0.46, 0.026, 0.64        # wheel radius (tyre outside), tyre tube radius, x of the wheel centres
-RAIL_X, RAIL_Y = 0.40, 0.56                       # the side rails
+RAIL_X, RAIL_Y = 0.40, 0.66                       # the side rails (high: the footboard sits on them, legs hang down onto it)
+SEAT_Y = 0.84                                     # the top of the seat deck (the cushion sits on it): 1.05 m above the ground once scaled
 TUBE = 0.017
 EYE = (0.0, 0.65, 1.92)                           # the drawbar eye (apex of the shafts), at the unscaled size
 K = 1.25                                          # everything is built at the size above and scaled by this (the eye then rests at 0.81 m: the height the hitch holds an eye at, HorseHitch.EYE_HEIGHT_M)
@@ -143,27 +144,35 @@ def body():
     by = RAIL_Y + (EYE[1] - RAIL_Y) * t
     bz = 0.46 + (EYE[2] - 0.46) * t
     rail((-bx, by, bz), (bx, by, bz), r=0.013)
-    # the foot bar
-    rail((-0.22, 0.50, 0.40), (0.22, 0.50, 0.40), r=0.014)
+    # the footboard: a plate on the rails in front of the seat, a front rail up from it
+    rail((-0.32, RAIL_Y + 0.03, 0.62), (0.32, RAIL_Y + 0.03, 0.62), r=0.014)
     for sx in (-1, 1):
-        rail((sx * 0.22, 0.50, 0.40), (sx * 0.22, RAIL_Y, 0.40), r=0.012)
+        rail((sx * 0.32, RAIL_Y, 0.62), (sx * 0.32, RAIL_Y + 0.03, 0.62), r=0.014)
     # the rear skid: two legs down to a small shoe each
     for sx in (-1, 1):
         rail((sx * 0.22, RAIL_Y, -0.58), (sx * 0.22, 0.05, -0.64), r=0.014)
         H.box(frame, sx * 0.22, 0.02, -0.67, 0.03, 0.02, 0.10)
     # the eye: a steel ring on the apex, lying flat
     torus_ring(frame, (EYE[0], EYE[1], EYE[2] + 0.045), (0, 1, 0), 0.040, 0.008, major=24, minor=6)
-    # the seat: a pad on a plate and a back
-    obox(seat, (0, RAIL_Y + 0.055, -0.25), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (0.21, 0.04, 0.20))
-    ang = math.radians(-14)                                           # the back leans back a little
+    # the seat: a bench (a deck on four posts, a cushion on it) and a leaning back, all in material 2 (brown); the footboard is frame material
+    obox(frame, (0, RAIL_Y + 0.035, 0.32), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (0.34, 0.010, 0.32))
+    for sx in (-1, 1):
+        for zz in (-0.54, -0.06):
+            rail((sx * 0.36, RAIL_Y, zz), (sx * 0.36, SEAT_Y, zz), r=0.014)
+    obox(frame, (0, SEAT_Y + 0.006, -0.30), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (0.39, 0.012, 0.27))
+    obox(seat, (0, SEAT_Y + 0.062, -0.30), ((1, 0, 0), (0, 1, 0), (0, 0, 1)), (0.37, 0.045, 0.25))
+    ang = math.radians(-12)                                           # the back leans back a little
     ay = (0, math.cos(ang), math.sin(ang)); az = (0, -math.sin(ang), math.cos(ang))
-    obox(seat, (0, RAIL_Y + 0.27, -0.48), ((1, 0, 0), ay, az), (0.20, 0.17, 0.03))
-    rail((-0.15, RAIL_Y, -0.45), (-0.15, RAIL_Y + 0.14, -0.45), r=0.012)
-    rail((0.15, RAIL_Y, -0.45), (0.15, RAIL_Y + 0.14, -0.45), r=0.012)
+    obox(seat, (0, SEAT_Y + 0.27, -0.60), ((1, 0, 0), ay, az), (0.37, 0.17, 0.035))
+    for sx in (-1, 1):
+        rail((sx * 0.37, SEAT_Y, -0.55), (sx * 0.37, SEAT_Y + 0.40, -0.63), r=0.013)
+    rail((-0.37, SEAT_Y + 0.40, -0.63), (0.37, SEAT_Y + 0.40, -0.63), r=0.013)
 
     # collision: the frame as one block, the seat back, the shafts (oriented), the skid shoes
     boxes.append(aabb_box((0, RAIL_Y, -0.06), RAIL_X + 0.02, 0.06, 0.54))
-    boxes.append(aabb_box((0, RAIL_Y + 0.27, -0.48), 0.20, 0.17, 0.04))
+    boxes.append(aabb_box((0, SEAT_Y + 0.05, -0.30), 0.39, 0.06, 0.27))                  # the bench
+    boxes.append(aabb_box((0, SEAT_Y + 0.27, -0.60), 0.38, 0.18, 0.05))                  # the back
+    boxes.append(aabb_box((0, RAIL_Y + 0.035, 0.32), 0.34, 0.02, 0.32))                  # the footboard
     for sx in (-1, 1):
         boxes.append(seg_box((sx * RAIL_X, RAIL_Y, 0.46), EYE, 0.02, 0.02))
         boxes.append(aabb_box((sx * 0.22, 0.12, -0.65), 0.03, 0.12, 0.11))
@@ -187,7 +196,7 @@ def wheel():
         tube(rim, hub, rm, 0.0028, sides=4)
     return tyre, rim
 
-MATERIALS = [("frame", '0.13 0.14 0.16 1', "0.5 0.5 0.5"), ("seat", '0.04 0.04 0.05 1', "0.2 0.2 0.2"),
+MATERIALS = [("frame", '0.13 0.14 0.16 1', "0.5 0.5 0.5"), ("seat", '0.38 0.21 0.09 1', "0.25 0.25 0.25"),
              ("tyre", '0.03 0.03 0.03 1', "0.1 0.1 0.1"), ("rim", '0.78 0.80 0.83 1', "0.7 0.7 0.7")]
 
 def write(out):
@@ -284,7 +293,7 @@ def write(out):
         <filename>vehicles/horseSulky/{name}.i3d</filename>
         <size width="{1.4 * K:.2f}" length="{2.9 * K:.2f}" height="{1.1 * K:.2f}" lengthOffset="{0.6 * K:.2f}"/>
         <components maxMass="400">
-            <component centerOfMass="0 {0.50 * K:.3f} {-0.12 * K:.3f}" solverIterationCount="10" mass="{MASS:g}"/>
+            <component centerOfMass="0 {0.70 * K:.3f} {-0.12 * K:.3f}" solverIterationCount="10" mass="{MASS:g}"/>
         </components>
         <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
         <mapHotspot type="TOOL_TRAILED" />
