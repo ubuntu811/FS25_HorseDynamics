@@ -116,9 +116,10 @@ function fitLids(P, pos) {
   const t = P.eye_fit; if (!(t > 0) || P.eye_legacy) return;
   const bb = vs => { const mn = [1e9, 1e9], mx = [-1e9, -1e9]; for (const v of vs) for (let a = 0; a < 2; a++) { const x = pos[v*3+1+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2], h: [(mx[0] - mn[0]) / 2, (mx[1] - mn[1]) / 2] }; };
   ['R', 'L'].forEach(sd => {
-    const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(1.5, Math.max(0.8, 1.18 * k.h[0] / r.h[0])), sz = Math.min(1.5, Math.max(0.8, 1.18 * k.h[1] / r.h[1]));   // 1.18: the adult's socket is about this much wider than its ball
-    const move = (v, f) => { const y = pos[v*3+1], z = pos[v*3+2]; pos[v*3+1] += (k.c[0] + (y - r.c[0]) * sy - y) * f; pos[v*3+2] += (k.c[1] + (z - r.c[1]) * sz - z) * f; };
-    const shift = (v, f) => { pos[v*3+1] += (k.c[0] - r.c[0]) * f; pos[v*3+2] += (k.c[1] - r.c[1]) * f; };
+    const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(2, Math.max(0.5, P.eye_fit_size * k.h[0] / r.h[0])), sz = Math.min(2, Math.max(0.5, P.eye_fit_size * k.h[1] / r.h[1]));   // eye_fit_size: socket opening vs ball (the adult's is about 1.18)
+    const tc = [k.c[0] + P.eye_fit_fwd, k.c[1] - P.eye_fit_up];             // socket centre = ball centre, nudged (ball forward/up in the socket = socket back/down)
+    const move = (v, f) => { const y = pos[v*3+1], z = pos[v*3+2]; pos[v*3+1] += (tc[0] + (y - r.c[0]) * sy - y) * f; pos[v*3+2] += (tc[1] + (z - r.c[1]) * sz - z) * f; };
+    const shift = (v, f) => { pos[v*3+1] += (tc[0] - r.c[0]) * f; pos[v*3+2] += (tc[1] - r.c[1]) * f; };
     for (const [v, w] of o.lidW) move(v, w * t);
     const R = P.socket, r0 = R * 0.35;                                     // skin around the lids comes along, fading out with distance
     if (R > 0) for (const e of socket.list) {
@@ -249,6 +250,9 @@ const PARAMS = [
   ['socket_smooth', 'Socket smoothing', 0, 1, 0.05, 0.5, 'Eyes', '%'],
   ['eye_legacy','Classic eyes (Nov 10 look: no fit, no skin push, no relaxing)', 0, 1, 1, 0, 'Eyes', 'x'],
   ['eye_fit',    'Fit the lids to the eyeball', 0, 1, 0.05, 0, 'Eyes', '%'],
+  ['eye_fit_size', 'Fit: socket size vs eyeball', 0.80, 1.60, 0.01, 1.18, 'Eyes', 'x'],
+  ['eye_fit_fwd',  'Fit: eyeball forward in socket', -0.015, 0.015, 0.001, 0, 'Eyes', 'm'],
+  ['eye_fit_up',   'Fit: eyeball up in socket', -0.015, 0.015, 0.001, 0, 'Eyes', 'm'],
   ['lid_up',    'Upper lid down over the eye', 0, 0.03, 0.001, 0, 'Eyes', 'm'],
   ['lid_low',   'Lower lid up',        0, 0.02, 0.001, 0, 'Eyes', 'm'],
   ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.09, 'Eyes', 'm'],
