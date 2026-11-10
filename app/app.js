@@ -106,7 +106,7 @@ const eyeFit = (() => {
     for (let v = 0; v < b.nv; v++) {
       let wl = 0; for (let k = 0; k < 4; k++) { const j = b.jn[v*4+k]; if (j === lids[0] || j === lids[1]) wl += b.wt[v*4+k]; }
       if (wl > 0) lidW.push([v, Math.min(1, wl)]);
-      if (wl > 0.5) ring.push(v);
+      if (wl > 0.25) ring.push(v);                                              // the whole socket: lid skin fades out around the ball, so > 0.5 is only the upper lid edge
     }
     out[sd] = { lidW, ring, ball: socket.ball[sd] };
   });
@@ -116,7 +116,7 @@ function fitLids(P, pos) {
   const t = P.eye_fit; if (!(t > 0) || P.eye_legacy) return;
   const bb = vs => { const mn = [1e9, 1e9], mx = [-1e9, -1e9]; for (const v of vs) for (let a = 0; a < 2; a++) { const x = pos[v*3+1+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2], h: [(mx[0] - mn[0]) / 2, (mx[1] - mn[1]) / 2] }; };
   ['R', 'L'].forEach(sd => {
-    const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(1.5, Math.max(1, 0.9 * k.h[0] / r.h[0])), sz = Math.min(1.5, Math.max(1, 0.9 * k.h[1] / r.h[1]));
+    const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(1.5, Math.max(0.8, 1.18 * k.h[0] / r.h[0])), sz = Math.min(1.5, Math.max(0.8, 1.18 * k.h[1] / r.h[1]));   // 1.18: the adult's socket is about this much wider than its ball
     const move = (v, f) => { const y = pos[v*3+1], z = pos[v*3+2]; pos[v*3+1] += (k.c[0] + (y - r.c[0]) * sy - y) * f; pos[v*3+2] += (k.c[1] + (z - r.c[1]) * sz - z) * f; };
     const shift = (v, f) => { pos[v*3+1] += (k.c[0] - r.c[0]) * f; pos[v*3+2] += (k.c[1] - r.c[1]) * f; };
     for (const [v, w] of o.lidW) move(v, w * t);
