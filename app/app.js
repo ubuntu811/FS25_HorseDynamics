@@ -315,33 +315,38 @@ function localScales(P) {
   }
   return out;
 }
+function modLocal(P, i, L) {   // the sliders' changes to a bone's local matrix (before its scale), for any key
+  const name = nodes[i].name;
+  if (name === 'Head_M' && P.head_pitch) L = preRotZ(L, -rad(P.head_pitch));
+  if (name.startsWith('ear')) {
+    const t = P.ear_tilt + P.head_pitch;
+    if (t) L = preRotZ(L, rad(t));
+    if (P.ear_fwd) L = mul(Tm(0, P.ear_fwd, 0), L);
+    if (P.ear_in) L = mul(Tm(0, 0, name.endsWith('_R') ? P.ear_in : -P.ear_in), L);
+  }
+  if (name.startsWith('lid') && !P.eye_legacy && Math.abs(ringGrow(P) - 1) > 1e-3) {      // the lid ring grows about the eyeball centre, not about its own pivot
+    const e = restLocal[idxOf['Eye_' + (name.endsWith('_R') ? 'R' : 'L')]], g = ringGrow(P);
+    L = L.slice(); L[3] = e[3] + (L[3] - e[3]) * g; L[7] = e[7] + (L[7] - e[7]) * g; L[11] = e[11] + (L[11] - e[11]) * g;
+  }
+  if (name.startsWith('lidUpper') && P.lid_up) L = mul(Tm(-P.lid_up, 0, 0), L);      // upper lid slides down over the eye
+  if (name.startsWith('lidBottom') && P.lid_low) L = mul(Tm(P.lid_low, 0, 0), L);    // lower lid slides up
+  if (name.startsWith('Eye_') || name.startsWith('lid')) {
+    if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
+  }
+  if (P.eye_sink && name.startsWith('Eye_')) L = mul(Tm(0, 0, name.endsWith('_R') ? P.eye_sink : -P.eye_sink), L);   // eyeball only sinks into the socket; lids and skin stay
+  if (P.rump !== 1 && nodes[i].parent === idxOf.Root_M) { const k = 1 / P.rump; L = L.slice(); L[3] *= k; L[7] *= k; L[11] *= k; }   // keep hips, spine and tail where they were
+  return L;
+}
 // skinning matrices (mesh frame) for params P at a key of a clip (clip null = rest)
-function skinMatrices(P, clip, key) {
+function skinMatrices(P, clip, key, dbg) {
   const sc = localScales(P);
   const tracks = clip ? DATA.clips[clip].tracks : null;
   const W = fkWorld(i => {
     let L;
     const tr = tracks && tracks[i];
     if (tr) { const k = tr[Math.min(key, tr.length - 1)]; L = TR([k[0], k[1], k[2]], [k[3], k[4], k[5]]); } else L = restLocal[i];
-    const name = nodes[i].name;
-    if (name === 'Head_M' && P.head_pitch) L = preRotZ(L, -rad(P.head_pitch));
-    if (name.startsWith('ear')) {
-      const t = P.ear_tilt + P.head_pitch;
-      if (t) L = preRotZ(L, rad(t));
-      if (P.ear_fwd) L = mul(Tm(0, P.ear_fwd, 0), L);
-      if (P.ear_in) L = mul(Tm(0, 0, name.endsWith('_R') ? P.ear_in : -P.ear_in), L);
-    }
-    if (name.startsWith('lid') && !P.eye_legacy && Math.abs(ringGrow(P) - 1) > 1e-3) {      // the lid ring grows about the eyeball centre, not about its own pivot
-      const e = restLocal[idxOf['Eye_' + (name.endsWith('_R') ? 'R' : 'L')]], g = ringGrow(P);
-      L = L.slice(); L[3] = e[3] + (L[3] - e[3]) * g; L[7] = e[7] + (L[7] - e[7]) * g; L[11] = e[11] + (L[11] - e[11]) * g;
-    }
-    if (name.startsWith('lidUpper') && P.lid_up) L = mul(Tm(-P.lid_up, 0, 0), L);      // upper lid slides down over the eye
-    if (name.startsWith('lidBottom') && P.lid_low) L = mul(Tm(P.lid_low, 0, 0), L);    // lower lid slides up
-    if (name.startsWith('Eye_') || name.startsWith('lid')) {
-      if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
-    }
-    if (P.eye_sink && name.startsWith('Eye_')) L = mul(Tm(0, 0, name.endsWith('_R') ? P.eye_sink : -P.eye_sink), L);   // eyeball only sinks into the socket; lids and skin stay
-    if (P.rump !== 1 && nodes[i].parent === idxOf.Root_M) { const k = 1 / P.rump; L = L.slice(); L[3] *= k; L[7] *= k; L[11] *= k; }   // keep hips, spine and tail where they were
+    L = modLocal(P, i, L);
+    if (dbg) { dbg.L[i] = L; dbg.sc = sc; }
     const s = sc[i];
     return (s[0] === 1 && s[1] === 1 && s[2] === 1) ? L : mul(L, Sm(s[0], s[1], s[2]));
   });
@@ -676,12 +681,28 @@ $('copyLink').addEventListener('click', e => { clearTimeout(urlTimer); const p =
 $('copyJson').addEventListener('click', e => { const o = {}; PARAMS.forEach(d => { o[d[0]] = +state.P[d[0]].toFixed(4); }); copy(JSON.stringify(o), e.target, 'Copied'); });
 $('exportObj').addEventListener('click', exportObj);
 $('exportPng').addEventListener('click', () => { if (!renderer) return; renderer.render(scene, camera); const a = document.createElement('a'); a.download = 'foal.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
-window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF,
+// everything tools/bake_foal.py needs: grounded rest meshes, the per-bone local scales, and each bone's modification as (rotation premultiplied, translation = a * key + b) so any clip key can be converted
+function bakeData(P) {
+  const r6 = a => Array.from(a, x => +x.toFixed(6));
+  const res = skin(P, null, 0), sc = localScales(P), id = I4();
+  const out = { names: nodes.map(n => n.name), minZ: res.minZ, sc: sc.map(r6), restL: [], mod: [], pos: {} };
+  nodes.forEach((n, i) => {
+    out.restL.push(r6(modLocal(P, i, restLocal[i]).slice(0, 12)));
+    const m0 = modLocal(P, i, id), m1 = modLocal(P, i, Tm(1, 0, 0));
+    out.mod.push({ R: r6([m0[0], m0[1], m0[2], m0[4], m0[5], m0[6], m0[8], m0[9], m0[10]]), a: +(m1[3] - m0[3]).toFixed(6), b: r6([m0[3], m0[7], m0[11]]) });
+  });
+  MESH_NAMES.forEach(n => { out.pos[n] = r6(res.pos[n]); });
+  out.check = {};
+  [0, 9, 18, 27].forEach(k => { const r = skin(P, 'walk', k, ['body']); out.check['walk' + k] = r6(r.pos.body); });
+  return out;
+}
+window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF, bakeData,
   eyeGap(P) { const r = skin(P, null, 0, ['body']), pos = r.pos.body, o = eyeFit.R;
     const bb = vs => { const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const v of vs) for (let a = 0; a < 3; a++) { const x = pos[v*3+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: mn.map((m, a) => +((m + mx[a]) / 2).toFixed(4)), e: mn.map((m, a) => +(mx[a] - m).toFixed(4)), mx: +(vs.reduce((t, v) => t + pos[v*3], 0) / vs.length).toFixed(4), lo: +mn[0].toFixed(4), hi: +mx[0].toFixed(4) }; };
     return { ring: bb(o.ring), ball: bb(o.ball) }; } };
 requestAnimationFrame(frame);
 if (/[?&]gap=1/.test(location.search)) document.getElementById('testout').textContent = 'GAP ' + JSON.stringify(window.__foal.eyeGap(state.P));
+if (/[?&]bake=1/.test(location.search)) document.getElementById('testout').textContent = 'BAKE' + JSON.stringify(window.__foal.bakeData(state.P)) + 'ENDBAKE';
 })();
 
 
