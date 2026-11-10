@@ -83,6 +83,21 @@ const socket = (() => {
   }
   return { list, cen };
 })();
+// vertex neighbours around the eyes, seam duplicates welded by rest position, for relaxing the socket skin
+const sockNb = (() => {
+  const b = mesh.body, key = v => Math.round(b.pos0[v*3]*1e4) + ',' + Math.round(b.pos0[v*3+1]*1e4) + ',' + Math.round(b.pos0[v*3+2]*1e4);
+  const canon = new Int32Array(b.nv), first = new Map(), dups = new Map();
+  for (let v = 0; v < b.nv; v++) { const k = key(v); if (!first.has(k)) first.set(k, v); const c = first.get(k); canon[v] = c; if (!dups.has(c)) dups.set(c, []); dups.get(c).push(v); }
+  const near = new Set(); socket.list.forEach(e => near.add(canon[e.v]));
+  const nb = new Map(); near.forEach(c => nb.set(c, new Set()));
+  const ix = b.idx;
+  for (let t = 0; t < ix.length; t += 3) {
+    const c = [canon[ix[t]], canon[ix[t+1]], canon[ix[t+2]]];
+    for (let a = 0; a < 3; a++) if (nb.has(c[a])) { nb.get(c[a]).add(c[(a+1)%3]); nb.get(c[a]).add(c[(a+2)%3]); }
+  }
+  const ids = [...near], lists = ids.map(c => [...nb.get(c)].filter(x => x !== c));
+  return { canon, dups, ids, lists };
+})();
 function applySocket(P, pos, jointsNow, jointsBase) {
   if (!(P.socket > 0) || !(P.eye_down || P.eye_fwd || P.eye_out)) return;
   const dl = {};
@@ -96,7 +111,28 @@ function applySocket(P, pos, jointsNow, jointsBase) {
     let fa = 1; if (e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }   // the forehead line above the brow stays put
     const f = t * fa * e.k, d = dl[e.side];
     pos[e.v*3] += d[0] * f; pos[e.v*3+1] += d[1] * f; pos[e.v*3+2] += d[2] * f;
+    if (!e.lid && f > sockW[e.v]) sockW[e.v] = f;
   }
+  if (P.socket_smooth > 0) relaxSocket(pos, P.socket_smooth); else sockW.fill(0);
+}
+const sockW = new Float32Array(mesh.body.nv);
+function relaxSocket(pos, amount) {
+  const { dups, ids, lists, canon } = sockNb, n = ids.length, w = new Float32Array(n), tmp = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { let m = 0; for (const v of dups.get(ids[i])) if (sockW[v] > m) m = sockW[v]; w[i] = Math.min(1, m * 2.5) * amount; }
+  const at = new Map(); ids.forEach((c, i) => at.set(c, i));
+  for (let it = 0; it < 3; it++) {
+    for (let i = 0; i < n; i++) {
+      const c = ids[i], nbs = lists[i], l = w[i];
+      let x = pos[c*3], y = pos[c*3+1], z = pos[c*3+2];
+      if (l > 0 && nbs.length) {
+        let ax = 0, ay = 0, az = 0; for (const q of nbs) { ax += pos[q*3]; ay += pos[q*3+1]; az += pos[q*3+2]; }
+        ax /= nbs.length; ay /= nbs.length; az /= nbs.length; x += (ax - x) * l * 0.5; y += (ay - y) * l * 0.5; z += (az - z) * l * 0.5;
+      }
+      tmp[i*3] = x; tmp[i*3+1] = y; tmp[i*3+2] = z;
+    }
+    for (let i = 0; i < n; i++) for (const v of dups.get(ids[i])) { pos[v*3] = tmp[i*3]; pos[v*3+1] = tmp[i*3+1]; pos[v*3+2] = tmp[i*3+2]; }
+  }
+  sockW.fill(0);
 }
 
 // head top / bottom line: skin above the ear-base-to-nose chord moves with "top", skin below it with "bottom"
@@ -170,6 +206,7 @@ const PARAMS = [
   ['eye_down',  'Eyes down',           -0.02, 0.07, 0.002, 0,   'Eyes',  'm'],
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
   ['eye_out',   'Eyes outward',        -0.02, 0.03, 0.002, 0,   'Eyes',  'm'],
+  ['socket_smooth', 'Socket smoothing', 0, 1, 0.05, 0.5, 'Eyes', '%'],
   ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.09, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
@@ -188,6 +225,7 @@ const PRESETS = [
   ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2, tail: 0.85 })],
   ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2 }))],
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
+  ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
