@@ -19,6 +19,7 @@ Single player only for now.
 
     <extraSourceFiles>
         <sourceFile filename="scripts/HorseGate.lua" />
+        <sourceFile filename="scripts/HorseWash.lua" />
         <sourceFile filename="scripts/HorseTie.lua" />
         <sourceFile filename="scripts/HorseBall.lua" />
         <sourceFile filename="scripts/HorseJump.lua" />
