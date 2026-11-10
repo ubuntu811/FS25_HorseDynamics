@@ -96,6 +96,43 @@ function applySocket(P, pos, jointsNow, jointsBase) {
   }
 }
 
+// head top / bottom line: skin above the ear-base-to-nose chord moves with "top", skin below it with "bottom"
+const headLine = (() => {
+  const b = mesh.body, E = [0, 1, 2].map(a => (restPos[idxOf.ear1_R][a] + restPos[idxOf.ear1_L][a]) / 2);
+  let ni = headIdx[0]; for (const v of headIdx) if (b.pos0[v*3+1] < b.pos0[ni*3+1]) ni = v;
+  const N = [b.pos0[ni*3], b.pos0[ni*3+1], b.pos0[ni*3+2]], c = [N[0]-E[0], N[1]-E[1], N[2]-E[2]], cl = Math.hypot(c[0], c[1], c[2]), ch = c.map(x => x / cl);
+  let up = [0, 0, 1]; const dp = up[0]*ch[0] + up[1]*ch[1] + up[2]*ch[2]; up = up.map((x, i) => x - dp * ch[i]); const ul = Math.hypot(up[0], up[1], up[2]); up = up.map(x => x / ul);
+  const head = nodes.map((n, i) => { for (let a = i; a >= 0; a = nodes[a].parent) if (a === idxOf.Head_M) return true; return false; });
+  const eyeLid = nodes.map(n => n.name.startsWith('Eye_') || n.name.startsWith('lid'));
+  const eyeC = {};
+  ['R', 'L'].forEach(sd => { const e = idxOf['Eye_' + sd]; eyeC[sd] = restPos[e]; });
+  const sOf = (x, y, z) => (x - E[0]) * up[0] + (y - E[1]) * up[1] + (z - E[2]) * up[2];
+  const list = [];
+  for (let v = 0; v < b.nv; v++) {
+    let hw = 0, ew = 0, side = 'R';
+    for (let k = 0; k < 4; k++) { const j = b.jn[v*4+k], w = b.wt[v*4+k]; if (head[j]) hw += w; if (eyeLid[j]) ew += w; }
+    if (hw < 0.02) continue;
+    let s = sOf(b.pos0[v*3], b.pos0[v*3+1], b.pos0[v*3+2]);
+    if (ew > 0.5) { const e = b.pos0[v*3] < 0 ? eyeC.R : eyeC.L; s = sOf(e[0], e[1], e[2]); }   // eyeball and lids move as one piece
+    list.push({ v, s, hw: Math.min(1, hw) });
+  }
+  return { list, up };
+})();
+function applyHeadLine(P, pos, Db) {
+  if (!P.head_top && !P.head_bot) return 0;
+  const d = Db[idxOf.Head_M], u = headLine.up;
+  let x = d[0]*u[0] + d[1]*u[1] + d[2]*u[2], y = d[4]*u[0] + d[5]*u[1] + d[6]*u[2], z = d[8]*u[0] + d[9]*u[1] + d[10]*u[2];
+  const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
+  let maxZ = -Infinity;
+  for (const e of headLine.list) {
+    const t = Math.max(-1, Math.min(1, e.s / 0.04)), up = t > 0, a = Math.abs(t), f = a * a * (3 - 2 * a);
+    const amt = (up ? P.head_top : P.head_bot) * f * e.hw;
+    pos[e.v*3] += x * amt; pos[e.v*3+1] += y * amt; pos[e.v*3+2] += z * amt;
+    if (pos[e.v*3+2] > maxZ) maxZ = pos[e.v*3+2];
+  }
+  return maxZ;
+}
+
 // ====================== parameters ======================
 // [key, label, min, max, step, adult default, group, unit]
 const PARAMS = [
@@ -105,7 +142,9 @@ const PARAMS = [
   ['neck_len',  'Neck length',         0.60, 1.80, 0.01, 1,     'Neck',  'x'],
   ['neck_th',   'Neck thickness',      0.60, 1.30, 0.01, 1,     'Neck',  'x'],
   ['head_d',    'Head depth',          0.70, 1.70, 0.01, 1,     'Head',  'x'],
-  ['head_l',    'Head length',         0.70, 1.50, 0.01, 1,     'Head',  'x'],
+  ['head_l',    'Head length',         0.40, 1.50, 0.01, 1,     'Head',  'x'],
+  ['head_top',  'Top line (forehead) up/down', -0.05, 0.08, 0.002, 0, 'Head', 'm'],
+  ['head_bot',  'Bottom line (jaw) up/down',  -0.08, 0.05, 0.002, 0, 'Head', 'm'],
   ['head_w',    'Head width',          0.70, 1.70, 0.01, 1,     'Head',  'x'],
   ['jaw_d',     'Jaw depth (cheek)',   0.70, 1.30, 0.01, 1,     'Head',  'x'],
   ['jaw_l',     'Jaw length',          0.70, 1.30, 0.01, 1,     'Head',  'x'],
@@ -224,6 +263,7 @@ function skin(P, clip, key, want) {
     }
     out[name] = pos;
   });
+  if (out.body) { const mz = applyHeadLine(P, out.body, Db); if (mz > maxZ) maxZ = mz; }
   let jointsBase = null;
   if (out.body && P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out)) {
     const D0 = skinMatrices(Object.assign({}, P, { eye_down: 0, eye_fwd: 0, eye_out: 0 }), clip, key);
