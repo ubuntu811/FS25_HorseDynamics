@@ -50,16 +50,21 @@ Single player only for now.
     <specializations>
         <specialization name="horseBallVehicle" className="HorseBallVehicle" filename="scripts/HorseBallVehicle.lua"/>
         <specialization name="horseHarnessItemVehicle" className="HorseHarnessItemVehicle" filename="scripts/HorseHarnessItemVehicle.lua"/>
+        <specialization name="horseObjectInfo" className="HorseObjectInfo" filename="scripts/HorseObjectInfo.lua"/>
     </specializations>
     <vehicleTypes>
         <type name="horseBall" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
             <specialization name="horseBallVehicle"/>
+            <specialization name="horseObjectInfo"/>
         </type>
         <type name="horseHarnessItem" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
             <specialization name="horseHarnessItemVehicle"/>
+            <specialization name="horseObjectInfo"/>
         </type>
-        <!-- the horse jumps: the game's base vehicle (dynamic objects: picked up with the hands, knocked over by a horse), no specialization needed -->
-        <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua"/>
+        <!-- the horse jumps: the game's base vehicle (dynamic objects: picked up with the hands, knocked over by a horse), only the weight line in the info box -->
+        <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseObjectInfo"/>
+        </type>
     </vehicleTypes>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
