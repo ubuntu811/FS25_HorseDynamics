@@ -12,6 +12,9 @@ HorseBall.MIN_SPEED = 0.35                  -- m/s a horse needs to kick (a stan
 HorseBall.CHEST_M = 0.9                     -- the horse's chest: this far ahead of its root
 HorseBall.REACH_M = 0.55                    -- a ball whose surface is this close to the chest is kicked
 HorseBall.KICK_COOLDOWN_MS = 350
+HorseBall.KICK_GAIN = 0.7                   -- the ball leaves at this times the horse's speed ...
+HorseBall.KICK_BASE = 1.0                   -- ... plus this (m/s): a trot (2.5 m/s) sends it at 2.8 m/s, a gallop (10 m/s) at 8
+HorseBall.MAX_SPEED = 7                      -- the ball is never faster than this (m/s, 25 km/h): a horse's hoof is not a rifle (the engine's own contact of a 400 kg horse with a 3 kg ball would send it off at twice the horse's speed)
 HorseBall.horses = {}                        -- vehicle -> { x, z } at the last frame
 HorseBall.moving = {}                        -- the horses that move now (worked out once per frame)
 HorseBall.frame = -1
@@ -65,6 +68,13 @@ function HorseBall.kick(vehicle, dt)
         local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
         say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), mass %.1f kg, sleeping: %s", by - ground, HorseBall.RADIUS, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
     end
+    -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
+    local vx, vy, vz = getLinearVelocity(node)
+    local speed = math.sqrt(vx * vx + vy * vy + vz * vz)
+    if speed > HorseBall.MAX_SPEED then
+        local k = HorseBall.MAX_SPEED / speed
+        setLinearVelocity(node, vx * k, vy * k, vz * k)
+    end
     if now - (HorseBall.lastKick[vehicle] or -1e9) < HorseBall.KICK_COOLDOWN_MS then
         return
     end
@@ -74,8 +84,11 @@ function HorseBall.kick(vehicle, dt)
         local ahead = (bx - h.x) * h.fx + (bz - h.z) * h.fz
         if h.forward and d < HorseBall.RADIUS + HorseBall.REACH_M and ahead > 0 then
             local mass = getMass(node)
-            local v = h.speed * 1.4 + 1.5               -- the ball leaves faster than the horse
-            addImpulse(node, h.fx * mass * v, mass * 1.2, h.fz * mass * v, bx, by, bz, false)
+            local v = math.min(h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE, HorseBall.MAX_SPEED)
+            local along = vx * h.fx + vz * h.fz                  -- (what the horse's body already gave it along the way)
+            if along < v then
+                addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, by, bz, false)
+            end
             HorseBall.lastKick[vehicle] = now
             say("kick: horse at %.1f m/s, ball leaves at about %.1f m/s", h.speed, v)
             return
