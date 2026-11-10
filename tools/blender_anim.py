@@ -119,8 +119,8 @@ def ground(scales):
     return low
 def shoot(prefix, scales, drop, keyframes=False):
     for k in keys:
+        scene.frame_set(k + 1)                   # (first the frame, then the pose: moving the frame re-evaluates the keyframes made so far and would overwrite the pose)
         pose(k, scales, drop)
-        scene.frame_set(k + 1)
         if keyframes:
             for o in empties.values():
                 o.rotation_mode = "QUATERNION"
