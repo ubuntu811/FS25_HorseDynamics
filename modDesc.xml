@@ -39,12 +39,14 @@ Single player only for now.
         <storeItem xmlFilename="handTools/leash/leash_leather.xml"/>
         <storeItem xmlFilename="handTools/harness/harness.xml"/>
         <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
+        <storeItem xmlFilename="handTools/ball/ball.xml"/>
         <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
     </storeItems>
     <handToolSpecializations>
         <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
         <specialization name="horseLeash" filename="scripts/HandToolHorseLeash.lua" className="HandToolHorseLeash"/>
         <specialization name="horseHarness" filename="scripts/HandToolHorseHarness.lua" className="HandToolHorseHarness"/>
+        <specialization name="horseBall" filename="scripts/HandToolHorseBall.lua" className="HandToolHorseBall"/>
     </handToolSpecializations>
     <handToolTypes>
         <type name="horseCarrot" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
@@ -55,6 +57,9 @@ Single player only for now.
         </type>
         <type name="horseHarness" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
             <specialization name="horseHarness"/>
+        </type>
+        <type name="horseBall" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseBall"/>
         </type>
     </handToolTypes>
 
@@ -104,6 +109,10 @@ Single player only for now.
         <text name="action_horseLeash">
             <en>Leash the nearest horse / let it go</en>
             <de>Nächstes Pferd anleinen / freilassen</de>
+        </text>
+        <text name="action_horseBall">
+            <en>Put the ball down / pick it up</en>
+            <de>Ball hinlegen / aufheben</de>
         </text>
         <text name="action_horseHarness">
             <en>Put the harness on the horse / take it off</en>

@@ -67,5 +67,35 @@ def build(out, radius):
     open(os.path.join(out, "horseBall.i3d"), "w", encoding="iso-8859-1").write(xml)
     print("wrote", out, "verts", len(P), "tris", len(T) // 3, "radius", radius)
 
+def build_visual(out, radius):
+    """Only the red visible sphere (no physics), centred on its origin: HorseBall puts it on the game football's baked collision body."""
+    m = sphere(radius)
+    P, N, U, T, subsets = H.merge([(m, 1)])
+    vis = H.shape_entity("horseBallVisual", 1, P, N, U, T, subsets, ["red"])
+    hdr = type("Hd", (), {"version": 10, "seed": 53})()
+    sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, vis)]})()
+    S.write(os.path.join(out, "horseBallVisual.i3d.shapes"), sf)
+    xml = f'''<?xml version="1.0" encoding="iso-8859-1"?>
+
+<i3D name="horseBallVisual" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
+  <Asset>
+    <Export program="make_horse_ball.py" version="1"/>
+  </Asset>
+  <Files/>
+  <Materials>
+    <Material name="red" materialId="1" diffuseColor="0.95 0.04 0.04 1" specularColor="0.7 0.7 0.7"/>
+  </Materials>
+  <Shapes externalShapesFile="horseBallVisual.i3d.shapes">
+  </Shapes>
+  <Scene>
+    <Shape name="horseBallVisual" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="1"/>
+  </Scene>
+
+</i3D>
+'''
+    open(os.path.join(out, "horseBallVisual.i3d"), "w", encoding="iso-8859-1").write(xml)
+    print("wrote the visual-only ball, radius", radius)
+
 if __name__ == "__main__":
+    build_visual(sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "..", "models", "ball"), 0.23)
     build(sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "..", "models", "ball"), float(sys.argv[2]) if len(sys.argv) > 2 else 0.45)

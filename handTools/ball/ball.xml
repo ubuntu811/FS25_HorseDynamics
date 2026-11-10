@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<handTool type="horseBall" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/handTool.xsd">
+    <storeData>
+        <name>
+            <en>Horse ball</en>
+            <de>Pferdeball</de>
+        </name>
+        <functions>
+            <function>A big red ball for the horses to kick around: use it to put the ball down in front of you, use it again to pick it up.</function>
+        </functions>
+        <image>store/ball.dds</image>
+        <price>25</price>
+        <lifetime>1000</lifetime>
+        <dailyUpkeep>0</dailyUpkeep>
+        <showInStore>true</showInStore>
+        <rotation>0</rotation>
+        <brand>NONE</brand>
+        <species>HANDTOOL</species>
+        <category>handtoolsAnimals</category>
+        <canBeSold>true</canBeSold>
+    </storeData>
+
+    <base>
+        <typeDesc>Horse toy</typeDesc>
+        <filename>handTools/ball/ball.i3d</filename>
+        <graphics node="graphics" lockFirstPerson="true"/>
+        <handNode node="handNode"/>
+        <firstPersonNode node="firstPersonNode"/>
+    </base>
+
+    <storable>
+        <holderType type="HANDTOOL" node="graphics"/>
+    </storable>
+
+    <i3dMappings>
+        <i3dMapping id="graphics" node="0>0" />
+        <i3dMapping id="handNode" node="0>1" />
+        <i3dMapping id="firstPersonNode" node="0>2" />
+    </i3dMappings>
+</handTool>

@@ -30,14 +30,27 @@ function HorseBall.loadNode(path)
     return node
 end
 
--- scale: only for the game's own football (a fallback), which is 32 cm across
-function HorseBall.spawn(x, y, z, game)
+-- Three bodies: "red" (the default): the game's own football body (its collision is baked by the Editor: a working dynamic body) scaled up, with my red sphere in place of its picture; "own": my own
+-- mesh as the body (the engine has to cook its collision at runtime: it did not become a working body); "game": the game's football as it is, scaled up.
+HorseBall.SCALE = 2.0                         -- the game's football hull is 0.23 m in radius: 0.46 m, a ball 92 cm across
+function HorseBall.spawn(x, y, z, mode)
     local node, radius, scale = nil, HorseBall.RADIUS, 1
-    if game then
-        node = HorseBall.loadNode("$data/maps/mapEU/textures/props/gameplay/football.i3d")
-        scale, radius = 2.8, 0.16 * 2.8
-    else
+    if mode == "own" then
         node = HorseBall.loadNode(HorseBall.dir .. "models/ball/horseBall.i3d")
+    else
+        node = HorseBall.loadNode("$data/maps/mapEU/textures/props/gameplay/football.i3d")
+        scale, radius = HorseBall.SCALE, 0.23 * HorseBall.SCALE
+        if node ~= nil and mode == "red" then
+            local picture = getChildAt(node, 0)
+            local red = HorseBall.loadNode(HorseBall.dir .. "models/ball/horseBallVisual.i3d")
+            if red ~= nil then
+                delete(picture)
+                link(node, red)
+                setTranslation(red, 0, 0, 0)
+            else
+                say("the red picture could not be loaded: the game's own picture stays")
+            end
+        end
     end
     if node == nil then
         return nil, "the ball model could not be loaded (see the log)"
@@ -53,9 +66,9 @@ function HorseBall.spawn(x, y, z, game)
     if not ok then
         say("could not put the ball into the physics: %s", tostring(err))
     end
-    local ball = { node = node, radius = radius, lastKick = -1e9, game = game }
+    local ball = { node = node, radius = radius, lastKick = -1e9, mode = mode, probeIn = 3000, spawnY = y }
     HorseBall.balls[#HorseBall.balls + 1] = ball
-    say("a %s ball (radius %.2f m) at %.1f %.1f %.1f, mass %s kg", game and "game football" or "red", radius, x, y, z, tostring(pcall(getMass, node) and getMass(node) * 1000 or "?"))
+    say("a %s ball (radius %.2f m) at %.1f %.1f %.1f, mass %s kg", mode, radius, x, y, z, tostring(pcall(getMass, node) and getMass(node) * 1000 or "?"))
     return ball
 end
 
@@ -92,18 +105,32 @@ function HorseBall.console(_, argument)
     if argument == "remove" then
         return string.format("%d ball(s) removed", HorseBall.remove())
     end
-    local game = argument == "game"
+    local mode = (argument == "own" or argument == "game") and argument or "red"
     local x, y, z = spotInFront(5)
     if x == nil then
         return "no player position"
     end
-    local radius = game and 0.16 * 2.8 or HorseBall.RADIUS
+    local radius = mode == "own" and HorseBall.RADIUS or 0.23 * HorseBall.SCALE
     HorseBall.remove()
-    local ball, err = HorseBall.spawn(x, y + radius + 0.3, z, game)
+    local ball, err = HorseBall.spawn(x, y + radius + 0.3, z, mode)
     if ball == nil then
         return err
     end
-    return string.format("the %s ball is %d m in front of you: ride or lead a horse into it", game and "game football (scaled up)" or "red", 5)
+    return string.format("the %s ball is 5 m in front of you: ride or lead a horse into it", mode)
+end
+
+-- The tool's switch: no ball -> one is put down 3.5 m in front of you; a ball -> it is picked up.
+function HorseBall.toggle()
+    if #HorseBall.balls > 0 then
+        HorseBall.remove()
+        return "ball picked up"
+    end
+    local x, y, z = spotInFront(3.5)
+    if x == nil then
+        return "no player position"
+    end
+    local ball, err = HorseBall.spawn(x, y + 0.23 * HorseBall.SCALE + 0.3, z, "red")
+    return ball ~= nil and "ball put down: ride or lead a horse into it" or err
 end
 
 function HorseBall.update(dt)
@@ -136,6 +163,15 @@ function HorseBall.update(dt)
         else
             local bx, by, bz = getWorldTranslation(ball.node)
             local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
+            if ball.probeIn ~= nil then
+                ball.probeIn = ball.probeIn - dt
+                if ball.probeIn <= 0 then
+                    ball.probeIn = nil
+                    -- a dynamic ball has fallen on the grass by now and rests with its centre one radius above it; one that is not in the physics is still where it was put
+                    say("probe 3 s after it was put down: centre %.2f m above the ground (it was put %.2f m above; a ball that fell and rests shows its collision radius, about %.2f), sleeping: %s",
+                        by - ground, ball.spawnY - ground, ball.radius, tostring(getIsSleeping ~= nil and getIsSleeping(ball.node)))
+                end
+            end
             if by < ground - 3 then
                 pcall(function() setWorldTranslation(ball.node, bx, ground + ball.radius + 1, bz); addToPhysics(ball.node) end)        -- (fell through: put back on top)
                 say("the ball had fallen through the ground: put back")
