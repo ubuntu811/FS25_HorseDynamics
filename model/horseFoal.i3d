@@ -93,36 +93,36 @@
                   <TransformGroup name="Neck2_M" translation="0.155430 -0.000000 0.000000" rotation="0.00000 -0.00000 -6.50460" nodeId="32">
                     <TransformGroup name="Neck4_M" translation="0.160710 -0.000733 0.000000" rotation="0.00000 -0.00000 0.72607" nodeId="33">
                       <TransformGroup name="Head_M" translation="0.061041 -0.000248 0.000000" rotation="0.00000 -0.00000 -18.85055" nodeId="34">
-                        <TransformGroup name="Jaw_M" translation="-0.020321 0.074209 0.000000" rotation="0.00000 -0.00000 104.43674" nodeId="35">
-                          <TransformGroup name="tongue3_M" translation="0.219008 -0.001777 0.000000" rotation="0.00000 -0.00000 -2.89415" nodeId="36" />
+                        <TransformGroup name="Jaw_M" translation="-0.020156 0.063122 0.000000" rotation="0.00000 -0.00000 104.43674" nodeId="35">
+                          <TransformGroup name="tongue3_M" translation="0.188127 0.005686 0.000000" rotation="0.00000 -0.00000 -2.89415" nodeId="36" />
                         </TransformGroup>
-                        <TransformGroup name="Eye_R" translation="0.027719 0.155739 -0.056533" rotation="-0.00010 53.71846 67.57044" nodeId="37" />
-                        <TransformGroup name="ear1_R" translation="0.043067 0.029381 -0.054348" rotation="180.00000 -0.00000 -5.12524" nodeId="38" />
-                        <TransformGroup name="lidUpper1_R" translation="0.018141 0.152349 -0.054782" rotation="-39.04668 40.36390 16.17579" nodeId="39" />
-                        <TransformGroup name="lidBottom1_R" translation="0.027959 0.152200 -0.054782" rotation="38.35516 41.00827 117.90476" nodeId="40" />
-                        <TransformGroup name="lipCorner_R" translation="-0.063917 0.280694 -0.038711" rotation="0.00000 89.27525 -112.42733" nodeId="41" />
-                        <TransformGroup name="lipMidBot_M" translation="-0.084616 0.353576 0.000000" rotation="0.00000 -0.00000 42.90604" nodeId="42" />
-                        <TransformGroup name="lipMidUp_M" translation="-0.041361 0.362408 0.000636" rotation="0.00000 -0.00000 113.24488" nodeId="43" />
-                        <TransformGroup name="Eye_L" translation="0.027750 0.155817 0.056471" rotation="0.00010 -53.71846 67.57044" nodeId="44" />
-                        <TransformGroup name="ear1_L" translation="0.043067 0.029381 0.054348" rotation="180.00000 -0.00000 174.87476" nodeId="45" />
-                        <TransformGroup name="lidUpper1_L" translation="0.018128 0.152318 0.054807" rotation="-39.04668 40.36390 -163.82421" nodeId="46" />
-                        <TransformGroup name="lidBottom1_L" translation="0.027947 0.152168 0.054807" rotation="38.35516 41.00827 -62.09524" nodeId="47" />
-                        <TransformGroup name="lipCorner_L" translation="-0.071089 0.304616 0.035634" rotation="0.00000 89.27525 67.57267" nodeId="48" />
-                        <TransformGroup name="jtsSkinWire_L_1" translation="-0.078616 0.262493 0.047209" rotation="90.00000 -78.06255 82.62359" nodeId="49">
-                          <TransformGroup name="jtsSkinWire_L_2" translation="0.000583 0.275362 0.003403" rotation="0.26184 0.01186 9.34588" nodeId="50">
-                            <TransformGroup name="jtsSkinWire_L_3" translation="0.000150 0.320803 0.004080" nodeId="51" rotation="0.00000 -0.00000 0.00000">
-                              <TransformGroup name="jtsSkinWire_L_4" translation="-0.023940 0.135400 0.002621" nodeId="52" rotation="0.00000 -0.00000 0.00000" />
+                        <TransformGroup name="Eye_R" translation="0.028067 0.132310 -0.056533" rotation="-0.00010 53.71846 67.57044" nodeId="37" />
+                        <TransformGroup name="ear1_R" translation="0.043134 0.024875 -0.054348" rotation="180.00000 -0.00000 -5.12524" nodeId="38" />
+                        <TransformGroup name="lidUpper1_R" translation="0.018390 0.129293 -0.054484" rotation="-39.04668 40.36390 16.17579" nodeId="39" />
+                        <TransformGroup name="lidBottom1_R" translation="0.028208 0.129143 -0.054484" rotation="38.35516 41.00827 117.90476" nodeId="40" />
+                        <TransformGroup name="lipCorner_R" translation="-0.063293 0.238727 -0.038711" rotation="0.00000 89.27525 -112.42733" nodeId="41" />
+                        <TransformGroup name="lipMidBot_M" translation="-0.083831 0.300722 0.000000" rotation="0.00000 -0.00000 42.90604" nodeId="42" />
+                        <TransformGroup name="lipMidUp_M" translation="-0.040554 0.308129 0.000636" rotation="0.00000 -0.00000 113.24488" nodeId="43" />
+                        <TransformGroup name="Eye_L" translation="0.028099 0.132376 0.056471" rotation="0.00010 -53.71846 67.57044" nodeId="44" />
+                        <TransformGroup name="ear1_L" translation="0.043134 0.024875 0.054348" rotation="180.00000 -0.00000 174.87476" nodeId="45" />
+                        <TransformGroup name="lidUpper1_L" translation="0.018374 0.129262 0.054514" rotation="-39.04668 40.36390 -163.82421" nodeId="46" />
+                        <TransformGroup name="lidBottom1_L" translation="0.028193 0.129112 0.054514" rotation="38.35516 41.00827 -62.09524" nodeId="47" />
+                        <TransformGroup name="lipCorner_L" translation="-0.070413 0.259076 0.035634" rotation="0.00000 89.27525 67.57267" nodeId="48" />
+                        <TransformGroup name="jtsSkinWire_L_1" translation="-0.078033 0.223290 0.047209" rotation="90.00000 -78.06255 82.62359" nodeId="49">
+                          <TransformGroup name="jtsSkinWire_L_2" translation="0.008815 0.236428 -0.002351" rotation="0.26184 0.01186 9.34588" nodeId="50">
+                            <TransformGroup name="jtsSkinWire_L_3" translation="0.002294 0.273440 -0.002554" nodeId="51" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_L_4" translation="-0.023027 0.115235 -0.000203" nodeId="52" rotation="0.00000 -0.00000 0.00000" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
-                        <TransformGroup name="jtsSkinWire_R_1" translation="-0.078616 0.262493 -0.047209" rotation="-90.00000 -78.06255 -97.37641" nodeId="53">
-                          <TransformGroup name="jtsSkinWire_R_2" translation="-0.000583 0.275362 0.003403" rotation="0.26184 -0.01186 -9.34588" nodeId="54">
-                            <TransformGroup name="jtsSkinWire_R_3" translation="-0.000150 0.320803 0.004080" nodeId="55" rotation="0.00000 -0.00000 0.00000">
-                              <TransformGroup name="jtsSkinWire_R_4" translation="0.024138 0.135391 0.002621" rotation="0.00000 -0.00000 -5.18305" nodeId="56" />
+                        <TransformGroup name="jtsSkinWire_R_1" translation="-0.078033 0.223290 -0.047209" rotation="-90.00000 -78.06255 -97.37641" nodeId="53">
+                          <TransformGroup name="jtsSkinWire_R_2" translation="-0.008815 0.236428 -0.002351" rotation="0.26184 -0.01186 -9.34588" nodeId="54">
+                            <TransformGroup name="jtsSkinWire_R_3" translation="-0.002294 0.273440 -0.002554" nodeId="55" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_R_4" translation="0.023225 0.115226 -0.000203" rotation="0.00000 -0.00000 -5.18305" nodeId="56" />
                             </TransformGroup>
                           </TransformGroup>
                         </TransformGroup>
-                        <TransformGroup name="jtsSkinWire_M_1" translation="-0.168875 -0.563897 0.000000" rotation="167.57063 -90.00000 0.00000" nodeId="57" />
+                        <TransformGroup name="jtsSkinWire_M_1" translation="-0.170138 -0.478907 0.000000" rotation="167.57063 -90.00000 0.00000" nodeId="57" />
                       </TransformGroup>
                     </TransformGroup>
                   </TransformGroup>

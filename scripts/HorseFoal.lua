@@ -102,10 +102,10 @@ function HorseFoal.hideEnterPrompt(vehicle)
 end
 
 -- The foal's bone regions against the adult's, per axis of the bone, about the bone's origin: the least-squares fit of the baked horseFoal.i3d.shapes to horse.i3d.shapes, in each bone's own space
--- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm; Favorite 3: overall size 0.65, the head 0.55 to 0.63 of the adult's). Re-measure after a re-bake with another shape.
+-- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm; Favorite 4: overall size 0.65, the head 0.54 to 0.63 of the adult's). Re-measure after a re-bake with another shape.
 -- Gear built for the adult (HorseDynamics' halter and harness) scales its points with these.
 HorseFoal.BONE_SCALE = {
-    Head_M = { 0.551, 0.629, 0.625 },
+    Head_M = { 0.562, 0.536, 0.625 },
     Chest_M = { 0.517, 0.545, 0.518 },
     Spine1_M = { 0.527, 0.527, 0.522 },
     RootPart1_M = { 0.598, 0.537, 0.528 },
