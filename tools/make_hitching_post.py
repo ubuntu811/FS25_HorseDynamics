@@ -84,7 +84,7 @@ def merge(parts):
 def align(buf, n):
     while len(buf) % n: buf.append(0)
 
-def shape_entity(name, sid, P, N, U, T, subsets, slots):
+def shape_entity(name, sid, P, N, U, T, subsets, slots, attachments=()):
     assert len(P) <= 65535
     b = bytearray()
     nm = name.encode("ascii"); b += struct.pack("<i", len(nm)); b += nm; align(b, 4); b += struct.pack("<I", sid)
@@ -104,7 +104,9 @@ def shape_entity(name, sid, P, N, U, T, subsets, slots):
     for p in P: b += struct.pack("<3f", *p)
     for n in N: b += struct.pack("<3f", *n)
     for u in U: b += struct.pack("<2f", *u)
-    b += struct.pack("<I", 0)                         # attachments
+    b += struct.pack("<I", len(attachments))          # attachments: (flags, bytes) each (flags 2 = a cooked convex hull, see make_horse_ball.convex_hull_block)
+    for flags, data in attachments:
+        b += struct.pack("<I", flags) + struct.pack("<i", len(data)) + data
     return bytes(b)
 
 class Raw:                                            # what shapes_io.write wants of an entity

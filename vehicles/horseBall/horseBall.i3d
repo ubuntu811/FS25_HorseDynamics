@@ -11,7 +11,7 @@
   <Shapes externalShapesFile="horseBall.i3d.shapes">
   </Shapes>
   <Scene>
-    <Shape name="horseBall" shapeId="2" dynamic="true" compound="true" density="0.01" collisionFilterGroup="0x4003c" collisionFilterMask="0xfffffbff" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
+    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" density="0.01" collisionFilterGroup="0x4003c" collisionFilterMask="0xfffffbff" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
       <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="2"/>
     </Shape>
   </Scene>
