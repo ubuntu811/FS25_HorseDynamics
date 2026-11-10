@@ -98,6 +98,37 @@ const sockNb = (() => {
   const ids = [...near], lists = ids.map(c => [...nb.get(c)].filter(x => x !== c));
   return { canon, dups, ids, lists };
 })();
+// fit the lids to the eyeball: lid opening centred on the ball and sized to match it
+const eyeFit = (() => {
+  const b = mesh.body, out = {};
+  ['R', 'L'].forEach(sd => {
+    const lids = [idxOf['lidUpper1_' + sd], idxOf['lidBottom1_' + sd]], lidW = [], ring = [];
+    for (let v = 0; v < b.nv; v++) {
+      let wl = 0; for (let k = 0; k < 4; k++) { const j = b.jn[v*4+k]; if (j === lids[0] || j === lids[1]) wl += b.wt[v*4+k]; }
+      if (wl > 0) lidW.push([v, Math.min(1, wl)]);
+      if (wl > 0.5) ring.push(v);
+    }
+    out[sd] = { lidW, ring, ball: socket.ball[sd] };
+  });
+  return out;
+})();
+function fitLids(P, pos) {
+  const t = P.eye_fit; if (!(t > 0)) return;
+  const bb = vs => { const mn = [1e9, 1e9], mx = [-1e9, -1e9]; for (const v of vs) for (let a = 0; a < 2; a++) { const x = pos[v*3+1+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2], h: [(mx[0] - mn[0]) / 2, (mx[1] - mn[1]) / 2] }; };
+  ['R', 'L'].forEach(sd => {
+    const o = eyeFit[sd], r = bb(o.ring), k = bb(o.ball), sy = Math.min(1.5, Math.max(1, 0.9 * k.h[0] / r.h[0])), sz = Math.min(1.5, Math.max(1, 0.9 * k.h[1] / r.h[1]));
+    const move = (v, f) => { const y = pos[v*3+1], z = pos[v*3+2]; pos[v*3+1] += (k.c[0] + (y - r.c[0]) * sy - y) * f; pos[v*3+2] += (k.c[1] + (z - r.c[1]) * sz - z) * f; };
+    const shift = (v, f) => { pos[v*3+1] += (k.c[0] - r.c[0]) * f; pos[v*3+2] += (k.c[1] - r.c[1]) * f; };
+    for (const [v, w] of o.lidW) move(v, w * t);
+    const R = P.socket, r0 = R * 0.35;                                     // skin around the lids comes along, fading out with distance
+    if (R > 0) for (const e of socket.list) {
+      if (e.side !== sd || e.lid || e.d >= R) continue;
+      let u = e.d <= r0 ? 1 : 1 - (e.d - r0) / (R - r0); u = u * u * (3 - 2 * u);
+      let fa = 1; if (e.sa !== undefined && e.sa > 0.02) { const a = Math.min(1, (e.sa - 0.02) / 0.035); fa = 1 - a * a * (3 - 2 * a); }
+      shift(e.v, u * fa * e.k * t);
+    }
+  });
+}
 function socketActive(P) { return P.socket > 0 && (P.eye_down || P.eye_fwd || P.eye_out || Math.abs(ringGrow(P) - 1) > 1e-3); }
 function ringGrow(P) { return P.eyes / ((P.head_d + P.head_l + P.head_w) / 3); }   // how much bigger the eyelid ring is than the skin around it
 function applySocket(P, pos, jointsNow, jointsBase) {
@@ -216,6 +247,9 @@ const PARAMS = [
   ['eye_fwd',   'Eyes forward',        -0.02, 0.04, 0.002, 0,   'Eyes',  'm'],
   ['eye_out',   'Eyes outward',        -0.02, 0.03, 0.002, 0,   'Eyes',  'm'],
   ['socket_smooth', 'Socket smoothing', 0, 1, 0.05, 0.5, 'Eyes', '%'],
+  ['eye_fit',    'Fit the lids to the eyeball', 0, 1, 0.05, 0, 'Eyes', '%'],
+  ['lid_up',    'Upper lid down over the eye', 0, 0.03, 0.001, 0, 'Eyes', 'm'],
+  ['lid_low',   'Lower lid up',        0, 0.02, 0.001, 0, 'Eyes', 'm'],
   ['socket',    'Socket reach (skin follows)', 0, 0.20, 0.005, 0.09, 'Eyes', 'm'],
   ['leg_len',   'Leg length',          0.80, 1.80, 0.01, 1,     'Legs & tail', 'x'],
   ['leg_th',    'Leg thickness',       0.50, 1.60, 0.01, 1,     'Legs & tail', 'x'],
@@ -234,7 +268,7 @@ const PRESETS = [
   ['foal',      'Foal (current)',   'uniform head, ears up',  mk({ B: 0.62, torso: 0.93, neck_len: 1.2, neck_th: 0.95, head_d: 1.2, head_l: 1.2, head_w: 1.2, ear: 1.12, ear_tilt: -30, ear_fwd: 0.02, eyes: 1.3, eye_down: 0.015, leg_len: 1.3, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2, tail: 0.85 })],
   ['q3',        'Q3',               'big head, sturdy legs', mk(Object.assign({}, Q, { ear: 1.7, leg_th: 1.25, rump: 0.75, hip_th: 0.85, hoof: 1.2 }))],
   ['n4',        'N4',               'long neck, small body', mk(Object.assign({}, Q, { B: 0.54, head_d: 1.4, head_l: 1.3, head_w: 0.95, neck_len: 1.45, neck_th: 0.82, ear: 1.9 }))],
-  ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
+  ['fav1',      'Favorite (Nov 10)', 'from the shared link',  mk({ B: 0.5, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 0.94, head_l: 0.79, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.17, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: -10, ear: 1.2, eyes: 1.68, eye_down: 0.036, eye_fwd: 0.04, eye_out: -0.01, socket: 0.115, eye_fit: 1, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
@@ -294,6 +328,8 @@ function skinMatrices(P, clip, key) {
       const e = restLocal[idxOf['Eye_' + (name.endsWith('_R') ? 'R' : 'L')]], g = ringGrow(P);
       L = L.slice(); L[3] = e[3] + (L[3] - e[3]) * g; L[7] = e[7] + (L[7] - e[7]) * g; L[11] = e[11] + (L[11] - e[11]) * g;
     }
+    if (name.startsWith('lidUpper') && P.lid_up) L = mul(Tm(-P.lid_up, 0, 0), L);      // upper lid slides down over the eye
+    if (name.startsWith('lidBottom') && P.lid_low) L = mul(Tm(P.lid_low, 0, 0), L);    // lower lid slides up
     if (name.startsWith('Eye_') || name.startsWith('lid')) {
       if (P.eye_down || P.eye_fwd || P.eye_out) L = mul(Tm(-P.eye_down, P.eye_fwd, name.endsWith('_R') ? -P.eye_out : P.eye_out), L);
     }
@@ -333,6 +369,7 @@ function skin(P, clip, key, want) {
     const jn = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11]]; });
     applySocket(P, out.body, jn, jb);
   }
+  if (out.body) fitLids(P, out.body);
   names.forEach(name => { const p = out[name]; for (let v = 2; v < p.length; v += 3) p[v] -= minZ; });   // ground
   const joints = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11] - minZ]; });
   return { pos: out, joints, height: maxZ - minZ, minZ };
@@ -450,6 +487,11 @@ function makeMesh(name, color) {
   g.setIndex(new THREE.BufferAttribute(m.idx, 1));
   g.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
+  if (name === 'body') {                                     // preview only: dark eyeballs so the lids read (export is untouched)
+    const col = new Float32Array(m.nv * 3), base = new THREE.Color(0xffffff), dark = new THREE.Color(0x3a2e28), eyes = [idxOf.Eye_R, idxOf.Eye_L];
+    for (let v = 0; v < m.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (eyes.includes(m.jn[v*4+k])) w += m.wt[v*4+k]; const c = w > 0.5 ? dark : base; col[v*3] = c.r; col[v*3+1] = c.g; col[v*3+2] = c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); mat.vertexColors = true;
+  }
   const o = new THREE.Mesh(g, mat); o.frustumCulled = false; scene.add(o); return o;
 }
 function initScene() {
@@ -617,7 +659,12 @@ $('copyLink').addEventListener('click', e => { clearTimeout(urlTimer); const p =
 $('copyJson').addEventListener('click', e => { const o = {}; PARAMS.forEach(d => { o[d[0]] = +state.P[d[0]].toFixed(4); }); copy(JSON.stringify(o), e.target, 'Copied'); });
 $('exportObj').addEventListener('click', exportObj);
 $('exportPng').addEventListener('click', () => { if (!renderer) return; renderer.render(scene, camera); const a = document.createElement('a'); a.download = 'foal.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); });
-window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF };
+window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF,
+  eyeGap(P) { const r = skin(P, null, 0, ['body']), pos = r.pos.body, o = eyeFit.R;
+    const bb = vs => { const mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9]; for (const v of vs) for (let a = 0; a < 3; a++) { const x = pos[v*3+a]; if (x < mn[a]) mn[a] = x; if (x > mx[a]) mx[a] = x; } return { c: mn.map((m, a) => +((m + mx[a]) / 2).toFixed(4)), e: mn.map((m, a) => +(mx[a] - m).toFixed(4)) }; };
+    return { ring: bb(o.ring), ball: bb(o.ball) }; } };
 requestAnimationFrame(frame);
+if (/[?&]gap=1/.test(location.search)) document.getElementById('testout').textContent = 'GAP ' + JSON.stringify(window.__foal.eyeGap(state.P));
 })();
+
 
