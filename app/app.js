@@ -394,7 +394,7 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false } };
+  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false, noeye: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
@@ -432,7 +432,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones', 'dark'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -443,7 +443,7 @@ function writeUrl() {
     PARAMS.forEach(d => { if (Math.abs(state.P[d[0]] - DEF[d[0]]) > 1e-9) p.set(d[0], String(+state.P[d[0]].toFixed(4))); });
     if (state.clip !== 'rest') p.set('pose', state.clip);
     if (state.view !== 'side') p.set('view', state.view);
-    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false };
+    const dflt = { mane: true, saddle: false, reins: false, wire: false, ghost: true, dots: false, bones: false, dark: false, noeye: false };
     Object.keys(dflt).forEach(k => { if (state.show[k] !== dflt[k]) p.set(k, state.show[k] ? '1' : '0'); });
     try { history.replaceState(null, '', p.toString() ? '?' + p.toString() : location.pathname); } catch (e) { /* file:// in some browsers */ }
   }, 150);
@@ -494,7 +494,14 @@ function makeMesh(name, color) {
     for (let v = 0; v < m.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (eyes.includes(m.jn[v*4+k])) w += m.wt[v*4+k]; const c = w > 0.5 ? dark : base; col[v*3] = c.r; col[v*3+1] = c.g; col[v*3+2] = c.b; }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   }
-  const o = new THREE.Mesh(g, mat); o.frustumCulled = false; scene.add(o); return o;
+  const o = new THREE.Mesh(g, mat); o.frustumCulled = false; scene.add(o);
+  if (name === 'body') {                                     // index buffer without the eyeball triangles, for "hide eyeballs" (preview only)
+    const ball = new Uint8Array(m.nv), eyes = [idxOf.Eye_R, idxOf.Eye_L];
+    for (let v = 0; v < m.nv; v++) { let w = 0; for (let k = 0; k < 4; k++) if (eyes.includes(m.jn[v*4+k])) w += m.wt[v*4+k]; ball[v] = w > 0.5 ? 1 : 0; }
+    const keep = []; for (let t = 0; t < m.idx.length; t += 3) if (!(ball[m.idx[t]] && ball[m.idx[t+1]] && ball[m.idx[t+2]])) keep.push(m.idx[t], m.idx[t+1], m.idx[t+2]);
+    o.userData.idxFull = g.getIndex(); o.userData.idxNoEye = new THREE.BufferAttribute(Uint32Array.from(keep), 1);
+  }
+  return o;
 }
 function initScene() {
   try { renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { renderer = null; }
@@ -568,7 +575,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)']].forEach(t => {
+  [['mane', 'Mane and tail'], ['saddle', 'Saddle'], ['reins', 'Reins and bridle'], ['wire', 'Wireframe'], ['ghost', 'Ghost of the game adult'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -578,7 +585,8 @@ function applyShow() {
   if (!renderer) return;
   meshes.maneTail.visible = state.show.mane; meshes.saddle.visible = state.show.saddle; meshes.reins.visible = state.show.reins;
   ['body', 'maneTail', 'saddle', 'reins'].forEach(n => { meshes[n].material.wireframe = state.show.wire; });
-  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; }); if (meshes.body.material.vertexColors !== state.show.dark) { meshes.body.material.vertexColors = state.show.dark; meshes.body.material.needsUpdate = true; }
+  ghostMesh.visible = state.show.ghost; dotGroup.visible = state.show.dots; boneSets.forEach(b => { b.grp.visible = state.show.bones; }); { const b = meshes.body, want = state.show.noeye ? b.userData.idxNoEye : b.userData.idxFull; if (b.geometry.getIndex() !== want) b.geometry.setIndex(want); }
+  if (meshes.body.material.vertexColors !== state.show.dark) { meshes.body.material.vertexColors = state.show.dark; meshes.body.material.needsUpdate = true; }
 }
 function setStats(res, lm) {
   const pct = (res.height / 2.28 * 100).toFixed(0);
