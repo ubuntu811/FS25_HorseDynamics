@@ -3,7 +3,7 @@
     each can be switched off. Saved in modSettings/FS25_HorseDynamics/config.xml, applied to the HorseHitch flags at load and on every change.
       gallopLimit  HorseHitch.GALLOP_LIMIT   a horse that pulls never gallops
       playerCap    HorseHitch.PLAYER_CAP     the load slows you down (walk and run), and the string with you
-      canterJump      (no HorseHitch flag) a jump at a canter is 80 % of the full height instead of the game's 50 %, so a canter clears a 90 cm bar
+      canterJump      (no HorseHitch flag) a jump at a canter rises to 60 % of the full height (the game: 50 %) and leaves at 1.5 x the canter's speed: a longer, lower arc
       leashAfterRide  (no HorseHitch flag) the leash tool goes into your hand when you get off a horse
       pullLimit    HorseHitch.SPEED_LIMITS   a horse is no tractor: its pull is limited (a heavy load hardly gets going), and the same three limits are on
 ]]

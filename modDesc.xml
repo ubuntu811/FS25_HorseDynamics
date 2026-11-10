@@ -180,7 +180,7 @@ Single player only for now.
             <en>Jump at a canter</en>
         </text>
         <text name="hd_canterJump_info">
-            <en>The game lets a horse clear only low obstacles at a canter (half the jump height of a gallop). On: a canter jump is 80 % of the full height, so a jump with the bar at 90 cm can be cleared without a full gallop. Off: the game's own.</en>
+            <en>The game's canter jump is a steep hop (half the height of a gallop's, at the canter's speed: it looks like jumping straight up and clears only low bars). On: a canter jump rises to 60 % of the full height (1.2 m) and stretches forward (the speed is raised by half as it leaves the ground): a lower, longer arc that clears a bar at 90 cm. Off: the game's own.</en>
         </text>
         <text name="hd_leashAfterRide_title">
             <en>Leash in hand after dismounting</en>
