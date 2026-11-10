@@ -30,6 +30,11 @@
         <audioMemoryUsage>0</audioMemoryUsage>
     </storeData>
 
+    <!-- the colour: the game's own palette (35 colours) as a configuration in the shop; the i3d's material "ball_mat" takes it (a vehicle shader material, colorScale) -->
+    <designColorConfigurations useDefaultColors="true" defaultColorIndex="13" price="0">
+        <material materialSlotName="ball_mat" materialTemplateUseColorOnly="true"/>
+    </designColorConfigurations>
+
     <base>
         <typeDesc>Horse toy</typeDesc>
         <filename>vehicles/horseBall/horseBall.i3d</filename>

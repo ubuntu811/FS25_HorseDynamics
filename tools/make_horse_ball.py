@@ -69,8 +69,8 @@ def build(out, radius):
         n = [N[T[k]][i] + N[T[k+1]][i] + N[T[k+2]][i] for i in range(3)]
         if cr[0]*n[0] + cr[1]*n[1] + cr[2]*n[2] < 0: bad += 1
     print("triangles against their normals:", bad, "of", len(T) // 3)
-    vis = H.shape_entity("horseBall_vis", 1, P, N, U, T, subsets, ["red"])
-    col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["red"], attachments=[(2, convex_hull_block(P, T))])
+    vis = H.shape_entity("horseBall_vis", 1, P, N, U, T, subsets, ["ball_mat"])
+    col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["ball_mat"], attachments=[(2, convex_hull_block(P, T))])
     hdr = type("Hd", (), {"version": 10, "seed": 91})()
     sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, vis), H.Raw(1, col)]})()
     S.write(os.path.join(out, "horseBall.i3d.shapes"), sf)
@@ -80,9 +80,22 @@ def build(out, radius):
   <Asset>
     <Export program="make_horse_ball.py" version="1"/>
   </Asset>
-  <Files/>
+  <Files>
+    <File fileId="1" filename="$data/shaders/vehicleShader.xml" />
+    <File fileId="2" filename="$data/shared/white_diffuse.png" />
+    <File fileId="3" filename="$data/shared/detailLibrary/flat_normal.png" />
+    <File fileId="4" filename="$data/shared/default_vmask.png" />
+  </Files>
   <Materials>
-    <Material name="red" materialId="1" diffuseColor="0.95 0.04 0.04 1" specularColor="0.7 0.7 0.7"/>
+    <Material name="ball_mat" materialId="1" customShaderId="1">
+      <CustomParameter name="clearCoatIntensity" value="0.3"/>
+      <CustomParameter name="clearCoatSmoothness" value="0.6"/>
+      <CustomParameter name="colorScale" value="0.85 0.04 0.04"/>
+      <CustomParameter name="smoothnessScale" value="0.7"/>
+      <Texture fileId="2"/>
+      <Normalmap fileId="3"/>
+      <Glossmap fileId="4"/>
+    </Material>
   </Materials>
   <Shapes externalShapesFile="horseBall.i3d.shapes">
   </Shapes>
