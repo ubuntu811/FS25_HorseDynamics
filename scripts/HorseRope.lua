@@ -418,6 +418,19 @@ function HorseRope.setJawAngle(degrees)
 end
 HorseRope.setJawAngle(HorseRope.halter.crown.jawAngle)
 
+-- How much smaller than the adult's this horse's head is, per axis of the head bone (x up, y along the face, z sideways): 1, 1, 1 unless a mod that makes smaller horses (FS25_HorseFoalMod publishes
+-- g_currentMission.horseFoal.getHeadScale(vehicle), mod globals are not visible across mods) says so.
+function HorseRope.headScaleOf(vehicle)
+    local api = g_currentMission ~= nil and g_currentMission.horseFoal or nil
+    if api ~= nil and api.getHeadScale ~= nil then
+        local ok, x, y, z = pcall(api.getHeadScale, vehicle)
+        if ok and x ~= nil then
+            return x, y, z
+        end
+    end
+    return 1, 1, 1
+end
+
 -- Builds the halter on a horse's head bone: nodes (children of the bone) and the rope pieces between them. Returns { nodes, pieces, tied } with the chin knot registered in HorseRope.chins, or nil.
 function HorseRope.buildHalter(vehicle, gear)
     if ForestryRope == nil or ForestryRope.new == nil or g_i3DManager == nil or Utils == nil or Utils.getFilename == nil or createTransformGroup == nil or link == nil
@@ -432,6 +445,10 @@ function HorseRope.buildHalter(vehicle, gear)
     -- The points are NOT children of the head bone: pieces hung under the skeleton were loaded, tied and "visible" in the game and still did not render (something inherited from the skeleton: a hidden parent,
     -- a mirrored scale ...), while the lead's pieces, whose points hang under the world root, do. So the points live under the root and are put at the bone's world position every frame (halterPlace).
     local halter = { nodes = {}, locals = {}, slack = {}, bone = bone, pieces = {}, tied = {}, targets = {}, localOf = {} }
+    -- A smaller head (a foal, FS25_HorseFoalMod): the halter is designed in the adult head's space and its points are scaled per axis when they are put on the head (halterPlace); the rope and the straps get thinner.
+    local sx, sy, sz = HorseRope.headScaleOf(vehicle)
+    halter.scale = { sx, sy, sz }
+    local thin = math.max(0.5, (sx + sy + sz) / 3)
     local function point(x, y, z, slack)
         local node = createTransformGroup("horseHalterPoint")
         link(getRootNode(), node)
@@ -463,9 +480,9 @@ function HorseRope.buildHalter(vehicle, gear)
         local options = nil
         if not steel then
             local nx, ny, nz = normalOf(from, to)
-            options = HorseRope.gearOptions(h.strapWidth, bone, nx, ny, nz, gear)
+            options = HorseRope.gearOptions(h.strapWidth * thin, bone, nx, ny, nz, gear)
         end
-        local rope = createSegment(from, diameter or h.diameter, options)
+        local rope = createSegment(from, (diameter or h.diameter) * thin, options)
         if rope ~= nil then
             rope.rfMaterialDone = steel or nil                -- (the hemp is put on a piece whose shape has loaded, unless it is a ring)
             halter.pieces[#halter.pieces + 1] = rope
@@ -573,7 +590,8 @@ function HorseRope.halterPlace(halter)
     local o = HorseRope.halterOffset
     for i, node in ipairs(halter.nodes) do
         local l, slack = halter.locals[i], halter.slack[i] or 0
-        local x, y, z = localToWorld(halter.bone, l[1] + o[1] + gx * slack, l[2] + o[2] + gy * slack, l[3] + o[3] + gz * slack)
+        local sc = halter.scale or { 1, 1, 1 }
+        local x, y, z = localToWorld(halter.bone, l[1] * sc[1] + o[1] + gx * slack, l[2] * sc[2] + o[2] + gy * slack, l[3] * sc[3] + o[3] + gz * slack)
         setTranslation(node, x, y, z)
     end
 end
