@@ -13,13 +13,13 @@
         <rotation>0</rotation>
         <brand>NONE</brand>
         <species>placeable</species>
-        <category>placeableMisc</category>
+        <category>animalpens</category>
         <canBeSold>true</canBeSold>
         <showInStore>true</showInStore>
         <brush>
             <type>placeable</type>
-            <category>decoration</category>
-            <tab>uncategorized</tab>
+            <category>animals</category>
+            <tab>horses</tab>
         </brush>
         <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
         <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
