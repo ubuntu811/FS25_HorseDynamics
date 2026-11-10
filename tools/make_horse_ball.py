@@ -41,7 +41,7 @@ def mesh_volume(P, T):
         v += (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])) / 6
     return abs(v)
 
-def convex_hull_block(P, T, margin=0.04, n=103):
+def convex_hull_block(P, T, margin=0.04, n=103, lift=0.0):
     """The collision attachment of a dynamic shape, read off the game's football (shapes of the base game, flags 2): 'cm' + version 4, the vertex count, then 14 floats (the margin 0.04, the volume of the
     mesh, its centre of mass, its 3x3 inertia tensor per unit mass) and the hull's vertices: points of a sphere `margin` inside the mesh's surface (the engine adds the margin back round the hull). Verified on the
     football: 8 + 56 + 103 * 12 = 1300 bytes, the volume and inertia are those of the sphere the mesh is, the vertices lie 0.04 inside it."""
@@ -51,15 +51,17 @@ def convex_hull_block(P, T, margin=0.04, n=103):
     I = 0.4 * Req * Req
     hull = fibonacci_sphere(n, R - margin)
     b = b"cm\x04\x00" + struct.pack("<I", len(hull))
-    b += struct.pack("<14f", margin, vol, 0, 0, 0, I, 0, 0, 0, I, 0, 0, 0, I)
+    b += struct.pack("<14f", margin, vol, 0, lift, 0, I, 0, 0, 0, I, 0, 0, 0, I)
     for p in hull:
-        b += struct.pack("<3f", *p)
+        b += struct.pack("<3f", p[0], p[1] + lift, p[2])
     return b
 
 def build(out, radius, name="horseBall"):
     os.makedirs(out, exist_ok=True)
     m = sphere(radius)
     P, N, U, T, subsets = H.merge([(m, 1)])
+    hull = convex_hull_block(P, T, lift=radius)          # (from the sphere centred on the origin, then raised with it)
+    P = [(p[0], p[1] + radius, p[2]) for p in P]        # the origin of a vehicle is where it stands: the ball's bottom is at y = 0, its centre (of mass) at y = radius
     # outward check with the vertex normals (the game's winding is counter-clockwise from outside)
     bad = 0
     for k in range(0, len(T), 3):
@@ -70,7 +72,7 @@ def build(out, radius, name="horseBall"):
         if cr[0]*n[0] + cr[1]*n[1] + cr[2]*n[2] < 0: bad += 1
     print("triangles against their normals:", bad, "of", len(T) // 3)
     vis = H.shape_entity("horseBall_vis", 1, P, N, U, T, subsets, ["ball_mat"])
-    col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["ball_mat"], attachments=[(2, convex_hull_block(P, T))])
+    col = H.shape_entity("horseBall", 2, P, N, U, T, subsets, ["ball_mat"], attachments=[(2, hull)])
     hdr = type("Hd", (), {"version": 10, "seed": 91})()
     sf = type("SF", (), {"header": hdr, "entities": [H.Raw(1, vis), H.Raw(1, col)]})()
     S.write(os.path.join(out, name + ".i3d.shapes"), sf)
@@ -127,7 +129,7 @@ def variants(out):
         build(out, radius, name)
         x = main.replace("vehicles/horseBall/horseBall.i3d", "vehicles/horseBall/%s.i3d" % name)
         x = re.sub(r'<size width="[^"]*" length="[^"]*" height="[^"]*" />', '<size width="%.2f" length="%.2f" height="%.2f" />' % (2 * radius, 2 * radius, 2 * radius), x)
-        x = re.sub(r'(<component centerOfMass="0 0 0" solverIterationCount="10" mass=")[^"]*(")', r'\g<1>%g\g<2>' % mass, x)
+        x = re.sub(r'<component centerOfMass="[^"]*" solverIterationCount="10" mass="[^"]*"', '<component centerOfMass="0 %g 0" solverIterationCount="10" mass="%g"' % (radius, mass), x)
         x = x.replace("<en>Horse ball</en>", "<en>Horse ball (%s, test)</en>" % label).replace("<de>Pferdeball</de>", "<de>Pferdeball (%s, Test)</de>" % label)
         x = x.replace("<showInStore>true</showInStore>", "<showInStore>false</showInStore>")
         open(os.path.join(out, name + ".xml"), "w", encoding="utf-8").write(x)

@@ -52,7 +52,7 @@
         <size width="1.40" length="1.40" height="1.40" />
         <canBeReset>true</canBeReset>
         <components maxMass="50">
-            <component centerOfMass="0 0 0" solverIterationCount="10" mass="8"/>
+            <component centerOfMass="0 0.7 0" solverIterationCount="10" mass="8"/>
         </components>
         <showInVehicleMenu>false</showInVehicleMenu>
         <mapHotspot available="false" />

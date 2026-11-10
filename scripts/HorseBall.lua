@@ -77,14 +77,15 @@ function HorseBall.kick(vehicle, dt)
     HorseBall.updateHorses(dt)
     local radius = HorseBall.radiusOf(vehicle)
     local now = g_time or 0
-    local bx, by, bz = getWorldTranslation(node)
+    local bx, by, bz = getWorldTranslation(node)         -- (the origin of the ball is its bottom: the centre is one radius up)
+    local cy = by + radius
     -- what the physics did with it: 3 s after it appeared, how high its centre is above the ground (a ball that fell and rests shows its collision radius)
     local age = (HorseBall.age[vehicle] or 0) + dt
     HorseBall.age[vehicle] = age
     if age >= 3000 and age - dt < 3000 then
         local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
         local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
-        say("probe: centre %.2f m above the ground (the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, radius, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
+        say("probe: bottom %.2f m above the ground (0 = it rests on it; the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, radius, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
     end
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
@@ -102,7 +103,7 @@ function HorseBall.kick(vehicle, dt)
     if now >= st.nextCheck then
         st.nextCheck = now + HorseBall.CHECK_MS
         local terrainY = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
-        if by - terrainY < radius + 0.2 then
+        if by - terrainY < 0.2 then
             local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
             local soft = math.max(0, math.min(1, depth or 0))
             if st.soft == nil or math.abs(st.soft - soft) > 0.02 then
@@ -127,7 +128,7 @@ function HorseBall.kick(vehicle, dt)
             local v = math.min(h.speed * HorseBall.KICK_GAIN + HorseBall.KICK_BASE, HorseBall.MAX_SPEED)
             local along = vx * h.fx + vz * h.fz                  -- (what the horse's body already gave it along the way)
             if along < v then
-                addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, by, bz, false)
+                addImpulse(node, h.fx * mass * (v - math.max(along, 0)), mass * 0.6, h.fz * mass * (v - math.max(along, 0)), bx, cy, bz, false)
             end
             HorseBall.lastKick[vehicle] = now
             say("kick: horse at %.1f m/s, ball leaves at about %.1f m/s", h.speed, v)
@@ -196,7 +197,7 @@ function HorseBall.console(_, argument)
     if x == nil then
         return "no player position"
     end
-    HorseBall.spawn("horseBall.xml", x, y + HorseBall.RADIUS + 0.3, z, nil)
+    HorseBall.spawn("horseBall.xml", x, y + 0.3, z, nil)
     return "a ball is put 5 m in front of you (or look at the log)"
 end
 
@@ -213,7 +214,7 @@ function HorseBall.consoleSet(_, argument)
     for r, row in ipairs(rows) do
         for weight = 1, 3 do
             local x, y, z = spot(4 + (r - 1) * 2.6, (weight - 2) * 2.2)
-            HorseBall.spawn(row[1], x, y + row[2] + 0.3, z, weight)
+            HorseBall.spawn(row[1], x, y + 0.3, z, weight)
             count = count + 1
         end
     end

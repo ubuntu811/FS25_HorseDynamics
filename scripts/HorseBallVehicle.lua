@@ -11,7 +11,7 @@ end
 
 -- the shop option "Weight" (the game's configuration mechanism; the items' additionalMass is applied by the game: VehicleConfigurationDataAdditionalMass)
 function HorseBallVehicle.initSpecialization()
-    g_vehicleConfigurationManager:addConfigurationType("horseBallWeight", g_i18n:getText("configuration_horseBallWeight", HorseBallVehicle.modName), "horseBallWeight", VehicleConfigurationItem)
+    g_vehicleConfigurationManager:addConfigurationType("horseBallWeight", g_i18n:getText("configuration_horseBallWeight", HorseBallVehicle.modName), nil, VehicleConfigurationItem)
 end
 
 function HorseBallVehicle.registerEventListeners(vehicleType)
