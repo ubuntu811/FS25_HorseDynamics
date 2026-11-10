@@ -1,7 +1,7 @@
 -- Foals in the game: horses under HorseFoal.ADULT_AGE months use the baked foal model (animal dealer, pastures); they cannot be ridden; older ones the normal horse.
 HorseFoal = {}
 HorseFoal.dir = g_currentModDirectory
-HorseFoal.ADULT_AGE = 24            -- months: from here on the game's own horse is shown
+HorseFoal.ADULT_AGE = 12            -- months: from here on the game's own horse is shown
 HorseFoal.NUM_COATS = 8             -- animals.xml holds the 8 adult coats, then the same 8 as foals
 
 -- game base path -> mod directory as a "$" path (the game resolves "$x" as <game folder>x, in Lua and in the animal config alike)
