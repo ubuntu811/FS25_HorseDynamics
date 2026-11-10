@@ -199,6 +199,39 @@ const headLine = (() => {
   }
   return { list, up, E, ch, cl };
 })();
+// The saddle shape carries the bridle, skinned to the head and jaw: its straps are right wherever the head edits leave them, but the BIT (the mouthpiece and its two rings, in the mouth) has to go back with the muzzle.
+// The bit is found once as four small connected pieces at the mouth (the saddle's duplicate vertices welded by position): they move together as one rigid piece by the displacement the nearest body vertices got
+// (muzzle cut, head lines), and the reins' ends next to the rings go with them (full at the rings, none 6 cm away).
+const bit = (() => {
+  const m = mesh.saddle, key = new Map(), rep = new Int32Array(m.nv), par = new Int32Array(m.nv).map((_, i) => i);
+  const find = a => { while (par[a] !== a) { par[a] = par[par[a]]; a = par[a]; } return a; };
+  for (let v = 0; v < m.nv; v++) { const k = Math.round(m.pos0[v*3]*1e4) + ',' + Math.round(m.pos0[v*3+1]*1e4) + ',' + Math.round(m.pos0[v*3+2]*1e4); if (!key.has(k)) key.set(k, v); rep[v] = key.get(k); }
+  for (let t = 0; t < m.idx.length; t += 3) for (const [i, j] of [[0, 1], [1, 2]]) { const x = find(rep[m.idx[t+i]]), y = find(rep[m.idx[t+j]]); if (x !== y) par[x] = y; }
+  const comps = new Map(); for (let v = 0; v < m.nv; v++) { const r = find(rep[v]); if (!comps.has(r)) comps.set(r, []); comps.get(r).push(v); }
+  const verts = [], centres = [];
+  comps.forEach(vs => {
+    const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], c = [0, 0, 0];
+    for (const v of vs) for (let a = 0; a < 3; a++) { const x = m.pos0[v*3+a]; if (x < lo[a]) lo[a] = x; if (x > hi[a]) hi[a] = x; c[a] += x / vs.length; }
+    const small = Math.max(hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2]) <= 0.09;
+    if (small && vs.length >= 80 && Math.abs(c[0]) < 0.1 && c[1] < -1.50 && c[1] > -1.58 && c[2] > 1.74 && c[2] < 1.86) { vs.forEach(v => verts.push(v)); centres.push(c); }
+  });
+  const b = mesh.body, cand = headLine.list.map(e => e.v), near = centres.map(c => { let best = -1, bd = Infinity; for (const u of cand) { const dx = b.pos0[u*3]-c[0], dy = b.pos0[u*3+1]-c[1], dz = b.pos0[u*3+2]-c[2], d = dx*dx+dy*dy+dz*dz; if (d < bd) { bd = d; best = u; } } return best; });
+  const rings = centres.filter(c => Math.abs(c[0]) > 0.05);
+  const r = mesh.reins, reinV = [], reinW = [];
+  for (let v = 0; v < r.nv; v++) {
+    let w = 0; for (const c of rings) { const d = Math.hypot(r.pos0[v*3]-c[0], r.pos0[v*3+1]-c[1], r.pos0[v*3+2]-c[2]); const t = Math.max(0, 1 - d / 0.06); w = Math.max(w, t * t * (3 - 2 * t)); }
+    if (w > 0) { reinV.push(v); reinW.push(w); }
+  }
+  return { verts, near, reinV, reinW };
+})();
+function carryHeadEdits(out, pre) {
+  if (!bit.verts.length || !out.saddle) return;
+  let tx = 0, ty = 0, tz = 0; const b = out.body;
+  for (const u of bit.near) { tx += (b[u*3] - pre[u*3]) / bit.near.length; ty += (b[u*3+1] - pre[u*3+1]) / bit.near.length; tz += (b[u*3+2] - pre[u*3+2]) / bit.near.length; }
+  const p = out.saddle; for (const v of bit.verts) { p[v*3] += tx; p[v*3+1] += ty; p[v*3+2] += tz; }
+  if (out.reins) { const q = out.reins; for (let k = 0; k < bit.reinV.length; k++) { const v = bit.reinV[k], w = bit.reinW[k]; q[v*3] += tx * w; q[v*3+1] += ty * w; q[v*3+2] += tz * w; } }
+}
+
 function applyHeadLine(P, pos, Db) {
   const prof = P.top_a1 || P.top_a2;
   if (!P.head_top && !P.head_bot && !prof && !P.muzzle) return 0;
@@ -382,6 +415,7 @@ function skin(P, clip, key, want) {
     }
     out[name] = pos;
   });
+  const pre = out.body && (out.saddle || out.reins) ? out.body.slice() : null;      // (the body before the head edits: what the bridle has to follow)
   if (out.body) { const mz = applyHeadLine(P, out.body, Db); if (mz > maxZ) maxZ = mz; }
   let jointsBase = null;
   if (out.body && socketActive(P)) {
@@ -392,6 +426,7 @@ function skin(P, clip, key, want) {
     applySocket(P, out.body, jn, jb);
   }
   if (out.body) fitLids(P, out.body);
+  if (pre) carryHeadEdits(out, pre);
   names.forEach(name => { const p = out[name]; for (let v = 2; v < p.length; v += 3) p[v] -= minZ; });   // ground
   const joints = nodes.map((n, i) => { const d = Db[i], r = restPos[i]; return [d[0]*r[0]+d[1]*r[1]+d[2]*r[2]+d[3], d[4]*r[0]+d[5]*r[1]+d[6]*r[2]+d[7], d[8]*r[0]+d[9]*r[1]+d[10]*r[2]+d[11] - minZ]; });
   return { pos: out, joints, height: maxZ - minZ, minZ };
