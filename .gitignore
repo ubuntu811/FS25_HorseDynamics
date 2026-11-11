@@ -1,2 +1,4 @@
 build/*.zip
 build/.build_staging/
+dev/out/
+dev/obj/
