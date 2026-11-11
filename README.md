@@ -53,8 +53,12 @@ The game swaps a pasture animal for a Rideable vehicle when a player rides it (`
 *A mod for Farming Simulator 25.* Not made, endorsed or supported by GIANTS Software. Farming Simulator is a trademark of GIANTS Software GmbH.
 
 * **The foal** (`models/foal`, the shop pictures in `store/foal`, `xml/horseFoal.xml`, `xml/foalAnimals.xml`) is based on the horse of Farming Simulator 25 (GIANTS Software): its mesh, skeleton, texture layout and animation clips are the game's, reshaped and re-baked by the tools in `dev/foal` (proportions, head, eyes, jaw, legs, hooves, a lower lip that follows the jaw). The game's textures are not in this repository: the foal uses the game's own coat textures. The game's horse mesh and textures are also left out of the foal app's source (`dev/foal/app/horse_app.json`, the coat textures), you make those yourself with the export step.
-* **The sulky, the horse ball, the jumps, the hitching post, the harness object and the scripts** are original work: generated from scratch by the scripts in `tools/` (meshes, collision, wheels) and written in Lua. They use no meshes or textures of the game.
-* The mod uses the game's own systems (the rideable horse, attacher joints, animal husbandry, the shop) and hooks into them; it needs FS25_WinchTow for the hitch.
+* **The sulky, the horse ball, the jumps, the hitching post and the harness object** are original: their meshes, collision shapes and wheels are generated from scratch by the scripts in `tools/`. They use no meshes or textures of the game.
+* **The Lua scripts** are written for this mod, but nobody writes game scripts from nothing: they use the game's own systems (the rideable horse, attacher joints, animal husbandry, the shop, hand tools) and follow the patterns of the game's own Lua, which was studied through its decompiled sources, so some ideas come from there. Specifically:
+  * `scripts/UIHelper.lua` is **third-party code**: the community's settings-page helper, *originally created by Farmsim Tim, based on discoveries made by Shad0wlife*, free to use as long as its first three lines stay (they do).
+  * how `HorseJoint.lua` adds the attacher-joint specialization to the horse's vehicle type follows the way **FS25_FollowMe** adds its specialization.
+  * the settings page pattern follows **FS25_ImmersiveWeathering** (the same author).
+  * the hitch needs and uses the API of **FS25_WinchTow** (the same author).
 * Built by one person and a lot of AI help (Claude, Anthropic), tested by playing.
 
 ## Status
