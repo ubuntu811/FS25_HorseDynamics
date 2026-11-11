@@ -1,0 +1,208 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<i3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="horseFoal" version="1.6" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
+
+  <Files>
+    <File fileId="4" filename="$data/shaders/tileAndMirrorShader.xml" />
+    <File fileId="1" filename="$dataS/character/animals/domesticated/horse/horse_diffuse.png" />
+    <File fileId="2" filename="$dataS/character/animals/domesticated/horse/horse_normal.png" />
+    <File fileId="3" filename="$dataS/character/animals/domesticated/horse/horse_specular.png" />
+    <File fileId="5" filename="$dataS/character/animals/domesticated/horse/maneTailBraide_diffuse.png" />
+    <File fileId="6" filename="$dataS/character/animals/domesticated/horse/maneTailBraide_normal.png" />
+    <File fileId="7" filename="$dataS/character/animals/domesticated/horse/maneTailBraide_specular.png" />
+    <File fileId="8" filename="$dataS/character/animals/domesticated/horse/saddle_diffuse.png" />
+    <File fileId="9" filename="$dataS/character/animals/domesticated/horse/saddle_normal.png" />
+    <File fileId="10" filename="$dataS/character/animals/domesticated/horse/saddle_specular.png" />
+  </Files>
+
+  <Materials>
+    <Material name="lambert1" materialId="1" diffuseColor="1 1 1 1">
+    </Material>
+    <Material name="horse_mat" materialId="2" customShaderId="4" customShaderVariation="dirtEnabled">
+      <CustomParameter name="atlasInvSizeAndOffsetUV" value="0.25 0.5 0 0" />
+      <CustomParameter name="mirrorScaleAndOffsetUV" value="1 1 0 0" />
+      <Texture fileId="1" />
+      <Normalmap fileId="2" />
+      <Glossmap fileId="3" />
+    </Material>
+    <Material name="maneTailBraide_mat" materialId="3" customShaderId="4" customShaderVariation="dirtEnabled">
+      <CustomParameter name="atlasInvSizeAndOffsetUV" value="0.25 0.5 0 0" />
+      <CustomParameter name="mirrorScaleAndOffsetUV" value="1 1 0 0" />
+      <Texture fileId="5" />
+      <Normalmap fileId="6" />
+      <Glossmap fileId="7" />
+    </Material>
+    <Material name="saddle_mat" materialId="4">
+      <Texture fileId="8" />
+      <Normalmap fileId="9" />
+      <Glossmap fileId="10" />
+    </Material>
+  </Materials>
+
+
+  <Shapes externalShapesFile="horseFoal.i3d.shapes">
+  </Shapes>
+
+  <Scene>
+    <Shape name="horse_main_component1" shapeId="1" kinematic="true" linearDamping="0.001" collisionFilterGroup="0x210004" collisionFilterMask="0xfffffbff" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="150" nodeId="1">
+      <TransformGroup name="skeleton" nodeId="2">
+        <TransformGroup name="Root_M" translation="0.000000 0.985386 -0.425637" rotation="-90.00000 -74.44340 -90.00000" nodeId="3">
+          <TransformGroup name="backHip_R" translation="-0.056654 0.124585 -0.088740" rotation="180.00000 -0.00000 75.74854" nodeId="4">
+            <TransformGroup name="backKnee_R" translation="0.284014 -0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="5">
+              <TransformGroup name="backAnkle_R" translation="0.254444 0.022823 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="6">
+                <TransformGroup name="backFoot_R" translation="0.248226 0.001507 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="7">
+                  <TransformGroup name="backToes_R" translation="0.062509 -0.004782 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="8">
+                    <TransformGroup name="hoofBackRight" translation="0.047322 -0.004840 0.000000" rotation="-76.65129 90.00000 0.00000" nodeId="9">
+                      <Shape name="emitterShapeSlowBackRight" shapeId="2" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="10" />
+                      <Shape name="emitterShapeFastBackRight" shapeId="3" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="11" />
+                    </TransformGroup>
+                  </TransformGroup>
+                </TransformGroup>
+                <TransformGroup name="backAnkleCorner1_R" translation="-0.037156 -0.032082 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="12" />
+              </TransformGroup>
+              <TransformGroup name="backKneeCorner1_R" translation="-0.093351 0.022368 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="13" />
+            </TransformGroup>
+          </TransformGroup>
+          <TransformGroup name="Tail0_M" translation="-0.140075 -0.019614 0.000000" rotation="180.00000 -0.00000 145.29635" nodeId="14">
+            <TransformGroup name="Tail2_M" translation="0.083729 -0.000000 0.000000" rotation="0.00000 -0.00000 20.11905" nodeId="15">
+              <TransformGroup name="Tail4_M" translation="0.092378 0.000000 0.000000" rotation="0.00000 -0.00000 3.36015" nodeId="16">
+                <TransformGroup name="Tail6_M" translation="0.092280 0.000000 0.000000" rotation="0.00000 -0.00000 1.18926" nodeId="17" />
+              </TransformGroup>
+            </TransformGroup>
+          </TransformGroup>
+          <TransformGroup name="RootPart1_M" translation="0.165315 -0.000000 0.000000" nodeId="18" rotation="0.00000 -0.00000 0.00000">
+            <TransformGroup name="Spine1_M" translation="0.132252 0.000000 0.000000" rotation="0.00000 -0.00000 52.00113" nodeId="19">
+              <TransformGroup name="Chest_M" translation="0.063856 -0.231948 0.000000" rotation="0.00000 -0.00000 -60.70822" nodeId="20">
+                <TransformGroup name="frontRump_R" translation="-0.028577 -0.050903 -0.068361" rotation="180.00000 -0.00000 44.39090" nodeId="21">
+                  <TransformGroup name="frontHip_R" translation="0.216849 0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="22">
+                    <TransformGroup name="frontKnee_R" translation="0.224130 -0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="23">
+                      <TransformGroup name="frontAnkle_R" translation="0.256956 -0.019224 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="24">
+                        <TransformGroup name="frontFoot_R" translation="0.203616 -0.012648 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="25">
+                          <TransformGroup name="frontToes_R" translation="0.061934 -0.007495 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="26">
+                            <TransformGroup name="hoofFrontRight" translation="0.042018 -0.011917 0.003426" rotation="-69.22777 90.00000 0.00000" nodeId="27">
+                              <Shape name="emitterShapeFastFrontRight" shapeId="4" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="28" />
+                              <Shape name="emitterShapeSlowFrontRight" shapeId="5" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="29" />
+                            </TransformGroup>
+                          </TransformGroup>
+                        </TransformGroup>
+                      </TransformGroup>
+                      <TransformGroup name="frKneeCorner1_R" translation="-0.060468 -0.051864 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="30" />
+                    </TransformGroup>
+                  </TransformGroup>
+                </TransformGroup>
+                <TransformGroup name="Neck_M" translation="0.073578 0.000000 0.000000" rotation="0.00000 -0.00000 -55.79116" nodeId="31">
+                  <TransformGroup name="Neck2_M" translation="0.155430 -0.000000 0.000000" rotation="0.00000 -0.00000 -6.50460" nodeId="32">
+                    <TransformGroup name="Neck4_M" translation="0.160710 -0.000733 0.000000" rotation="0.00000 -0.00000 0.72607" nodeId="33">
+                      <TransformGroup name="Head_M" translation="0.061041 -0.000248 0.000000" rotation="0.00000 -0.00000 -19.35055" nodeId="34">
+                        <TransformGroup name="Jaw_M" translation="-0.020331 0.073455 0.000000" rotation="0.00000 -0.00000 104.43674" nodeId="35">
+                          <TransformGroup name="tongue3_M" translation="0.214835 -0.001250 0.000000" rotation="0.00000 -0.00000 -2.89415" nodeId="36" />
+                        </TransformGroup>
+                        <TransformGroup name="Eye_R" translation="0.027716 0.154130 -0.056533" rotation="-0.00010 53.71846 67.57044" nodeId="37" />
+                        <TransformGroup name="ear1_R" translation="0.043077 0.029063 -0.054348" rotation="180.00000 -0.00000 -4.62524" nodeId="38" />
+                        <TransformGroup name="lidUpper1_R" translation="0.018130 0.150767 -0.054763" rotation="-39.04668 40.36390 16.17579" nodeId="39" />
+                        <TransformGroup name="lidBottom1_R" translation="0.027951 0.150615 -0.054763" rotation="38.35516 41.00827 117.90476" nodeId="40" />
+                        <TransformGroup name="lipCorner_R" translation="-0.063952 0.277837 -0.038711" rotation="0.00000 89.27525 -112.42733" nodeId="41" />
+                        <TransformGroup name="lipMidBot_M" translation="-0.084662 0.349979 0.000000" rotation="0.00000 -0.00000 42.90604" nodeId="42" />
+                        <TransformGroup name="lipMidUp_M" translation="-0.041396 0.358703 0.000636" rotation="0.00000 -0.00000 113.24488" nodeId="43" />
+                        <TransformGroup name="Eye_L" translation="0.027747 0.154207 0.056471" rotation="0.00010 -53.71846 67.57044" nodeId="44" />
+                        <TransformGroup name="ear1_L" translation="0.043077 0.029063 0.054348" rotation="180.00000 -0.00000 175.37476" nodeId="45" />
+                        <TransformGroup name="lidUpper1_L" translation="0.018116 0.150736 0.054789" rotation="-39.04668 40.36390 -163.82421" nodeId="46" />
+                        <TransformGroup name="lidBottom1_L" translation="0.027938 0.150584 0.054789" rotation="38.35516 41.00827 -62.09524" nodeId="47" />
+                        <TransformGroup name="lipCorner_L" translation="-0.071128 0.301516 0.035634" rotation="0.00000 89.27525 67.57267" nodeId="48" />
+                        <TransformGroup name="jtsSkinWire_L_1" translation="-0.078654 0.259828 0.047209" rotation="90.00000 -78.06255 82.62359" nodeId="49">
+                          <TransformGroup name="jtsSkinWire_L_2" translation="0.001149 0.272685 0.003058" rotation="0.26184 0.01186 9.34588" nodeId="50">
+                            <TransformGroup name="jtsSkinWire_L_3" translation="0.000297 0.317547 0.003685" nodeId="51" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_L_4" translation="-0.023877 0.134014 0.002453" nodeId="52" rotation="0.00000 -0.00000 0.00000" />
+                            </TransformGroup>
+                          </TransformGroup>
+                        </TransformGroup>
+                        <TransformGroup name="jtsSkinWire_R_1" translation="-0.078654 0.259828 -0.047209" rotation="-90.00000 -78.06255 -97.37641" nodeId="53">
+                          <TransformGroup name="jtsSkinWire_R_2" translation="-0.001149 0.272685 0.003058" rotation="0.26184 -0.01186 -9.34588" nodeId="54">
+                            <TransformGroup name="jtsSkinWire_R_3" translation="-0.000297 0.317547 0.003685" nodeId="55" rotation="0.00000 -0.00000 0.00000">
+                              <TransformGroup name="jtsSkinWire_R_4" translation="0.024075 0.134005 0.002453" rotation="0.00000 -0.00000 -5.18305" nodeId="56" />
+                            </TransformGroup>
+                          </TransformGroup>
+                        </TransformGroup>
+                        <TransformGroup name="jtsSkinWire_M_1" translation="-0.168882 -0.558044 0.000000" rotation="167.57063 -90.00000 0.00000" nodeId="57" />
+                      </TransformGroup>
+                    </TransformGroup>
+                  </TransformGroup>
+                </TransformGroup>
+                <TransformGroup name="frontRump_L" translation="-0.028577 -0.050903 0.068361" rotation="180.00000 -0.00000 -135.60910" nodeId="58">
+                  <TransformGroup name="frontHip_L" translation="-0.216849 -0.000000 0.000000" rotation="0.00000 -0.00000 -59.01118" nodeId="59">
+                    <TransformGroup name="frontKnee_L" translation="-0.224130 0.000000 0.000000" rotation="0.00000 -0.00000 20.70480" nodeId="60">
+                      <TransformGroup name="frontAnkle_L" translation="-0.256956 0.019224 0.000000" rotation="0.00000 -0.00000 -3.87363" nodeId="61">
+                        <TransformGroup name="frontFoot_L" translation="-0.203616 0.012648 0.000000" rotation="0.00000 -0.00000 38.41246" nodeId="62">
+                          <TransformGroup name="frontToes_L" translation="-0.061934 0.007495 0.000000" rotation="0.00000 -0.00000 -14.21977" nodeId="63">
+                            <TransformGroup name="hoofFrontLeft" translation="-0.042017 0.011917 -0.001117" rotation="110.77223 90.00000 0.00000" nodeId="64">
+                              <Shape name="emitterShapeSlowFrontLeft" shapeId="6" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="65" />
+                              <Shape name="emitterShapeFastFrontLeft" shapeId="7" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="66" />
+                            </TransformGroup>
+                          </TransformGroup>
+                        </TransformGroup>
+                      </TransformGroup>
+                      <TransformGroup name="frKneeCorner1_L" translation="0.060468 0.051864 0.000000" rotation="180.00000 -0.00000 -125.34813" nodeId="67" />
+                    </TransformGroup>
+                  </TransformGroup>
+                </TransformGroup>
+              </TransformGroup>
+              <TransformGroup name="Spine1Part1_M" translation="0.071746 -0.000000 0.000000" nodeId="68" rotation="0.00000 -0.00000 0.00000">
+                <TransformGroup name="belly1_M" translation="0.071746 -0.000000 0.000000" rotation="0.00000 -0.00000 4.46379" nodeId="69" />
+              </TransformGroup>
+              <TransformGroup name="jnts_forLeg_R" translation="0.133783 -0.028174 -0.164840" rotation="112.44219 -90.00000 0.00000" nodeId="70" />
+              <TransformGroup name="jnts_forLeg_L" translation="0.133783 -0.028174 0.164905" rotation="112.44219 -90.00000 0.00000" nodeId="71" />
+            </TransformGroup>
+          </TransformGroup>
+          <TransformGroup name="backHip_L" translation="-0.056654 0.124585 0.088740" rotation="180.00000 -0.00000 -104.25146" nodeId="72">
+            <TransformGroup name="backKnee_L" translation="-0.284014 0.000000 0.000000" rotation="0.00000 -0.00000 -25.70666" nodeId="73">
+              <TransformGroup name="backAnkle_L" translation="-0.254444 -0.022823 0.000000" rotation="0.00000 -0.00000 24.12545" nodeId="74">
+                <TransformGroup name="backFoot_L" translation="-0.248226 -0.001507 0.000000" rotation="0.00000 -0.00000 22.82439" nodeId="75">
+                  <TransformGroup name="backToes_L" translation="-0.062509 0.004782 0.000000" rotation="0.00000 -0.00000 -6.58927" nodeId="76">
+                    <TransformGroup name="hoofBackLeft" translation="-0.047322 0.004840 0.001350" rotation="103.34871 90.00000 0.00000" nodeId="77">
+                      <Shape name="emitterShapeSlowBackLeft" shapeId="8" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="78" />
+                      <Shape name="emitterShapeFastBackLeft" shapeId="9" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="79" />
+                    </TransformGroup>
+                  </TransformGroup>
+                </TransformGroup>
+                <TransformGroup name="backAnkleCorner1_L" translation="0.037156 0.032082 0.000000" rotation="180.00000 -0.00000 -122.47605" nodeId="80" />
+              </TransformGroup>
+              <TransformGroup name="backKneeCorner1_L" translation="0.093351 -0.022368 0.000000" rotation="0.00000 -0.00000 105.43672" nodeId="81" />
+            </TransformGroup>
+          </TransformGroup>
+        </TransformGroup>
+      </TransformGroup>
+      <TransformGroup name="cameras" visibility="false" nodeId="82">
+        <TransformGroup name="outdoorCameraTarget" translation="0 1.649919 0.113558" rotation="-24 129.017456 0" nodeId="83">
+          <Camera name="outdoorCamera" translation="0 0 7" fov="60" nearClip="0.3" farClip="5000" nodeId="84" />
+        </TransformGroup>
+        <TransformGroup name="cameraRaycastNode1" translation="0 1.943888 1.668623" nodeId="85" />
+        <TransformGroup name="cameraRaycastNode2" translation="0 1.67377 -0.867113" nodeId="86" />
+        <Camera name="indoorCamera" translation="0 2.5 0.477" rotation="-10 180 0" fov="60" nearClip="0.1" farClip="5000" nodeId="87" />
+        <Shape name="shadowFocusBox" translation="0 2.354028 0.271938" visibility="false" shapeId="10" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" clipDistance="150" nodeId="88" />
+      </TransformGroup>
+      <TransformGroup name="exitPoint" translation="2 0 0" visibility="false" nodeId="89" />
+      <TransformGroup name="geo" collision="false" clipDistance="150" nodeId="90">
+        <TransformGroup name="horseLODs" lodDistance="0 10 30" static="true" nodeId="91">
+          <TransformGroup name="LOD0" collision="false" clipDistance="150" nodeId="92">
+            <Shape name="body" shapeId="11" castsShadows="true" receiveShadows="true" materialIds="2" skinBindNodeIds="35 36 34 37 44 3 4 5 6 7 8 12 13 14 15 18 19 20 21 22 23 24 25 26 30 31 32 33 38 39 41 42 43 45 46 48 58 59 60 61 62 63 67 68 69 72 73 74 75 76 80 81" clipDistance="150" nodeId="93" />
+            <Shape name="maneTail" shapeId="12" castsShadows="true" receiveShadows="true" materialIds="3" skinBindNodeIds="19 20 21 31 32 33 34 35 37 38 39 40 41 44 45 46 48 58 59 68 14 15 16 17" clipDistance="150" nodeId="94" />
+          </TransformGroup>
+          <TransformGroup name="LOD1" collision="false" clipDistance="150" nodeId="95">
+            <Shape name="body_LOD1" shapeId="13" castsShadows="true" receiveShadows="true" materialIds="2" skinBindNodeIds="20 44 37 34 35 32 33 31 18 3 68 19 14 15 80 12 74 6 75 7 72 4 81 13 73 5 76 8 69 45 38 67 30 61 24 62 25 59 22 60 23 58 21 63 26 46 39 48 41 42 43 36" clipDistance="150" nodeId="96" />
+            <Shape name="maneTail_LOD1" shapeId="14" castsShadows="true" receiveShadows="true" materialIds="3" skinBindNodeIds="20 44 37 34 35 32 33 31 19 14 15 16 17 45 38 58 21 40 46 39" clipDistance="150" nodeId="97" />
+          </TransformGroup>
+          <TransformGroup name="LOD2" collision="false" clipDistance="150" nodeId="98">
+            <Shape name="body_LOD2" shapeId="15" castsShadows="true" receiveShadows="true" materialIds="2" skinBindNodeIds="3 4 5 6 7 8 12 13 14 15 18 19 20 21 22 23 24 25 26 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 53 54 58 59 60 61 62 63 67 68 69 70 71 72 73 74 75 76 80 81" clipDistance="150" nodeId="99" />
+            <Shape name="maneTail_LOD2" shapeId="16" castsShadows="true" receiveShadows="true" materialIds="3" skinBindNodeIds="3 4 6 14 15 16 17 19 20 21 31 32 33 34 35 37 38 39 40 44 45 46 47 49 50 51 53 54 58 72 74" clipDistance="150" nodeId="100" />
+          </TransformGroup>
+        </TransformGroup>
+        <Shape name="saddle" visibility="false" shapeId="17" castsShadows="true" receiveShadows="true" materialIds="4" skinBindNodeIds="3 18 19 20 21 22 23 30 31 32 33 34 35 36 37 38 39 40 41 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 67 68 69 70 71" clipDistance="150" nodeId="101" />
+        <Shape name="reins" visibility="false" shapeId="18" castsShadows="true" receiveShadows="true" materialIds="4" skinBindNodeIds="34 35 41 48 33 45 46 38 18 19 69 68 20 21 58 71 70 3 22 59 4 72 50 51 49 52 56 57 53 54 55" clipDistance="150" nodeId="102" />
+      </TransformGroup>
+      <Shape name="proxy" visibility="false" shapeId="19" kinematic="true" linearDamping="0.5" angularDamping="0.5" collisionFilterGroup="0x200000" collisionFilterMask="0xfffffbff" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" nodeId="103" />
+      <Shape name="translation" visibility="false" shapeId="20" castsShadows="true" receiveShadows="true" nonRenderable="true" materialIds="1" nodeId="104" />
+    </Shape>
+  </Scene>
+
+
+  <Animation externalAnimFile="horseFoal.i3d.anim" />
+</i3D>

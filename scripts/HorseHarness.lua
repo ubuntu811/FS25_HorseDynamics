@@ -107,7 +107,7 @@ function HorseHarness.build(vehicle, gear)
         bones[name] = node
     end
     local s = HorseHarness.spec
-    -- a smaller horse (a foal, FS25_HorseFoalMod): every point is scaled in its bone's space by that bone's factor, the straps get thinner
+    -- a smaller horse (a foal, HorseFoal.lua): every point is scaled in its bone's space by that bone's factor, the straps get thinner
     local boneScale, thin = {}, 1
     for name in pairs(bones) do
         local sx, sy, sz = HorseRope.boneScaleOf(vehicle, name)

@@ -7,3 +7,7 @@ assets/*.zip
 assets/*.obj
 assets/*.mtl
 assets/wagon_split/
+# foal workshop: game-derived or generated, never committed
+dev/foal/out/
+dev/foal/obj/
+__pycache__/

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>foal-scale: shape the foal, not the guesswork</title>
+<style>
+/*STYLE*/
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">foal<b>·</b>scale</div>
+  <div class="tagline" id="url-hint">state lives in the URL: bookmark it to save</div>
+</header>
+<div class="layout">
+  <div class="col controls">
+    <h2 class="section-title">preset</h2>
+    <div class="chips" id="presets"></div>
+    <h2 class="section-title spaced">shape</h2>
+    <div id="sliders"></div>
+    <div class="row"><button class="btn" id="resetAll">Reset to adult</button></div>
+  </div>
+  <div class="viewport">
+    <div id="canvas-wrap"></div>
+    <div class="vp-ui" id="vpui">
+      <button class="btn" data-view="side">Side</button>
+      <button class="btn" data-view="three">3/4</button>
+      <button class="btn" data-view="front">Front</button>
+      <button class="btn" data-view="head">Head</button>
+      <button class="btn" id="resetView">Reset view</button>
+    </div>
+    <div class="vp-hint">drag to orbit · scroll to zoom · right-drag to pan</div>
+    <div class="vp-note" id="vpnote"></div>
+  </div>
+  <div class="col output">
+    <h2 class="section-title">pose</h2>
+    <div class="row" id="poses">
+      <button class="btn" data-clip="rest">Rest</button>
+      <button class="btn" data-clip="idle">Idle</button>
+      <button class="btn" data-clip="walk">Walk</button>
+    </div>
+    <div class="field"><label>speed <span class="val" id="speedv">1.0x</span></label><input type="range" id="speed" min="0.2" max="2" step="0.1" value="1"></div>
+    <h2 class="section-title spaced">measures</h2>
+    <div id="stats"></div>
+    <p class="note">The ear base, eye and nose tip keep a fixed relation on the game's adult (the eye sits about 30% of the way from the ear base to the nose, nearly in a line). Scale the head uniformly and the relation holds.</p>
+    <h2 class="section-title spaced">view</h2>
+    <div class="toggles" id="toggles"></div>
+    <h2 class="section-title spaced">export</h2>
+    <div class="row">
+      <button class="btn primary" id="copyLink">Copy shareable link</button>
+      <button class="btn" id="copyJson">Copy parameters (JSON)</button>
+      <button class="btn" id="exportObj">Export 3D model (.obj)</button>
+      <button class="btn" id="exportPng">Save picture (.png)</button>
+    </div>
+    <p class="note">Everything is computed in your browser. The horse mesh is the game's own model, embedded in this file for local use: do not publish this page.</p>
+    <pre id="testout"></pre>
+  </div>
+</div>
+<script>
+/*THREE*/
+</script>
+<script>
+const DATA = /*DATA*/;
+</script>
+<script>
+/*APP*/
+</script>
+</body>
+</html>

@@ -419,7 +419,7 @@ end
 HorseRope.setJawAngle(HorseRope.halter.crown.jawAngle)
 
 -- How much smaller than the adult's this horse's bone region is, per axis of that bone (the head bone: x up, y along the face, z sideways): 1, 1, 1 unless a mod that makes smaller horses
--- (FS25_HorseFoalMod publishes g_currentMission.horseFoal.getBoneScale(vehicle, boneName); mod globals are not visible across mods) says so.
+-- (HorseFoal.lua publishes g_currentMission.horseFoal.getBoneScale(vehicle, boneName); kept as an API on g_currentMission, like the other mods' globals) says so.
 function HorseRope.boneScaleOf(vehicle, boneName)
     local api = g_currentMission ~= nil and g_currentMission.horseFoal or nil
     if api ~= nil and api.getBoneScale ~= nil then
@@ -448,7 +448,7 @@ function HorseRope.buildHalter(vehicle, gear)
     -- The points are NOT children of the head bone: pieces hung under the skeleton were loaded, tied and "visible" in the game and still did not render (something inherited from the skeleton: a hidden parent,
     -- a mirrored scale ...), while the lead's pieces, whose points hang under the world root, do. So the points live under the root and are put at the bone's world position every frame (halterPlace).
     local halter = { nodes = {}, locals = {}, slack = {}, bone = bone, pieces = {}, tied = {}, targets = {}, localOf = {} }
-    -- A smaller head (a foal, FS25_HorseFoalMod): the halter is designed in the adult head's space and its points are scaled per axis when they are put on the head (halterPlace); the rope and the straps get thinner.
+    -- A smaller head (a foal, HorseFoal.lua): the halter is designed in the adult head's space and its points are scaled per axis when they are put on the head (halterPlace); the rope and the straps get thinner.
     local sx, sy, sz = HorseRope.headScaleOf(vehicle)
     halter.scale = { sx, sy, sz }
     local thin = math.max(0.5, (sx + sy + sz) / 3)
