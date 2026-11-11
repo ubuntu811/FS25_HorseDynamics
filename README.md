@@ -48,6 +48,15 @@ The game swaps a pasture animal for a Rideable vehicle when a player rides it (`
 
 **Gates.** The leash click is for a fence gate when you look at it (`scripts/HorseGate.lua`): the gate is within 4.5 m of you (its door or its trigger) and the view ray passes within 1.8 m of its door, hinge or trigger. With a horse on the rope it opens or closes the gate instead of letting the horse go. With no horse on the rope it does the same when the gate is met before the horse the click would take along the ray: a horse you look at in front of the gate wins, and a gate you are merely standing next to never counts (so with a harness or a leash aimed at a horse beside a gate, the horse is the one). With no camera ray (LOOK off) the nearest gate in reach counts, as it used to. The game's own `setDirection` is used on every leaf of the gate (the same call as its key), the farm check of the game is respected. Both fence systems are covered (pasture fences and the older fence placeables). To let a horse go next to a gate, look away from the gate and click again.
 
+## Credits and what is whose
+
+*A mod for Farming Simulator 25.* Not made, endorsed or supported by GIANTS Software. Farming Simulator is a trademark of GIANTS Software GmbH.
+
+* **The foal** (`models/foal`, the shop pictures in `store/foal`, `xml/horseFoal.xml`, `xml/foalAnimals.xml`) is based on the horse of Farming Simulator 25 (GIANTS Software): its mesh, skeleton, texture layout and animation clips are the game's, reshaped and re-baked by the tools in `dev/foal` (proportions, head, eyes, jaw, legs, hooves, a lower lip that follows the jaw). The game's textures are not in this repository: the foal uses the game's own coat textures. The game's horse mesh and textures are also left out of the foal app's source (`dev/foal/app/horse_app.json`, the coat textures), you make those yourself with the export step.
+* **The sulky, the horse ball, the jumps, the hitching post, the harness object and the scripts** are original work: generated from scratch by the scripts in `tools/` (meshes, collision, wheels) and written in Lua. They use no meshes or textures of the game.
+* The mod uses the game's own systems (the rideable horse, attacher joints, animal husbandry, the shop) and hooks into them; it needs FS25_WinchTow for the hitch.
+* Built by one person and a lot of AI help (Claude, Anthropic), tested by playing.
+
 ## Status
 
 Offline: `lua5.1 tests/horsedynamics_test.lua` (35 checks, a fake engine). In the game: the lead logic is the prototype's (confirmed: a horse followed out of its pasture, through a gate); the keys, the stuck

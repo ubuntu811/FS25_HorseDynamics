@@ -11,6 +11,6 @@ The workshop is part of this repo, with its history (`git log -- dev`): a browse
 3. `dev/foal/tools/blender_icon.py`: the shop pictures, one per coat.
 4. Copy the result into `models/foal/` and `store/foal/`, then `bash build/deploy.sh`.
 
-What is not in git (it comes from the game's own horse): `dev/foal/app/horse_app.json`, `dev/obj/`, `dev/out/`, `dev/foal/app/vendor/` (three.js). Keep this repo private or keep those out of it.
+What is not in git (it comes from the game's own horse): `dev/foal/app/horse_app.json`, `dev/obj/`, `dev/out/`, `dev/foal/app/vendor/` (three.js). They are left out of git because they are the game's data; the foal model itself (`models/foal`) is in the repo with credit, see the README's Credits section.
 
 The build (`build/build.sh`) packs only `store/ models/foal/ xml/ scripts/ ...` (HorseDynamics' build): `dev/foal/` never goes into the mod.

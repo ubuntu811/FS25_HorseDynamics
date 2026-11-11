@@ -15,4 +15,4 @@ Open: look at it in the GIANTS Editor; the collision proxy, camera nodes and the
 The skinning is the Blender maths ported to JavaScript; `?test=1` runs a self-test against the Blender numbers (heights within 1 cm).
 
 Build: `blender.exe --background --python tools/export_for_app.py -- <horse.i3d> <game folder> app/horse_app.json`, then `python3 tools/build_app.py`.
-The page embeds the game's own horse mesh: keep it local, do not publish it. `app/horse_app.json` and `app/vendor/` (three.js r128) are not in git.
+The page embeds the game's own horse mesh and textures: keep that page local (the built page is not in git). `app/horse_app.json` and `app/vendor/` (three.js r128) are not in git.
