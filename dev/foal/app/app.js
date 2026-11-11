@@ -320,6 +320,7 @@ const PRESETS = [
   ['fav6',      'Favorite 6 (Nov 10)', 'your tuned link: nose cut 0.105, head 0.99, softer profile', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.77, hoof: 0.75, tail: 0.4 })],
   ['fav7',      'Favorite 7 (Nov 11)', 'fav6, cuter: sturdier neck, body, legs, bigger hooves, fuller tail', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['fav8',      'Favorite 8 (Nov 11)', 'fav7 with leg length 0.9: all four hooves on the floor', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
+  ['fav9',      'Favorite 9 (Nov 11)', 'fav8 with jaw depth 0.72: the lower lip is level with the upper one (it stuck out 6 mm)', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 0.72, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
@@ -526,6 +527,24 @@ function setBones(set, joints) {
     la.set(a, k * 6); la.set(b, k * 6 + 3); pa.set(b, k * 3);
   });
   set.lines.geometry.getAttribute('position').needsUpdate = true; set.pts.geometry.getAttribute('position').needsUpdate = true;
+}
+
+
+// ====================== lip check: how far the lower lip front is behind the upper lip front (along the ear-to-nose line) ======================
+let lipVerts = null;
+function lipSetback(res) {
+  if (!lipVerts) {
+    const m = mesh.body; lipVerts = { up: [], lo: [] };
+    for (let v = 0; v < m.nv; v++) {
+      let best = 0, bk = 0; for (let k = 0; k < 4; k++) if (m.wt[v*4+k] > best) { best = m.wt[v*4+k]; bk = k; }
+      const nm = nodes[m.jn[v*4+bk]].name;
+      if (nm === 'lipMidUp_M' || nm === 'Head_M') lipVerts.up.push(v); else if (nm === 'lipMidBot_M' || nm === 'Jaw_M') lipVerts.lo.push(v);
+    }
+  }
+  const p = res.pos.body, E = headLine.E, ch = headLine.ch;
+  const front = list => { let b = -Infinity; list.forEach(v => { const t = (p[v*3]-E[0])*ch[0] + (p[v*3+1]-E[1])*ch[1] + (p[v*3+2]-E[2])*ch[2]; if (t > b) b = t; }); return b; };
+  const u = front(lipVerts.up), l = front(lipVerts.lo);
+  return { upper: u, lower: l, setback: u - l };
 }
 
 // ====================== hoof gaps: how far each hoof is above the floor (the ruler) ======================
@@ -798,6 +817,7 @@ window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF, bakeData,
     return { ring: bb(o.ring), ball: bb(o.ball) }; } };
 requestAnimationFrame(frame);
 if (/[?&]gap=1/.test(location.search)) document.getElementById('testout').textContent = 'GAP ' + JSON.stringify(window.__foal.eyeGap(state.P));
+if (/[?&]lipdump=1/.test(location.search)) document.getElementById('testout').textContent = 'LIPS' + JSON.stringify(lipSetback(skin(state.P, null, 0))) + 'ENDLIPS';
 if (/[?&]gapsdump=1/.test(location.search)) document.getElementById('testout').textContent = 'GAPS' + JSON.stringify(hoofGaps(skin(state.P, null, 0))) + 'ENDGAPS';
 if (/[?&]bake=1/.test(location.search)) document.getElementById('testout').textContent = 'BAKE' + JSON.stringify(window.__foal.bakeData(state.P)) + 'ENDBAKE';
 })();
