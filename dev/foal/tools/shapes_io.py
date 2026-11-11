@@ -1,5 +1,6 @@
 """Read and write FS25 .i3d.shapes: entities in, entities out (same cipher call structure as the game's reader, so an untouched file round-trips byte for byte).
-Uses the Blender i3d importer add-on's reader for the cipher (path below)."""
+Uses the reader of the Blender "i3d Importer" add-on by Nadine Brinkmann (github.com/nadine-brinkmann/blender-i3d-importer, GPL-3.0-or-later) for the container and the cipher (path below; imported, not copied).
+That reader is a Python port of I3DShapesTool by Donkie (github.com/Donkie/I3DShapesTool), who worked out the .i3d.shapes format."""
 import sys, struct
 ADDON = "/mnt/c/Users/Startklar/AppData/Roaming/Blender Foundation/Blender/5.1/extensions/user_default/blender_i3d_importer"
 sys.path.insert(0, ADDON)

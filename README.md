@@ -59,6 +59,7 @@ The game swaps a pasture animal for a Rideable vehicle when a player rides it (`
   * how `HorseJoint.lua` adds the attacher-joint specialization to the horse's vehicle type follows the way **FS25_FollowMe** adds its specialization.
   * the settings page pattern follows **FS25_ImmersiveWeathering** (the same author).
   * the hitch needs and uses the API of **FS25_WinchTow** (the same author).
+* **The tools that read and write `.i3d.shapes`** (the meshes of the sulky, ball, jumps, hitching post, harness and the foal bake): `tools/shapes_io.py` is a small wrapper that imports the reader of the **[i3d Importer](https://github.com/nadine-brinkmann/blender-i3d-importer)** Blender add-on by **Nadine Brinkmann** (GPL-3.0-or-later; it is not copied into this repository, the tools import it from the add-on's folder). That reader is a Python port of **[I3DShapesTool](https://github.com/Donkie/I3DShapesTool)** by **Donkie**, which worked out the file format and its cipher. The shop pictures and previews are rendered in Blender through the same importer. The foal app (`dev/foal/app`, not published as a built page) uses three.js.
 * Built by one person and a lot of AI help (Claude, Anthropic), tested by playing.
 
 ## Status
