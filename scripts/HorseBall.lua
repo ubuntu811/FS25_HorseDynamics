@@ -27,13 +27,26 @@ HorseBall.REST_SPEED = 0.08                 -- m/s: slower than this on the grou
 HorseBall.CHECK_MS = 100                    -- the ground is read this often
 -- How each weight option of the shop feels (the number is the option's place in horseBallWeightConfigurations, see tools/make_horse_ball.py WEIGHTS): how hard a horse kicks it, how soon it stops rolling
 -- (a multiplier of the ground's damping), its top speed (m/s).
+-- bounce: the part of the fall speed it gives back from the ground (the engine's own ball does not bounce at all): the lighter the ball, the more
 HorseBall.PROFILES = {
-    { kick = 1.0, roll = 1.0, max = 7.0 },      -- 1 normal
-    { kick = 1.4, roll = 1.5, max = 9.0 },      -- 2 beach ball: light, flies off at a touch, but the air stops it
-    { kick = 0.85, roll = 0.9, max = 6.5 },     -- 3 medium
-    { kick = 0.6, roll = 0.7, max = 5.0 },      -- 4 heavy
-    { kick = 0.4, roll = 0.5, max = 3.5 },      -- 5 medicine ball: hardly moves, and once it does it keeps going
+    { kick = 1.0, roll = 1.0, max = 7.0, bounce = 0.5 },      -- 1 normal
+    { kick = 1.4, roll = 1.5, max = 9.0, bounce = 0.85 },     -- 2 beach ball: light, flies off at a touch, but the air stops it; bounces like one
+    { kick = 0.85, roll = 0.9, max = 6.5, bounce = 0.32 },    -- 3 medium
+    { kick = 0.6, roll = 0.7, max = 5.0, bounce = 0.16 },     -- 4 heavy
+    { kick = 0.4, roll = 0.5, max = 3.5, bounce = 0.05 },     -- 5 medicine ball: hardly moves, and once it does it keeps going
 }
+HorseBall.BOUNCE_MIN_FALL = 1.5              -- m/s: a slower fall does not bounce
+HorseBall.BOUNCE_MIN_UP = 0.7                -- m/s: a bounce weaker than this is not made (the ball comes to rest)
+HorseBall.BOUNCE_SOFT_LOSS = 0.5             -- the ground's softness (meadow 0.6) takes this times itself off a bounce: a road bounces most
+
+-- The upward speed to give a ball whose fall was stopped by the ground this frame, or nil. lastVy: its vertical speed the frame before (negative: falling), vy: now. Pure.
+function HorseBall.bounceSpeed(lastVy, vy, bounce, soft)
+    if lastVy == nil or bounce == nil or bounce <= 0 or lastVy > -HorseBall.BOUNCE_MIN_FALL or vy <= lastVy * 0.4 then
+        return nil                           -- (not falling fast enough, or the fall was not stopped: it is still falling)
+    end
+    local up = -lastVy * bounce * (1 - HorseBall.BOUNCE_SOFT_LOSS * math.max(0, math.min(1, soft or 0)))
+    return up >= HorseBall.BOUNCE_MIN_UP and up or nil
+end
 function HorseBall.profile(vehicle)
     local id = vehicle.configurations ~= nil and vehicle.configurations.horseBallWeight or 1
     return HorseBall.PROFILES[id] or HorseBall.PROFILES[1]
@@ -44,6 +57,7 @@ HorseBall.frame = -1
 HorseBall.lastKick = setmetatable({}, { __mode = "k" })
 HorseBall.ground = setmetatable({}, { __mode = "k" })
 HorseBall.age = setmetatable({}, { __mode = "k" })
+HorseBall.lastVy = setmetatable({}, { __mode = "k" })
 
 local function say(format, ...)
     print(string.format("[HorseDynamics] ball: " .. format, ...))
@@ -103,6 +117,18 @@ function HorseBall.kick(vehicle, dt)
     end
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
+    -- the bounce: a fall that the ground stopped this frame gives part of its speed back (lighter balls more)
+    local lastVy = HorseBall.lastVy[vehicle]
+    HorseBall.lastVy[vehicle] = vy
+    if lastVy ~= nil and lastVy < -HorseBall.BOUNCE_MIN_FALL and by - getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz) < 0.3 then
+        local st0 = HorseBall.ground[vehicle]
+        local up = HorseBall.bounceSpeed(lastVy, vy, prof.bounce, st0 ~= nil and st0.soft or 0.6)
+        if up ~= nil then
+            vy = up
+            setLinearVelocity(node, vx, vy, vz)
+            HorseBall.lastVy[vehicle] = up
+        end
+    end
     local speed = math.sqrt(vx * vx + vy * vy + vz * vz)
     if speed > prof.max then
         local k = prof.max / speed
