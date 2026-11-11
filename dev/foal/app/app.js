@@ -49,7 +49,7 @@ const restPos = nodes.map(n => n.p || [0, 0, 0]);
 const mesh = {};
 MESH_NAMES.forEach(n => {
   const m = DATA.meshes[n];
-  mesh[n] = { pos0: Float32Array.from(m.pos), idx: Uint32Array.from(m.idx), jn: Uint8Array.from(m.jn), wt: Float32Array.from(m.wt), nv: m.pos.length / 3 };
+  mesh[n] = { pos0: Float32Array.from(m.pos), idx: Uint32Array.from(m.idx), jn: Uint8Array.from(m.jn), wt: Float32Array.from(m.wt), nv: m.pos.length / 3, uv: m.uv ? Float32Array.from(m.uv) : null };
 });
 const headIdx = [];                              // body vertices that mostly follow the head / jaw (for the nose tip)
 {
@@ -232,6 +232,30 @@ function carryHeadEdits(out, pre) {
   if (out.reins) { const q = out.reins; for (let k = 0; k < bit.reinV.length; k++) { const v = bit.reinV[k], w = bit.reinW[k]; q[v*3] += tx * w; q[v*3+1] += ty * w; q[v*3+2] += tz * w; } }
 }
 
+
+// ====================== the lower lip follows the jaw ======================
+// The skin of the lower lip is skinned mostly to the head bone, so the jaw slider only moved the teeth. With lip_follow the skin below the mouth slit, in the front of the head, is carried by the jaw bone (like the lids by the eyeball):
+// each such vertex is blended toward where the jaw bone alone would put it, by how far below the slit and how far forward it is.
+let lipFollow = null;
+function buildLipFollow() {
+  const up = headLine.up, E = headLine.E;
+  const sOf = p => (p[0]-E[0])*up[0] + (p[1]-E[1])*up[1] + (p[2]-E[2])*up[2];
+  const slit = (sOf(restPos[idxOf.lipMidBot_M]) + sOf(restPos[idxOf.lipMidUp_M])) / 2;
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  lipFollow = { slit, list: headLine.list.filter(e => e.hw > 0.5).map(e => ({ v: e.v, f: sm(0.62, 0.80, e.a) * sm(slit, slit - 0.02, e.s) })).filter(x => x.f > 0.001) };
+}
+function applyLipFollow(P, pos, Db) {
+  if (!P.lip_follow) return;
+  if (!lipFollow) buildLipFollow();
+  const d = Db[idxOf.Jaw_M], p0 = mesh.body.pos0;
+  for (const e of lipFollow.list) {
+    const x = p0[e.v*3], y = p0[e.v*3+1], z = p0[e.v*3+2], f = e.f * P.lip_follow;
+    pos[e.v*3]   += (d[0]*x + d[1]*y + d[2]*z + d[3] - pos[e.v*3]) * f;
+    pos[e.v*3+1] += (d[4]*x + d[5]*y + d[6]*z + d[7] - pos[e.v*3+1]) * f;
+    pos[e.v*3+2] += (d[8]*x + d[9]*y + d[10]*z + d[11] - pos[e.v*3+2]) * f;
+  }
+}
+
 function applyHeadLine(P, pos, Db) {
   const prof = P.top_a1 || P.top_a2;
   if (!P.head_top && !P.head_bot && !prof && !P.muzzle) return 0;
@@ -275,6 +299,7 @@ const PARAMS = [
   ['jaw_d',     'Jaw depth (cheek)',   0.70, 1.30, 0.01, 1,     'Head',  'x'],
   ['jaw_l',     'Jaw length',          0.70, 1.30, 0.01, 1,     'Head',  'x'],
   ['jaw_w',     'Jaw width',           0.70, 1.30, 0.01, 1,     'Head',  'x'],
+  ['lip_follow','Lower lip follows the jaw (the skin below the mouth is carried by the jaw bone: move the jaw, the lip comes along)', 0, 1, 0.05, 0, 'Head', 'x'],
   ['lipw',      'Nose width',          0.90, 1.40, 0.01, 1,     'Head',  'x'],
   ['head_pitch','Nose forward',        -10,  40,   0.5,  0,     'Head',  '°'],
   ['ear',       'Ear size',            0.50, 2.20, 0.01, 1,     'Ears',  'x'],
@@ -320,6 +345,7 @@ const PRESETS = [
   ['fav6',      'Favorite 6 (Nov 10)', 'your tuned link: nose cut 0.105, head 0.99, softer profile', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.77, hoof: 0.75, tail: 0.4 })],
   ['fav7',      'Favorite 7 (Nov 11)', 'fav6, cuter: sturdier neck, body, legs, bigger hooves, fuller tail', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['fav8',      'Favorite 8 (Nov 11)', 'fav7 with leg length 0.9: all four hooves on the floor', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
+  ['fav11',      'Favorite 11 (Nov 11)', 'fav8 (your pick) with eyes 1.25 and the lower lip bound to the jaw: lips level, hooves on the floor', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8,  jaw_l: 1.02, jaw_w: 0.82, jaw_d: 0.96, lip_follow: 1, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.25, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['fav9',      'Favorite 9 (Nov 11)', 'fav8 with jaw depth 0.72: the lower lip is level with the upper one (it stuck out 6 mm)', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 0.72, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['fav10',      'Favorite 10 (Nov 11)', 'fav9 with smaller eyes (1.25, the lab-accident look): lips level, hooves on the floor', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 0.72, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.25, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
@@ -390,7 +416,7 @@ function skinMatrices(P, clip, key, dbg) {
   const W = fkWorld(i => {
     let L;
     const tr = tracks && tracks[i];
-    if (tr) { const k = tr[Math.min(key, tr.length - 1)]; L = TR([k[0], k[1], k[2]], [k[3], k[4], k[5]]); } else L = restLocal[i];
+    if (tr) { const k = tr[Math.max(0, Math.min(key, tr.length - 1))]; L = TR([k[0], k[1], k[2]], [k[3], k[4], k[5]]); } else L = restLocal[i];
     L = modLocal(P, i, L);
     if (dbg) { dbg.L[i] = L; dbg.sc = sc; }
     const s = sc[i];
@@ -421,6 +447,7 @@ function skin(P, clip, key, want) {
     out[name] = pos;
   });
   const pre = out.body && (out.saddle || out.reins) ? out.body.slice() : null;      // (the body before the head edits: what the bridle has to follow)
+  if (out.body) applyLipFollow(P, out.body, Db);
   if (out.body) { const mz = applyHeadLine(P, out.body, Db); if (mz > maxZ) maxZ = mz; }
   let jointsBase = null;
   if (out.body && socketActive(P)) {
@@ -454,7 +481,7 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { gaps: true, mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false } };
+  show: { tex: true, gaps: true, mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
@@ -492,7 +519,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['gaps', 'mane', 'saddle', 'reins', 'wire', 'ghost', 'beside', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['tex', 'gaps', 'mane', 'saddle', 'reins', 'wire', 'ghost', 'beside', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -545,7 +572,13 @@ function lipSetback(res) {
   const p = res.pos.body, E = headLine.E, ch = headLine.ch;
   const front = list => { let b = -Infinity; list.forEach(v => { const t = (p[v*3]-E[0])*ch[0] + (p[v*3+1]-E[1])*ch[1] + (p[v*3+2]-E[2])*ch[2]; if (t > b) b = t; }); return b; };
   const u = front(lipVerts.up), l = front(lipVerts.lo);
-  return { upper: u, lower: l, setback: u - l };
+  if (!lipFollow) buildLipFollow();
+  const E2 = headLine.E, up2 = headLine.up;
+  let fu = -Infinity, fl = -Infinity;
+  headLine.list.forEach(e => { if (e.hw < 0.5) return; const v = e.v, t = (p[v*3]-E2[0])*ch[0] + (p[v*3+1]-E2[1])*ch[1] + (p[v*3+2]-E2[2])*ch[2];
+    if (e.s > lipFollow.slit + 0.003 && e.a > 0.85) { if (t > fu) fu = t; }
+    else if (e.s < lipFollow.slit - 0.004 && e.a > 0.85) { if (t > fl) fl = t; } });
+  return { upper: u, lower: l, setback: u - l, fleshUpper: fu, fleshLower: fl, fleshSetback: fu - fl };
 }
 
 // ====================== hoof gaps: how far each hoof is above the floor (the ruler) ======================
@@ -602,6 +635,7 @@ function makeMesh(name, color) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(m.pos0), 3).setUsage(THREE.DynamicDrawUsage));
   g.setIndex(new THREE.BufferAttribute(m.idx, 1));
+  if (m.uv) g.setAttribute('uv', new THREE.BufferAttribute(m.uv, 2));
   g.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
   if (name === 'body') {                                     // preview only: dark eyeballs so the lids read (export is untouched)
@@ -618,6 +652,7 @@ function makeMesh(name, color) {
   }
   return o;
 }
+let loadTextures_pending = false;
 function initScene() {
   try { renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); } catch (e) { renderer = null; }
   if (!renderer) { document.getElementById('vpnote').textContent = 'WebGL is not available here'; return; }
@@ -630,6 +665,7 @@ function initScene() {
   const d2 = new THREE.DirectionalLight(0x6FA8A0, 0.35); d2.position.set(-4, 3, 2); scene.add(d2);
   gridHelper = new THREE.GridHelper(10, 20, 0x2A3336, 0x1A2225); gridHelper.rotation.x = Math.PI / 2; scene.add(gridHelper);
   rulerLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true, depthTest: false, transparent: true })); rulerLines.renderOrder = 7; rulerLines.frustumCulled = false; scene.add(rulerLines);
+  loadTextures_pending = true;
   meshes.body = makeMesh('body', 0xD3CEC3); meshes.maneTail = makeMesh('maneTail', 0x5B5047); meshes.saddle = makeMesh('saddle', 0x7A4B2B); meshes.reins = makeMesh('reins', 0x3A2A1F);
   const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mesh.body.pos0), 3).setUsage(THREE.DynamicDrawUsage)); gg.setIndex(new THREE.BufferAttribute(mesh.body.idx, 1));
   ghostMesh = new THREE.Mesh(gg, new THREE.MeshBasicMaterial({ color: 0x6FA8A0, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })); ghostMesh.frustumCulled = false; scene.add(ghostMesh);
@@ -695,14 +731,37 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['gaps', 'Hoof gap ruler (how far each hoof is above the floor)'], ['mane', 'Mane and tail'], ['saddle', 'Saddle and bridle'], ['reins', 'Reins'], ['wire', 'Wireframe'], ['beside', 'Game adult standing beside the foal (solid)'], ['ghost', 'Ghost of the game adult (wireframe, overlaid)'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
+  [['tex', 'The game\'s coat texture (pick the coat below)'], ['gaps', 'Hoof gap ruler (how far each hoof is above the floor)'], ['mane', 'Mane and tail'], ['saddle', 'Saddle and bridle'], ['reins', 'Reins'], ['wire', 'Wireframe'], ['beside', 'Game adult standing beside the foal (solid)'], ['ghost', 'Ghost of the game adult (wireframe, overlaid)'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
   });
+  const row = document.createElement('label'); row.innerHTML = 'Coat: <select id="coatSel">' + COATS.map(k => '<option' + (k[0] === state.coat ? ' selected' : '') + '>' + k[0] + '</option>').join('') + '</select>';
+  row.querySelector('select').addEventListener('change', e => { state.coat = e.target.value; applyShow(); dirty = true; });
+  host.appendChild(row);
+}
+let texBody = null, texMane = null;
+function loadTextures() {
+  if (typeof TEX === 'undefined') return;
+  const loader = new THREE.TextureLoader(), done = t => { t.anisotropy = 4; dirty = true; applyShow(); };
+  if (TEX.body) texBody = loader.load(TEX.body, done);
+  if (TEX.mane) texMane = loader.load(TEX.mane, done);
+}
+function applyTexture() {                                     // the coat tile of the atlas (4 x 2) on the body and the mane; the bridle and saddle keep their colours
+  const c = COATS.find(k => k[0] === state.coat) || COATS[2], on = state.show.tex;
+  [[meshes.body, texBody], [meshes.maneTail, texMane]].forEach(([m, t]) => {
+    if (!m || !t) return;
+    t.repeat.set(0.25, 0.5); t.offset.set(0.25 * c[1], 0.5 * c[2]);
+    const want = on ? t : null;
+    if (m.material.map !== want) { m.material.map = want; m.material.needsUpdate = true; }
+    if (m === meshes.body) m.material.vertexColors = on ? false : state.show.dark;
+    m.material.alphaTest = (on && m === meshes.maneTail) ? 0.5 : 0;
+    m.material.color.set(on ? 0xffffff : (m === meshes.body ? 0xD3CEC3 : 0x5B5047));
+  });
 }
 function applyShow() {
   if (!renderer) return;
+  applyTexture();
   meshes.maneTail.visible = state.show.mane; meshes.saddle.visible = state.show.saddle; meshes.reins.visible = state.show.reins;
   ['body', 'maneTail', 'saddle', 'reins'].forEach(n => { meshes[n].material.wireframe = state.show.wire; });
   if (state.view === 'front') sideOff = [1.15, 0, 0]; else if (state.view === 'side' || state.view === 'three') sideOff = [0, 2.0, 0];
@@ -744,6 +803,8 @@ function update() {
   current = res; curLm = lm;
 }
 let current = null, curLm = null, gapsNow = [];
+const COATS = [['Gray', 0, 0], ['Pinto', 1, 0], ['Palomino', 2, 0], ['Chestnut', 3, 0], ['Bay', 0, 1], ['Black', 1, 1], ['SealBrown', 2, 1], ['Dun', 3, 1]];
+state.coat = (new URLSearchParams(location.search)).get('coat') || 'Palomino';
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (state.clip !== 'rest') { state.time += dt * state.speed; dirty = true; }
@@ -787,7 +848,7 @@ function exportObj() {
 
 // ====================== wire up ======================
 buildPresets(); buildSliders(); buildToggles();
-initScene(); applyShow(); setView(state.view); refreshUi(); markView();
+initScene(); loadTextures(); applyShow(); setView(state.view); refreshUi(); markView();
 document.querySelectorAll('#vpui [data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 $('resetView').addEventListener('click', () => setView('side'));
 document.querySelectorAll('#poses [data-clip]').forEach(b => b.addEventListener('click', () => { state.clip = b.dataset.clip; state.time = 0; refreshUi(); dirty = true; writeUrl(); }));

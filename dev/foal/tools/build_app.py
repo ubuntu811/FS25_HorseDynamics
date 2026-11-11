@@ -9,6 +9,14 @@ html = open(os.path.join(app, "index.template.html")).read()
 for key, path in (("/*STYLE*/", "style.css"), ("/*THREE*/", "vendor/three.min.js"), ("/*APP*/", "app.js")):
     html = html.replace(key, open(os.path.join(app, path)).read())
 html = html.replace("/*DATA*/", data)
+# the game's coat textures for the texture view (converted to jpg / png by hand, see ABOUT.md; they are the game's: not in git)
+import base64
+tex = {}
+for key, f, mime in (("body", "vendor/tex_body.jpg", "image/jpeg"), ("mane", "vendor/tex_mane.png", "image/png")):
+    fp = os.path.join(app, f)
+    if os.path.exists(fp):
+        tex[key] = "data:%s;base64,%s" % (mime, base64.b64encode(open(fp, "rb").read()).decode())
+html = html.replace("/*TEX*/", json.dumps(tex))
 out = os.path.join(root, "out", "foal-scale.html")
 os.makedirs(os.path.dirname(out), exist_ok=True)
 open(out, "w").write(html)
