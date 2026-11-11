@@ -319,6 +319,7 @@ const PRESETS = [
   ['fav5',      'Favorite 5 (Nov 10)', 'fav4 with a shorter nose (muzzle 0.12)', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_d: 1.0, head_l: 0.92, head_top: 0.004, head_bot: 0.01, top_break: 0.57, top_a1: -6, top_a2: 11.5, head_w: 1.0, jaw_d: 1.04, jaw_l: 1.02, jaw_w: 0.82, lipw: 0.97, head_pitch: 6, ear: 1.2, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.68, hoof: 0.75, tail: 0.4, muzzle: 0.12 })],
   ['fav6',      'Favorite 6 (Nov 10)', 'your tuned link: nose cut 0.105, head 0.99, softer profile', mk({ B: 0.65, torso: 0.8, rump: 0.86, neck_len: 0.74, neck_th: 0.77, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.4, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.78, hip_th: 0.77, hoof: 0.75, tail: 0.4 })],
   ['fav7',      'Favorite 7 (Nov 11)', 'fav6, cuter: sturdier neck, body, legs, bigger hooves, fuller tail', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
+  ['fav8',      'Favorite 8 (Nov 11)', 'fav7 with leg length 0.9: all four hooves on the floor', mk({ B: 0.65, torso: 0.9, rump: 0.98, neck_len: 0.74, neck_th: 0.92, head_l: 0.99, head_top: 0.006, head_bot: 0.01, top_break: 0.57, muzzle: 0.105, top_a1: -4, top_a2: 8, jaw_d: 1.03, jaw_l: 1.02, jaw_w: 0.82, lipw: 1.11, head_pitch: 6.5, ear: 1.08, eyes: 1.5, eye_down: 0.006, eye_fwd: 0.04, eye_out: -0.002, socket_smooth: 0.6, eye_fit: 1, eye_sink: 0.006, eye_fit_size: 1.6, lid_up: 0.012, lid_low: 0.003, socket: 0.155, leg_len: 0.9, leg_th: 0.95, hip_th: 0.92, hoof: 1.1, tail: 0.8 })],
   ['month1',    '1 month',          '~64% of adult',         mk({ B: 0.50, torso: 0.95, neck_len: 1.45, neck_th: 0.82, head_d: 1.3, head_l: 1.3, head_w: 1.2, ear: 1.1, ear_tilt: -30, eyes: 1.4, eye_down: 0.02, leg_len: 1.5, leg_th: 1.15, rump: 0.75, hip_th: 0.85, hoof: 1.1, tail: 0.9 })],
 ];
 // reference values from the Blender runs (idle pose, ground to top of the head), used by the self-test
@@ -451,7 +452,7 @@ function landmarks(res) {
 
 // ====================== state ======================
 const state = { P: Object.assign({}, DEF), clip: 'rest', time: 0, speed: 1, preset: 'adult', view: 'side',
-  show: { mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false } };
+  show: { gaps: true, mane: true, saddle: false, reins: false, wire: false, ghost: true, beside: true, dots: false, bones: false, dark: false, noeye: false } };
 const adultRef = { cache: {} };
 function adultAt(clip, key) {
   const id = clip + ':' + key;
@@ -489,7 +490,7 @@ function readUrl() {
   PARAMS.forEach(p => { if (q.has(p[0])) { const v = parseFloat(q.get(p[0])); if (!isNaN(v)) state.P[p[0]] = Math.max(p[2], Math.min(p[3], v)); } });
   if (q.has('pose') && ['rest', 'idle', 'walk'].includes(q.get('pose'))) state.clip = q.get('pose');
   if (q.has('view') && ['side', 'three', 'front', 'head'].includes(q.get('view'))) state.view = q.get('view');
-  ['mane', 'saddle', 'reins', 'wire', 'ghost', 'beside', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
+  ['gaps', 'mane', 'saddle', 'reins', 'wire', 'ghost', 'beside', 'dots', 'bones', 'dark', 'noeye'].forEach(k => { if (q.has(k)) state.show[k] = q.get(k) === '1'; });
   if (q.has('preset')) state.preset = q.get('preset');
 }
 let urlTimer = 0;
@@ -525,6 +526,43 @@ function setBones(set, joints) {
     la.set(a, k * 6); la.set(b, k * 6 + 3); pa.set(b, k * 3);
   });
   set.lines.geometry.getAttribute('position').needsUpdate = true; set.pts.geometry.getAttribute('position').needsUpdate = true;
+}
+
+// ====================== hoof gaps: how far each hoof is above the floor (the ruler) ======================
+const HOOF_NAMES = { frontToes_L: 'front left', frontToes_R: 'front right', backToes_L: 'hind left', backToes_R: 'hind right' };
+let hoofVerts = null, rulerLines = null;
+function buildHoofVerts() {
+  const m = mesh.body; hoofVerts = {};
+  for (let v = 0; v < m.nv; v++) {
+    let best = 0, bk = 0;
+    for (let k = 0; k < 4; k++) if (m.wt[v*4+k] > best) { best = m.wt[v*4+k]; bk = k; }
+    const nm = nodes[m.jn[v*4+bk]].name;
+    if (HOOF_NAMES[nm]) (hoofVerts[nm] = hoofVerts[nm] || []).push(v);
+  }
+}
+function hoofGaps(res) {                                   // the lowest vertex of each hoof: its height above the floor (the foal is grounded on its lowest vertex) and where it is
+  if (!hoofVerts) buildHoofVerts();
+  const pos = res.pos.body;
+  return Object.keys(HOOF_NAMES).filter(n => hoofVerts[n]).map(n => {
+    let bz = Infinity, bv = 0;
+    hoofVerts[n].forEach(v => { if (pos[v*3+2] < bz) { bz = pos[v*3+2]; bv = v; } });
+    return { name: HOOF_NAMES[n], gap: bz, x: pos[bv*3], y: pos[bv*3+1] };
+  });
+}
+function updateRuler(gaps) {
+  if (!rulerLines) return;
+  const pa = [], ca = [];
+  gaps.forEach(g => {
+    const ok = g.gap < 0.004, c = ok ? [0.3, 0.9, 0.4] : [1.0, 0.55, 0.15], z = Math.max(g.gap, 0.002);
+    const seg = (a, b) => { pa.push(...a, ...b); ca.push(...c, ...c); };
+    seg([g.x, g.y, 0], [g.x, g.y, z]);                      // the ruler: floor to hoof
+    seg([g.x - 0.04, g.y, 0], [g.x + 0.04, g.y, 0]);        // a tick on the floor ...
+    seg([g.x - 0.04, g.y, z], [g.x + 0.04, g.y, z]);        // ... and one at the hoof
+    for (let t = 0.01; t < g.gap; t += 0.01) seg([g.x - 0.015, g.y, t], [g.x + 0.015, g.y, t]);   // a mark every centimetre
+  });
+  const geo = rulerLines.geometry;
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pa, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(ca, 3));
+  geo.computeBoundingSphere();
 }
 const orbit = { az: 0, el: 0.12, dist: 5.2, target: [0, -0.55, 0.95] };
 const VIEWS = {
@@ -571,6 +609,7 @@ function initScene() {
   const d1 = new THREE.DirectionalLight(0xffffff, 0.62); d1.position.set(4, -3, 6); scene.add(d1);
   const d2 = new THREE.DirectionalLight(0x6FA8A0, 0.35); d2.position.set(-4, 3, 2); scene.add(d2);
   gridHelper = new THREE.GridHelper(10, 20, 0x2A3336, 0x1A2225); gridHelper.rotation.x = Math.PI / 2; scene.add(gridHelper);
+  rulerLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true, depthTest: false, transparent: true })); rulerLines.renderOrder = 7; rulerLines.frustumCulled = false; scene.add(rulerLines);
   meshes.body = makeMesh('body', 0xD3CEC3); meshes.maneTail = makeMesh('maneTail', 0x5B5047); meshes.saddle = makeMesh('saddle', 0x7A4B2B); meshes.reins = makeMesh('reins', 0x3A2A1F);
   const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(mesh.body.pos0), 3).setUsage(THREE.DynamicDrawUsage)); gg.setIndex(new THREE.BufferAttribute(mesh.body.idx, 1));
   ghostMesh = new THREE.Mesh(gg, new THREE.MeshBasicMaterial({ color: 0x6FA8A0, wireframe: true, transparent: true, opacity: 0.18, depthWrite: false })); ghostMesh.frustumCulled = false; scene.add(ghostMesh);
@@ -636,7 +675,7 @@ function buildPresets() {
 }
 function buildToggles() {
   const host = $('toggles');
-  [['mane', 'Mane and tail'], ['saddle', 'Saddle and bridle'], ['reins', 'Reins'], ['wire', 'Wireframe'], ['beside', 'Game adult standing beside the foal (solid)'], ['ghost', 'Ghost of the game adult (wireframe, overlaid)'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
+  [['gaps', 'Hoof gap ruler (how far each hoof is above the floor)'], ['mane', 'Mane and tail'], ['saddle', 'Saddle and bridle'], ['reins', 'Reins'], ['wire', 'Wireframe'], ['beside', 'Game adult standing beside the foal (solid)'], ['ghost', 'Ghost of the game adult (wireframe, overlaid)'], ['dots', 'Ear base / eye / nose tip / profile break'], ['bones', 'Bones (adult teal, foal orange)'], ['dark', 'Dark eyeballs (preview only)'], ['noeye', 'Hide eyeballs (see the lids; preview only)']].forEach(t => {
     const l = document.createElement('label'); l.innerHTML = '<input type="checkbox" data-k="' + t[0] + '"> ' + t[1];
     l.querySelector('input').addEventListener('change', e => { state.show[t[0]] = e.target.checked; applyShow(); dirty = true; writeUrl(); });
     host.appendChild(l);
@@ -660,7 +699,8 @@ function setStats(res, lm) {
     '<div class="stat"><span>of the game adult (2.28 m)</span><b>' + pct + '%</b></div>' +
     '<div class="stat"><span>ear base to nose tip</span><b>' + (lm.chord * 100).toFixed(0) + ' cm</b></div>' +
     '<div class="stat"><span>eye position, ear to nose</span><b>' + (lm.eyeFrac * 100).toFixed(0) + '%</b></div>' +
-    '<div class="stat"><span>angle ear / eye / nose</span><b>' + lm.angle.toFixed(0) + '°</b></div>';
+    '<div class="stat"><span>angle ear / eye / nose</span><b>' + lm.angle.toFixed(0) + '°</b></div>' +
+    gapsNow.map(g => '<div class="stat"><span>' + g.name + ' hoof above the floor</span><b style="color:' + (g.gap < 0.004 ? "#5ad06a" : "#ff8c26") + '">' + (g.gap * 100).toFixed(1) + ' cm</b></div>').join('');
 }
 
 // ====================== frame loop ======================
@@ -676,12 +716,14 @@ function update() {
     ['body', 'maneTail'].forEach(n => { const g = adultMeshes[n].geometry, a = g.getAttribute('position'); a.array.set(gh.pos[n]); a.needsUpdate = true; g.computeVertexNormals(); });
     if (state.show.bones) { setBones(boneSets[0], gh.joints); setBones(boneSets[1], res.joints); }
   }
+  const gaps = hoofGaps(res); gapsNow = gaps;
+  if (renderer) { updateRuler(gaps); rulerLines.visible = state.show.gaps; }
   const lm = landmarks(res);
   if (renderer) { const K = breakPoint(res); dotGroup.children.forEach(s => { const p = s.name === 'N' ? lm.N : s.name === 'E' ? lm.E : s.name === 'K' ? K : lm.Y; s.position.set(p[0] + 0.12, p[1], p[2]); }); }
   setStats(res, lm);
   current = res; curLm = lm;
 }
-let current = null, curLm = null;
+let current = null, curLm = null, gapsNow = [];
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (state.clip !== 'rest') { state.time += dt * state.speed; dirty = true; }
@@ -756,6 +798,7 @@ window.__foal = { state, skin, landmarks, selfTest, PRESETS, DEF, bakeData,
     return { ring: bb(o.ring), ball: bb(o.ball) }; } };
 requestAnimationFrame(frame);
 if (/[?&]gap=1/.test(location.search)) document.getElementById('testout').textContent = 'GAP ' + JSON.stringify(window.__foal.eyeGap(state.P));
+if (/[?&]gapsdump=1/.test(location.search)) document.getElementById('testout').textContent = 'GAPS' + JSON.stringify(hoofGaps(skin(state.P, null, 0))) + 'ENDGAPS';
 if (/[?&]bake=1/.test(location.search)) document.getElementById('testout').textContent = 'BAKE' + JSON.stringify(window.__foal.bakeData(state.P)) + 'ENDBAKE';
 })();
 

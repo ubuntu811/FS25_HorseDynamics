@@ -104,7 +104,7 @@ end
 -- The foal's bone regions against the adult's, per axis of the bone, about the bone's origin: the least-squares fit of the baked horseFoal.i3d.shapes to horse.i3d.shapes, in each bone's own space
 -- (vertices with weight above 0.3 on the bone; fit errors 1 to 2 cm; Favorite 6 (the user's tuned link): overall size 0.65, a nose-only cut; the head fit is a compromise between crown and muzzle). Re-measure after a re-bake with another shape.
 -- Gear built for the adult (HorseDynamics' halter and harness) scales its points with these.
-HorseFoal.BONE_SCALE = {          -- Favorite 7 (the app's per-bone scales chained to the adult, as measured for Favorite 6, scaled by the change)
+HorseFoal.BONE_SCALE = {          -- Favorite 8 = 7 with leg length 0.9, same chain scales (the app's per-bone scales chained to the adult, as measured for Favorite 6, scaled by the change)
     Head_M = { 0.560, 0.513, 0.625 },
     Chest_M = { 0.582, 0.613, 0.583 },
     Spine1_M = { 0.593, 0.593, 0.587 },
