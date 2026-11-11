@@ -2,7 +2,7 @@
 <i3D xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="horseFoal" version="1.6" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
 
   <Files>
-    <File fileId="4" filename="$data/shaders/tileAndMirrorShader.xml" />
+    <File fileId="4" filename="../../shaders/foalCoatShader.xml" />
     <File fileId="1" filename="$dataS/character/animals/domesticated/horse/horse_diffuse.png" />
     <File fileId="2" filename="$dataS/character/animals/domesticated/horse/horse_normal.png" />
     <File fileId="3" filename="$dataS/character/animals/domesticated/horse/horse_specular.png" />
@@ -20,6 +20,7 @@
     <Material name="horse_mat" materialId="2" customShaderId="4" customShaderVariation="dirtEnabled">
       <CustomParameter name="atlasInvSizeAndOffsetUV" value="0.25 0.5 0 0" />
       <CustomParameter name="mirrorScaleAndOffsetUV" value="1 1 0 0" />
+      <CustomParameter name="coatTint" value="1 1 1 1" />
       <Texture fileId="1" />
       <Normalmap fileId="2" />
       <Glossmap fileId="3" />
@@ -27,6 +28,7 @@
     <Material name="maneTailBraide_mat" materialId="3" customShaderId="4" customShaderVariation="dirtEnabled">
       <CustomParameter name="atlasInvSizeAndOffsetUV" value="0.25 0.5 0 0" />
       <CustomParameter name="mirrorScaleAndOffsetUV" value="1 1 0 0" />
+      <CustomParameter name="coatTint" value="1 1 1 1" />
       <Texture fileId="5" />
       <Normalmap fileId="6" />
       <Glossmap fileId="7" />

@@ -232,3 +232,31 @@ if InGameMenuMapFrame ~= nil and InGameMenuMapFrame.onClickEnterVehicle ~= nil a
         return superFunc(self, ...)
     end)
 end
+
+-- ===== coat shader experiment: hdCoat r g b [all] sets the coatTint of the nearest foal vehicle (or every one): foalCoatShader.xml multiplies the coat by it; hdCoat alone puts it back to 1 1 1 =====
+function HorseFoal.consoleCoat(_, r, g, b, scope)
+    r, g, b = tonumber(r) or 1, tonumber(g) or r and tonumber(r) or 1, tonumber(b) or tonumber(r) or 1
+    local px, _, pz = HorseLead.playerPosition()
+    local best, bestD, count = nil, math.huge, 0
+    for _, vehicle in ipairs(HorseLead.rideables()) do
+        local ok, cluster = pcall(vehicle.getCluster, vehicle)
+        if ok and isFoalCluster(cluster) and vehicle.spec_rideable.meshNode ~= nil then
+            if scope == "all" then
+                I3DUtil.setShaderParameterRec(vehicle.spec_rideable.meshNode, "coatTint", r, g, b, 1)
+                count = count + 1
+            elseif px ~= nil then
+                local x, _, z = getWorldTranslation(vehicle.rootNode)
+                local d = math.sqrt((x - px) ^ 2 + (z - pz) ^ 2)
+                if d < bestD then best, bestD = vehicle, d end
+            end
+        end
+    end
+    if best ~= nil and bestD < 30 then
+        I3DUtil.setShaderParameterRec(best.spec_rideable.meshNode, "coatTint", r, g, b, 1)
+        count = 1
+    end
+    return count == 0 and "no foal vehicle near you (lead one out of its pasture first; hdCoat r g b all does every foal)" or string.format("coatTint %.2f %.2f %.2f on %d foal(s)", r, g, b, count)
+end
+if addConsoleCommand ~= nil then
+    addConsoleCommand("hdCoat", "HorseDynamics: coat shader experiment: tint the nearest foal vehicle, hdCoat r g b [all]", "consoleCoat", HorseFoal)
+end

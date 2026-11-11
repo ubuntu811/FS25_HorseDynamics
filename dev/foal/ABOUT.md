@@ -14,3 +14,8 @@ The workshop is part of this repo, with its history (`git log -- dev`): a browse
 What is not in git (it comes from the game's own horse): `dev/foal/app/horse_app.json`, `dev/obj/`, `dev/out/`, `dev/foal/app/vendor/` (three.js). They are left out of git because they are the game's data; the foal model itself (`models/foal`) is in the repo with credit, see the README's Credits section.
 
 The build (`build/build.sh`) packs only `store/ models/foal/ xml/ scripts/ ...` (HorseDynamics' build): `dev/foal/` never goes into the mod.
+
+## Coat shader experiment (2026-11-12)
+
+`python3 dev/foal/tools/make_coat_shader.py <game data dir>` writes `shaders/foalCoatShader.xml` (the game's horse skin shader plus a `coatTint` setting) and points `models/foal/horseFoal.i3d` at it; run it again after every bake (the bake writes the game's shader path back). `--revert` points the foal model at the game's own shader again. In the game: lead a foal out of its pasture, then `hdCoat 0.6 0.6 0.6` darkens the nearest foal, `hdCoat 1.2 0.9 0.8` warms it, `hdCoat` resets it, `hdCoat r g b all` every foal. If the foal looks pink, black or invisible the shader did not load: run with `--revert`, deploy, and read the log for the shader error.
+
