@@ -138,7 +138,8 @@ Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, function(vehic
     local ok, cluster = pcall(vehicle.getCluster, vehicle)
     if ok and isFoalCluster(cluster) and not vehicle.horseFoalLogged then        -- (one line per foal vehicle: a foal that was saved out of its pasture is, or is not, back in the world after a restart)
         vehicle.horseFoalLogged = true
-        local x, _, z = getWorldTranslation(vehicle.rootNode)
-        print(string.format("[HorseFoal] foal vehicle %s (%d months) is in the world at %.0f %.0f", tostring(cluster.name), cluster.getAge ~= nil and cluster:getAge() or -1, x, z))
+        local x, y, z = getWorldTranslation(vehicle.rootNode)
+        local ground = g_terrainNode ~= nil and getTerrainHeightAtWorldPos(g_terrainNode, x, 0, z) or y
+        print(string.format("[HorseFoal] foal vehicle %s (%d months) is in the world at %.0f %.0f, %.2f m %s the terrain", tostring(cluster.name), cluster.getAge ~= nil and cluster:getAge() or -1, x, z, math.abs(y - ground), y >= ground and "above" or "BELOW"))
     end
 end)
