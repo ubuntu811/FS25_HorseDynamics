@@ -143,3 +143,92 @@ Rideable.setCluster = Utils.appendedFunction(Rideable.setCluster, function(vehic
         print(string.format("[HorseFoal] foal vehicle %s (%d months) is in the world at %.0f %.0f, %.2f m %s the terrain", tostring(cluster.name), cluster.getAge ~= nil and cluster:getAge() or -1, x, z, math.abs(y - ground), y >= ground and "above" or "BELOW"))
     end
 end)
+
+-- ===== the map: a foal cannot be ridden, so its popup says Visit and takes you next to it =====
+HorseFoal.VISIT_RADII = { 2.5, 3.5, 5.0, 7.0 }        -- m from the foal, tried in this order
+HorseFoal.VISIT_CLEAR_M = 0.7                           -- the spot is free when nothing solid is within this of a standing player's middle
+
+-- The first free spot round (fx, fz), nearest ring first, starting at the foal's left side: isFree(x, z) and groundAt(x, z) are the engine's (injected: the tests use fakes). Falls back to the first spot.
+function HorseFoal.pickVisitSpot(fx, fz, heading, isFree, groundAt)
+    local first
+    for _, r in ipairs(HorseFoal.VISIT_RADII) do
+        for k = 0, 11 do
+            local a = heading + math.pi / 2 + k * math.pi / 6
+            local x, z = fx + math.sin(a) * r, fz + math.cos(a) * r
+            first = first or { x, groundAt(x, z), z }
+            if isFree(x, z) then
+                return x, groundAt(x, z), z
+            end
+        end
+    end
+    return first[1], first[2], first[3]
+end
+
+local solidHits
+function HorseFoal.onSolid(_, nodeId)
+    solidHits = (solidHits or 0) + 1
+    return true
+end
+
+local function visitSpotFree(x, z)
+    local y = getTerrainHeightAtWorldPos(g_terrainNode, x, 0, z)
+    solidHits = 0
+    local mask = CollisionFlag.STATIC_OBJECT + CollisionFlag.BUILDING + CollisionFlag.TREE + CollisionFlag.VEHICLE + CollisionFlag.DYNAMIC_OBJECT + CollisionFlag.WATER
+    overlapSphere(x, y + 1.0, z, HorseFoal.VISIT_CLEAR_M, "onSolid", HorseFoal, mask, true, true, false, true)
+    return solidHits == 0
+end
+
+-- Takes the player to a free spot next to the foal vehicle (leaving the vehicle they are in).
+function HorseFoal.visit(vehicle)
+    local fx, _, fz = getWorldTranslation(vehicle.rootNode)
+    local dx, _, dz = localDirectionToWorld(vehicle.rootNode, 0, 0, 1)
+    local x, y, z = HorseFoal.pickVisitSpot(fx, fz, math.atan2(dx, dz), visitSpotFree, function(px, pz) return getTerrainHeightAtWorldPos(g_terrainNode, px, 0, pz) end)
+    if g_localPlayer:getCurrentVehicle() ~= nil then
+        g_localPlayer:leaveVehicle()
+    end
+    g_localPlayer:teleportTo(x, y, z)
+end
+
+local function foalOfHotspot(frame)
+    local vehicle = InGameMenuMapUtil ~= nil and frame.currentHotspot ~= nil and InGameMenuMapUtil.getHotspotVehicle(frame.currentHotspot) or nil
+    if vehicle ~= nil and vehicle.getCluster ~= nil and isFoalCluster(vehicle:getCluster()) then
+        return vehicle
+    end
+    return nil
+end
+
+if InGameMenuMapFrame ~= nil and InGameMenuMapFrame.onClickEnterVehicle ~= nil and not HorseFoal.mapHooked then
+    HorseFoal.mapHooked = true
+    local function asVisit(frame)
+        if frame.contextActions ~= nil and frame.contextActions[InGameMenuMapFrame.ACTIONS.ENTER_VEHICLE] ~= nil then
+            frame.contextActions[InGameMenuMapFrame.ACTIONS.ENTER_VEHICLE].text = "action_visit"
+        end
+    end
+    -- the popup of a foal offers the button, called Visit (the game's own text), instead of Ride
+    InGameMenuMapFrame.setMapInputContext = Utils.overwrittenFunction(InGameMenuMapFrame.setMapInputContext, function(self, superFunc, canEnter, ...)
+        if foalOfHotspot(self) ~= nil then
+            canEnter = true
+            asVisit(self)
+        end
+        return superFunc(self, canEnter, ...)
+    end)
+    InGameMenuMapFrame.setAIInputContext = Utils.overwrittenFunction(InGameMenuMapFrame.setAIInputContext, function(self, superFunc, canGoTo, canCreateJob, canCancel, canSkipTask, canEnter, ...)
+        if foalOfHotspot(self) ~= nil then
+            canEnter = true
+            asVisit(self)
+        end
+        return superFunc(self, canGoTo, canCreateJob, canCancel, canSkipTask, canEnter, ...)
+    end)
+    InGameMenuMapFrame.onClickEnterVehicle = Utils.overwrittenFunction(InGameMenuMapFrame.onClickEnterVehicle, function(self, superFunc, ...)
+        local foal = foalOfHotspot(self)
+        if foal ~= nil and not g_currentMission.isPlayerFrozen then
+            self.onClickBackCallback()
+            local ok, err = pcall(HorseFoal.visit, foal)
+            if not ok then
+                print("[HorseFoal] visit: " .. tostring(err))
+            end
+            return true
+        end
+        return superFunc(self, ...)
+    end)
+end
