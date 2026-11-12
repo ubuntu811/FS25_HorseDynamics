@@ -233,17 +233,35 @@ if InGameMenuMapFrame ~= nil and InGameMenuMapFrame.onClickEnterVehicle ~= nil a
     end)
 end
 
--- ===== coat shader experiment: hdCoat r g b [all] sets the coatTint of the nearest foal vehicle (or every one): foalCoatShader.xml multiplies the coat by it; hdCoat alone puts it back to 1 1 1 =====
-function HorseFoal.consoleCoat(_, r, g, b, scope)
-    r, g, b = tonumber(r) or 1, tonumber(g) or r and tonumber(r) or 1, tonumber(b) or tonumber(r) or 1
-    local px, _, pz = HorseLead.playerPosition()
-    local best, bestD, count = nil, math.huge, 0
+-- ===== coat shader experiment (shaders/foalCoatShader.xml, see dev/foal/ABOUT.md): per-foal settings on the foal vehicles =====
+--   hdCoat tint r g b          colour multiplying the COAT (not eyes, mouth, hooves)      hdCoat 0.6 0.6 0.6 is the same as hdCoat tint 0.6 0.6 0.6
+--   hdCoat shade b [s]         brightness and saturation of the coat (1 1 = as it is)
+--   hdCoat gloss g             glossy eyeballs, 0..1
+--   hdCoat pattern a [r g b]   the pattern layer (the Pinto patches so far): strength 0..1 and its colour (white)
+--   hdCoat reset               everything back
+-- each acts on the nearest foal vehicle within 30 m; add "all" at the end for every foal vehicle.
+HorseFoal.COAT_DEFAULT = { tint = { 1, 1, 1 }, shade = { 1, 1 }, gloss = 0, pattern = { 0, 1, 1, 1 } }
+local function coatApply(vehicle, c)
+    local node = vehicle.spec_rideable.meshNode
+    I3DUtil.setShaderParameterRec(node, "coatTint", c.tint[1], c.tint[2], c.tint[3], 1)
+    I3DUtil.setShaderParameterRec(node, "coatShade", c.shade[1], c.shade[2], 0, c.gloss)
+    I3DUtil.setShaderParameterRec(node, "patternA", c.pattern[2], c.pattern[3], c.pattern[4], c.pattern[1])
+end
+
+function HorseFoal.consoleCoat(_, ...)
+    local args = { ... }
+    local all = args[#args] == "all"
+    if all then table.remove(args) end
+    local what = args[1]
+    if tonumber(what) ~= nil then table.insert(args, 1, "tint"); what = "tint" end
+    local n = function(i, default) return tonumber(args[i]) or default end
+    local targets, px, _, pz = {}, HorseLead.playerPosition()
+    local bestD, best = math.huge, nil
     for _, vehicle in ipairs(HorseLead.rideables()) do
         local ok, cluster = pcall(vehicle.getCluster, vehicle)
         if ok and isFoalCluster(cluster) and vehicle.spec_rideable.meshNode ~= nil then
-            if scope == "all" then
-                I3DUtil.setShaderParameterRec(vehicle.spec_rideable.meshNode, "coatTint", r, g, b, 1)
-                count = count + 1
+            if all then
+                targets[#targets + 1] = vehicle
             elseif px ~= nil then
                 local x, _, z = getWorldTranslation(vehicle.rootNode)
                 local d = math.sqrt((x - px) ^ 2 + (z - pz) ^ 2)
@@ -251,12 +269,26 @@ function HorseFoal.consoleCoat(_, r, g, b, scope)
             end
         end
     end
-    if best ~= nil and bestD < 30 then
-        I3DUtil.setShaderParameterRec(best.spec_rideable.meshNode, "coatTint", r, g, b, 1)
-        count = 1
+    if best ~= nil and bestD < 30 then targets[1] = best end
+    if #targets == 0 then
+        return "no foal vehicle near you (lead one out of its pasture first; add 'all' for every foal)"
     end
-    return count == 0 and "no foal vehicle near you (lead one out of its pasture first; hdCoat r g b all does every foal)" or string.format("coatTint %.2f %.2f %.2f on %d foal(s)", r, g, b, count)
+    if what == nil then
+        return "hdCoat tint r g b | shade b [s] | gloss g | pattern a [r g b] | reset   (+ 'all')"
+    end
+    for _, vehicle in ipairs(targets) do
+        local c = vehicle.horseCoat or { tint = { 1, 1, 1 }, shade = { 1, 1 }, gloss = 0, pattern = { 0, 1, 1, 1 } }
+        if what == "tint" then c.tint = { n(2, 1), n(3, n(2, 1)), n(4, n(2, 1)) }
+        elseif what == "shade" then c.shade = { n(2, 1), n(3, 1) }
+        elseif what == "gloss" then c.gloss = n(2, 0)
+        elseif what == "pattern" then c.pattern = { n(2, 1), n(3, 1), n(4, 1), n(5, 1) }
+        elseif what == "reset" then c = { tint = { 1, 1, 1 }, shade = { 1, 1 }, gloss = 0, pattern = { 0, 1, 1, 1 } }
+        else return "unknown: " .. tostring(what) end
+        vehicle.horseCoat = c
+        coatApply(vehicle, c)
+    end
+    return string.format("hdCoat %s on %d foal(s)", what, #targets)
 end
 if addConsoleCommand ~= nil then
-    addConsoleCommand("hdCoat", "HorseDynamics: coat shader experiment: tint the nearest foal vehicle, hdCoat r g b [all]", "consoleCoat", HorseFoal)
+    addConsoleCommand("hdCoat", "HorseDynamics: coat shader experiment on foal vehicles: tint r g b | shade b [s] | gloss g | pattern a [r g b] | reset  [all]", "consoleCoat", HorseFoal)
 end

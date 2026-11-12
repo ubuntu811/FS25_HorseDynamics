@@ -3,11 +3,14 @@
 <CustomShader version="5">
     <Groups>
         <Group name="dirt" define="DIRT_ENABLED" />
+        <Group name="coat" define="COAT_MASK" />
     </Groups>
     <Parameters>
         <Parameter name="mirrorScaleAndOffsetUV"  target="mirrorScaleAndOffsetUV"   type="float4" group="base" defaultValue="1 1 0 0.5"           minValue="0 0 -10 -10" maxValue="10 10 10 10" description="XY - scale the texture (horizontal/vertical)\n4x2 texture = 0.25/0.5\nZW - offset uv incorporated into scale\n4x2 texture = (0,1,2,3)/(0,1) or (0,-1,-2,-3)/(0,-1)"/>
         <Parameter name="atlasInvSizeAndOffsetUV" target="atlasInvSizeAndOffsetUV"  type="float4" group="base" defaultValue="0.5 0.5 0 0"         minValue="0 0 -1 -1"   maxValue="1 1 1 1"     description="XY - invert size of the atlas (horizontal/vertical)\n4x2 texture = 0.25/0.5\nZW - offset uv after XY applied (horizontal/vertical)\n4x2 texture = (0.0,0.25,0.5,0.75)/(0.0,0.5)"/>
-        <Parameter name="coatTint" target="coatTint" type="float4" group="base" defaultValue="1 1 1 1" minValue="0 0 0 0" maxValue="4 4 4 4" description="colour that multiplies the coat (foal coat shader)"/>
+        <Parameter name="coatTint" target="coatTint" type="float4" group="base" defaultValue="1 1 1 1" minValue="0 0 0 0" maxValue="4 4 4 4" description="colour that multiplies the coat"/>
+        <Parameter name="coatShade" target="coatShade" type="float4" group="base" defaultValue="1 1 0 0" minValue="0 0 0 0" maxValue="4 4 4 1" description="x brightness, y saturation, w eye gloss"/>
+        <Parameter name="patternA" target="patternA" type="float4" group="base" defaultValue="1 1 1 0" minValue="0 0 0 0" maxValue="1 1 1 1" description="rgb colour of pattern A, a its strength"/>
         <Parameter name="dirt"                    target="dirt"                     type="float3" group="dirt" defaultValue="1 20 20"             minValue="0 0 0"       maxValue="1 50 50"     description="X - dirt amount 0..1\nYZ - dirtNmap uv scale"/>
         <Parameter name="dirtColor"               target="dirtColor"                type="float4" group="dirt" defaultValue="0.20 0.14 0.08 0"    minValue="0 0 0 0"     maxValue="1 1 1 1"     description="color of the dirt"/>
         <Parameter name="sssColor"                target="sssColor"                 type="float4" group="sss"  defaultValue="0.938 0.567 0.567 1" minValue="0 0 0 0"     maxValue="1 1 1 1"     description="color of the fake subsurface scattering"/>
@@ -22,11 +25,18 @@
     <Textures>
         <Texture name="dirtNmap" group="dirt"     defaultColorProfile="linearRGB" defaultFilename="$data/shared/characterDirt_normal.png"/>
         <Texture name="alphaMap" group="alphaMap" defaultColorProfile="linearRGB"/>
+        <Texture name="coatMask" group="coat" defaultColorProfile="linearRGB"/>
     </Textures>
     <VertexAttributes>
         <VertexAttribute name="uv1" group="uv1"/>
     </VertexAttributes>
     <Variations>
+        <Variation name="coatDirt" groups="base dirt coat">
+<![CDATA[
+    /* the body of our foal: dirtEnabled plus the coat mask (R coat, G eyeball, B hoof, A pattern A) */
+    #define DIRT_ENABLED
+]]>
+        </Variation>
         <Variation name="dirtEnabled" groups="base dirt">
 <![CDATA[
     /*
@@ -158,8 +168,10 @@ float4 mirrorScaleAndOffsetUV;
     4x2 texture = (0.0,0.25,0.5,0.75)/(0.0,0.5)
 */
 float4 atlasInvSizeAndOffsetUV;
-/* the coat is multiplied by this colour (our addition) */
+/* our additions: coatTint rgb multiplies the coat; coatShade x brightness y saturation w eye gloss; patternA rgb colour a strength */
 float4 coatTint;
+float4 coatShade;
+float4 patternA;
 #if defined( DIRT_ENABLED )
 /*
     X - dirt amount 0..1
@@ -176,6 +188,7 @@ float4 coatTint;
             <CodeInjection position="FS_GLOBALS">
 <![CDATA[
     float4 gGloss;
+    float4 gCoatMask; // R coat, G eyeball, B hoof, A pattern A (1 0 0 0 without the mask)
 #if defined( DIRT_ENABLED )
     float  gDirt;
 #endif
@@ -209,6 +222,11 @@ float4 coatTint;
             <CodeInjection position="START_FS">
 <![CDATA[
 globals.gGloss = float4(0.0,1.0,0.0,0.0);
+#if defined( COAT_MASK )
+    globals.gCoatMask = tex2DSample( coatMask, standardMaterialSampler, In.vs.glossmapTexCoords ).rgba;
+#else
+    globals.gCoatMask = float4(1.0,0.0,0.0,0.0);
+#endif
 #if defined( GLOSS_MAP )
     globals.gGloss = tex2DSample( glossMap, GLOSS_MAP_SAMPLER, In.vs.glossmapTexCoords).rgba;
 #endif
@@ -262,7 +280,13 @@ globals.gGloss = float4(0.0,1.0,0.0,0.0);
             </CodeInjection>
             <CodeInjection position="POST_DIFFUSE_COLOR_FS">
 <![CDATA[
-    diffuseColor = diffuseColor * object.coatTint.rgb;   // our addition: the coat colour of this animal
+    {   // our additions: the coat colour of this animal, then its pattern
+        float3 shaded = diffuseColor * object.coatTint.rgb;
+        float shadeLum = dot(shaded, float3(0.299, 0.587, 0.114));
+        shaded = lerp(float3(shadeLum, shadeLum, shadeLum), shaded, object.coatShade.y) * object.coatShade.x;
+        diffuseColor = lerp(diffuseColor, shaded, globals.gCoatMask.r);
+        diffuseColor = lerp(diffuseColor, object.patternA.rgb, globals.gCoatMask.a * object.patternA.a);
+    }
 #if defined( DIRT_ENABLED )
     #if defined( SPECULAR ) && defined( GLOSS_MAP )
         diffuseColor = lerp( object.dirtColor.rgb, diffuseColor, globals.gDirt); // DirtColor lerp
@@ -328,6 +352,9 @@ globals.gGloss = float4(0.0,1.0,0.0,0.0);
         metalness = 0; // No metalness, since the blue channel stores the dirt mask
         bakedAO = globals.gGloss.g;
     #endif
+#endif
+#if defined( COAT_MASK )
+    roughness = lerp(roughness, 0.04, globals.gCoatMask.g * object.coatShade.w); // our addition: glossy eyeballs
 #endif
 ]]>
             </CodeInjection>
