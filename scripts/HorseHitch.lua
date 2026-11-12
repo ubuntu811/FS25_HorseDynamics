@@ -1171,7 +1171,7 @@ end
 -- Second result: where the eye is now, third: the hinge's reach (log only).
 HorseHitch.REACH_SHARE = 0.9
 HorseHitch.EYE_HEIGHT_M = 0.81
-HorseHitch.EYE_HEIGHT_BY_FILE = { horseSulky = 1.0 }       -- vehicles of ours that are made for a higher eye (the sulky's shafts rise to it), by a part of the vehicle's xml file name
+HorseHitch.EYE_HEIGHT_BY_FILE = { horseSulky = "rest" }  -- vehicles of ours that bring their own eye height, by a part of the vehicle's xml file name: "rest" = the eye is held where it rests (nothing is tilted: a sulky has no tongue, and tilting it 6 cm lowered the eye with the wrong sign and ran away to a nose-up wagon), a number = that many metres above the ground
 function HorseHitch.eyeHeight(target, wanted)
     local x, y, z = getWorldTranslation(target.node)
     local now = y - HorseHitch.groundY(x, z)
@@ -1180,6 +1180,9 @@ function HorseHitch.eyeHeight(target, wanted)
     if file ~= nil then
         for part, height in pairs(HorseHitch.EYE_HEIGHT_BY_FILE) do
             if string.find(file, part, 1, true) ~= nil then
+                if height == "rest" then
+                    return now, now, reach
+                end
                 return height, now, reach
             end
         end

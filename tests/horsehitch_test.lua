@@ -978,5 +978,18 @@ g_currentMission.winchTow = nil
 check("without FS25_WinchTow the hitch does nothing (no pick)", HorseHitch.click() == nil)
 
 print = realPrint
+-- the sulky holds its eye where it rests (no tilt: it has no tongue); another wagon is held at the usual height
+do
+    local gw, gg, gl = getWorldTranslation, HorseHitch.groundY, HorseHitch.liftReach
+    getWorldTranslation = function() return 0, 1.06, 0 end
+    HorseHitch.groundY = function() return 0 end
+    HorseHitch.liftReach = function() return 0 end
+    local sulkyGoal = HorseHitch.eyeHeight({ node = 1, vehicle = { configFileName = "C:/mods/FS25_HorseDynamics/vehicles/horseSulky/horseSulky.xml" } }, 0.4)
+    check("the sulky's eye goal is where the eye rests now (nothing to tilt)", math.abs(sulkyGoal - 1.06) < 1e-9)
+    local wagonGoal = HorseHitch.eyeHeight({ node = 1, vehicle = { configFileName = "data/vehicles/x/woodenTrailer.xml" } }, 0.4)
+    check("another wagon is held at the usual eye height", wagonGoal == HorseHitch.EYE_HEIGHT_M)
+    getWorldTranslation, HorseHitch.groundY, HorseHitch.liftReach = gw, gg, gl
+end
+
 print(string.format("horsehitch_test: %d/%d passed", passed, passed + failed))
 os.exit(failed == 0 and 0 or 1)
