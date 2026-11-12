@@ -16,17 +16,25 @@ print("meshes", [(o.name, len(o.data.vertices), [m.name if m else None for m in 
 import re as _re
 xml_text = open(model, encoding="iso-8859-1").read()
 cols = {m.group(1): tuple(float(x) for x in m.group(2).split()) for m in _re.finditer(r'<Material name="([^"]+)"[^>]*diffuseColor="([^"]+)"', xml_text)}
+# materials painted by a colorScale custom parameter (the horse ball: vehicle shader, no diffuseColor) get that colour, a little glossy
+glossy = set()
+for mm in _re.finditer(r'<Material name="([^"]+)"[^>]*>(.*?)</Material>', xml_text, _re.S):
+    cs = _re.search(r'name="colorScale" value="([^"]+)"', mm.group(2))
+    if cs and mm.group(1) not in cols:
+        cols[mm.group(1)] = tuple(float(x) for x in cs.group(1).split()); glossy.add(mm.group(1))
 for o in meshes:
     for m in o.data.materials:
         if m is None: continue
         m.use_nodes = True
         bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-        key = next((k for k in cols if k in m.name), None)
+        key = m.name if m.name in cols else next((k for k in cols if k in m.name), None)
         if key is None: continue
         c = cols[key]
+        for l in list(m.node_tree.links):
+            if l.to_socket == bsdf.inputs["Base Color"]: m.node_tree.links.remove(l)        # (a texture on the colour would hide it: the horse ball has a white one)
         bsdf.inputs["Base Color"].default_value = (c[0], c[1], c[2], 1)
         steel = "steel" in key
-        bsdf.inputs["Roughness"].default_value = 0.3 if steel else 0.7
+        bsdf.inputs["Roughness"].default_value = 0.3 if steel else (0.3 if key in glossy else 0.7)
         bsdf.inputs["Metallic"].default_value = 0.9 if steel else 0.0
 bpy.context.view_layer.update()
 dg = bpy.context.evaluated_depsgraph_get()
