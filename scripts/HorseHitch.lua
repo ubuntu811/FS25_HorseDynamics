@@ -1172,6 +1172,20 @@ end
 HorseHitch.REACH_SHARE = 0.9
 HorseHitch.EYE_HEIGHT_M = 0.81
 HorseHitch.EYE_HEIGHT_BY_FILE = { horseSulky = "rest" }  -- vehicles of ours that bring their own eye height, by a part of the vehicle's xml file name: "rest" = the eye is held where it rests (nothing is tilted: a sulky has no tongue, and tilting it 6 cm lowered the eye with the wrong sign and ran away to a nose-up wagon), a number = that many metres above the ground
+-- Does this vehicle hold its eye where it rests ("rest" in EYE_HEIGHT_BY_FILE)? Then nothing is tilted by the script, and the horse's joint sits at the horse's own hook height (HorseJoint.attach): the game's joint pulls the eye down to
+-- it and the cart pitches about its axle by itself (a foal's hook is lower than a sulky's eye).
+function HorseHitch.eyeIsRest(vehicle)
+    local file = vehicle ~= nil and vehicle.configFileName or nil
+    if file ~= nil then
+        for part, height in pairs(HorseHitch.EYE_HEIGHT_BY_FILE) do
+            if height == "rest" and string.find(file, part, 1, true) ~= nil then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function HorseHitch.eyeHeight(target, wanted)
     local x, y, z = getWorldTranslation(target.node)
     local now = y - HorseHitch.groundY(x, z)

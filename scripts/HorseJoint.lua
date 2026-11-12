@@ -160,6 +160,21 @@ function HorseJoint.attach(horse, target)
     local root = horse.components[1].node
     local _, ly = worldToLocal(root, getWorldTranslation(target.node))
     ly = math.max(HorseJoint.MIN_Y, math.min(HorseJoint.AT[2], ly))
+    -- a cart that holds its eye where it rests (the sulky): the joint stays at the horse's own hook (not above the eye, at most HOOK_DROP_M under it), so the eye is pulled DOWN to it and the cart pitches nose-down
+    -- about its axle, as on a small horse; a joint above the eye would lift the shafts
+    if HorseHitch ~= nil and HorseHitch.eyeIsRest ~= nil and HorseHitch.eyeIsRest(trailer) then
+        local ride = nil
+        for _, r in ipairs(HorseLead ~= nil and HorseLead.rides or {}) do
+            if r.vehicle == horse then ride = r end
+        end
+        local rig = ride ~= nil and ride.rig or nil
+        if rig ~= nil and rig.hookNode ~= nil and rig.hookFollow == nil and (entityExists == nil or entityExists(rig.hookNode)) then
+            local _, hy = worldToLocal(root, getWorldTranslation(rig.hookNode))
+            local natural = math.max(HorseJoint.MIN_Y, ly - HorseJoint.HOOK_DROP_M, math.min(ly, hy))
+            say("attach: the joint goes to the horse's own hook height %.2f m (the eye is at %.2f m): the cart pitches down by about %.0f degrees", natural, ly, math.deg(math.atan2(ly - natural, 2.4)))
+            ly = natural
+        end
+    end
     setTranslation(entry.node, HorseJoint.AT[1], ly, HorseJoint.AT[3])
     entry.joint.jointOrigTrans = { getTranslation(entry.node) }
     -- The joint's limits are measured from the rotation between its two frames (this node and the eye's node), so the frames have to be the same when the wagon is straight behind the horse: the joint looks the
@@ -293,6 +308,7 @@ end
 -- Where the joint is (or would be): a green ring round it, a blue line along the way it looks (the way a trailer's eye has to look within 70 degrees for the game's own prompt), a yellow ring of the game's
 -- own 0.7 m reach, and a red line to the eye the saddle key would take. For every horse in a harness. hdJoint show on|off.
 HorseJoint.SHOW = false                 -- off: the sequence is seen without the debug drawing (hdJoint show on)
+HorseJoint.HOOK_DROP_M = 0.5            -- a cart that holds its eye where it rests is pulled at most this far down to the horse's hook
 HorseJoint.MIN_Y = 0.2                  -- the lowest the joint goes (in the horse's model space) to meet an eye
 HorseJoint.RING_M = 0.3
 HorseJoint.GAME_REACH_M = 0.7

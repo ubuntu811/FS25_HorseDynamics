@@ -977,6 +977,8 @@ end
 g_currentMission.winchTow = nil
 check("without FS25_WinchTow the hitch does nothing (no pick)", HorseHitch.click() == nil)
 
+check("eyeIsRest: the sulky yes, another wagon no, nothing no", HorseHitch.eyeIsRest({ configFileName = "x/horseSulky/horseSulky.xml" }) == true and HorseHitch.eyeIsRest({ configFileName = "data/vehicles/woodenTrailer.xml" }) == false and HorseHitch.eyeIsRest(nil) == false)
+
 print = realPrint
 -- the sulky holds its eye where it rests (no tilt: it has no tongue); another wagon is held at the usual height
 do
