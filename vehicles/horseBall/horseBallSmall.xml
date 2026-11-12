@@ -60,7 +60,7 @@
         <filename>vehicles/horseBall/horseBallSmall.i3d</filename>
         <size width="0.50" length="0.50" height="0.50" />
         <canBeReset>true</canBeReset>
-        <components maxMass="50">
+        <components maxMass="500">
             <component centerOfMass="0 0.25 0" solverIterationCount="10" mass="1.5"/>
         </components>
         <showInVehicleMenu>true</showInVehicleMenu>

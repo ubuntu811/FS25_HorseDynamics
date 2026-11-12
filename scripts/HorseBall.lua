@@ -113,7 +113,7 @@ function HorseBall.kick(vehicle, dt)
     if age >= 3000 and age - dt < 3000 then
         local ground = getTerrainHeightAtWorldPos(g_terrainNode, bx, 0, bz)
         local _, _, _, depth = getTerrainAttributesAtWorldPos(g_terrainNode, bx, by, bz, true, true, true, true, false)
-        say("probe: bottom %.2f m above the ground (0 = it rests on it; the ball is %.2f m in radius), ground softness %.2f, mass %.1f kg, sleeping: %s", by - ground, radius, depth or -1, getMass(node) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
+        say("probe: bottom %.2f m above the ground (0 = it rests on it; the ball is %.2f m in radius), ground softness %.2f, body mass %.1f kg (the vehicle says %.1f), sleeping: %s", by - ground, radius, depth or -1, getMass(node) * 1000, (vehicle.getTotalMass ~= nil and vehicle:getTotalMass() or 0) * 1000, tostring(getIsSleeping ~= nil and getIsSleeping(node)))
     end
     -- a ceiling on its speed (whatever pushed it: the kick, or the horse's body in the physics)
     local vx, vy, vz = getLinearVelocity(node)
