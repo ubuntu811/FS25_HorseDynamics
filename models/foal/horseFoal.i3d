@@ -11,7 +11,6 @@
     <File fileId="7" filename="$dataS/character/animals/domesticated/horse/maneTailBraide_specular.png" />
     <File fileId="8" filename="$dataS/character/animals/domesticated/horse/saddle_diffuse.png" />
     <File fileId="9" filename="$dataS/character/animals/domesticated/horse/saddle_normal.png" />
-    <File fileId="11" filename="coatMask.dds" />
     <File fileId="10" filename="$dataS/character/animals/domesticated/horse/saddle_specular.png" />
   </Files>
 

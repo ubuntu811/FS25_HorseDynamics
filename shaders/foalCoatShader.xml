@@ -319,6 +319,13 @@ globals.gGloss = float4(0.0,1.0,0.0,0.0);
         lighting.xyz = cLT * lightAtten;
     #endif
 #endif
+#if defined( COAT_MASK )
+    {   // our addition: the sun's glint on the eyeballs (viewDir and lightDir point away from the surface, as in the scattering above)
+        float3 glintHalf = normalize(lightDir + viewDir);
+        float glint = pow(saturate(dot(normal, glintHalf)), 500.0) * globals.gCoatMask.g * object.coatShade.w * 30.0;
+        lighting.xyz += lightColor * glint * lightAtten;
+    }
+#endif
 ]]>
             </CodeInjection>
             <CodeInjection position="ALPHA_FS">

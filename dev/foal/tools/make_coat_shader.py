@@ -40,6 +40,17 @@ def make():
 """, "post diffuse")
     old = "        bakedAO = globals.gGloss.g;\n    #endif\n#endif\n"
     s = must(old, old + "#if defined( COAT_MASK )\n    roughness = lerp(roughness, 0.04, globals.gCoatMask.g * object.coatShade.w); // our addition: glossy eyeballs\n#endif\n", "post gloss")
+    # a sun glint on the eyeballs (coatShade.w): a sharp highlight of the sun on the eye's surface, so the eyes shine even where there is nothing bright to reflect
+    i = s.index('<CodeInjection position="POST_GET_LIGHTING_FS">')
+    j = s.index("]]>", i)
+    s = s[:j] + """#if defined( COAT_MASK )
+    {   // our addition: the sun's glint on the eyeballs (viewDir and lightDir point away from the surface, as in the scattering above)
+        float3 glintHalf = normalize(lightDir + viewDir);
+        float glint = pow(saturate(dot(normal, glintHalf)), 500.0) * globals.gCoatMask.g * object.coatShade.w * 30.0;
+        lighting.xyz += lightColor * glint * lightAtten;
+    }
+#endif
+""" + s[j:]
     out = os.path.join(mod, "shaders", "foalCoatShader.xml")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, "w", encoding="utf-8").write(s)
