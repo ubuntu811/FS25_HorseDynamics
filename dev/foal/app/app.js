@@ -236,13 +236,14 @@ function carryHeadEdits(out, pre) {
 // ====================== the lower lip follows the jaw ======================
 // The skin of the lower lip is skinned mostly to the head bone, so the jaw slider only moved the teeth. With lip_follow the skin below the mouth slit, in the front of the head, is carried by the jaw bone (like the lids by the eyeball):
 // each such vertex is blended toward where the jaw bone alone would put it, by how far below the slit and how far forward it is.
+const LIP_A0 = 0.76, LIP_A1 = 0.96;                 // how far forward along the ear-to-nose line the lip follows the jaw: none before A0, fully from A1 (a long, gentle blend: a short one pinched the cheek)
 let lipFollow = null;
 function buildLipFollow() {
   const up = headLine.up, E = headLine.E;
   const sOf = p => (p[0]-E[0])*up[0] + (p[1]-E[1])*up[1] + (p[2]-E[2])*up[2];
   const slit = (sOf(restPos[idxOf.lipMidBot_M]) + sOf(restPos[idxOf.lipMidUp_M])) / 2;
   const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  lipFollow = { slit, list: headLine.list.filter(e => e.hw > 0.5).map(e => ({ v: e.v, f: sm(0.62, 0.80, e.a) * sm(slit, slit - 0.02, e.s) })).filter(x => x.f > 0.001) };
+  lipFollow = { slit, list: headLine.list.filter(e => e.hw > 0.5).map(e => ({ v: e.v, f: sm(LIP_A0, LIP_A1, e.a) * sm(slit + 0.004, slit - 0.04, e.s) })).filter(x => x.f > 0.001) };
 }
 function applyLipFollow(P, pos, Db) {
   if (!P.lip_follow) return;
