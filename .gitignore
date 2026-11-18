@@ -1,0 +1,19 @@
+# recordings and build output do not belong in the repo
+assets/*.mp4
+build/.build_staging/
+build/*.zip
+assets/*.zip
+# GIANTS geometry exported for looking and measuring only, never committed
+assets/*.obj
+assets/*.mtl
+assets/wagon_split/
+# foal workshop: game-derived or generated, never committed
+dev/foal/out/
+dev/foal/obj/
+__pycache__/
+
+# the mouse sticker sheet the mouse ball's texture is made from (tools/make_horse_ball_mice.py); kept local
+dev/ballmice/
+build/.deploy_stage/
+dev/foal/horseCoats_diffuse.png
+dev/foal/tex/*.png

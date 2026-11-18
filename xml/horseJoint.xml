@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<!-- the attacher joint HorseJoint.lua gives the horse: read by the game's own loader (AttacherJoints:loadAttacherJointFromXML) with the horse's vehicle schema. The node is the id of a node made at runtime
+     (HorseJoint registers it in the horse's i3dMappings), a trailer joint: it takes what has an input joint of the trailer type (a drawbar eye).
+     The rotation limits are those of the game's own tractors (25 degrees up and down, 75 to each side and of roll): the game's default for a trailer joint is 0 0 0, a drawbar locked rigidly to the horse -->
+<vehicle>
+    <attacherJoints>
+        <attacherJoint node="rfHitchJoint" jointType="trailer" lowerRotLimit="25 75 75" allowsJointLimitMovement="false" />
+    </attacherJoints>
+</vehicle>

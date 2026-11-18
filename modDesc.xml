@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<modDesc descVersion="94">
+    <author>ubuntu811</author>
+    <version>0.1.0.0</version>
+    <title>
+        <en>HorseDynamics</en>
+    </title>
+    <description>
+        <en><![CDATA[
+Makes the horses of a pasture follow you. Call the nearest one with Right Ctrl + C (again for each further horse); they walk, trot or gallop to you depending on the distance, in bursts
+(a few seconds of walking, then they stand a while), give up when a fence is in the way, and go back into a stable by themselves when you lead them to one. Right Ctrl + V gives them all back.
+Built on the game's own horse riding: a horse becomes a rideable vehicle that is steered by a virtual rider.
+
+Single player only for now.
+]]></en>
+    </description>
+    <iconFilename>icon.dds</iconFilename>
+    <multiplayer supported="false" />
+
+    <extraSourceFiles>
+        <sourceFile filename="scripts/HorseStoreCategories.lua" />
+        <sourceFile filename="scripts/HorseGate.lua" />
+        <sourceFile filename="scripts/HorseFoal.lua" />
+        <sourceFile filename="scripts/HorseCoat.lua" />
+        <sourceFile filename="scripts/HorseTack.lua" />
+        <sourceFile filename="scripts/HorseStirrupPose.lua" />
+        <sourceFile filename="scripts/HorseStirrup.lua" />
+        <sourceFile filename="scripts/HorsePreview.lua" />
+        <sourceFile filename="scripts/HorseWash.lua" />
+        <sourceFile filename="scripts/HorseTie.lua" />
+        <sourceFile filename="scripts/HorseBall.lua" />
+        <sourceFile filename="scripts/HorseJump.lua" />
+        <sourceFile filename="scripts/HorseHarnessItem.lua" />
+        <sourceFile filename="scripts/HorseSaddleItem.lua" />
+        <sourceFile filename="scripts/HorseRope.lua" />
+        <sourceFile filename="scripts/HorseHarness.lua" />
+        <sourceFile filename="scripts/HorseHitch.lua" />
+        <sourceFile filename="scripts/HorseJoint.lua" />
+        <sourceFile filename="scripts/HorseLead.lua" />
+        <sourceFile filename="scripts/HorseSave.lua" />
+        <sourceFile filename="scripts/HorseDynamics.lua" />
+        <sourceFile filename="scripts/UIHelper.lua" />
+        <sourceFile filename="scripts/HorseSettings.lua" />
+    </extraSourceFiles>
+
+    <!-- two hand tools in the shop's "animals" hand tool category (the one the game's own horse brush is in) -->
+    <!-- the shop categories "horses" and "animalGear" are added by scripts/HorseStoreCategories.lua: a modDesc only gets them for DLCs -->
+    <storeItems>
+        <storeItem xmlFilename="handTools/carrot/carrot.xml"/>
+        <storeItem xmlFilename="handTools/leash/leash.xml"/>
+        <storeItem xmlFilename="handTools/leash/leash_leather.xml"/>
+        <storeItem xmlFilename="handTools/harness/harness.xml"/>
+        <storeItem xmlFilename="handTools/harness/harness_leather.xml"/>
+        <storeItem xmlFilename="vehicles/horseBall/horseBall.xml"/>
+        <storeItem xmlFilename="vehicles/horseBall/horseBallMice.xml"/>
+        <storeItem xmlFilename="placeables/hitchingPost/hitchingPost.xml"/>
+        <storeItem xmlFilename="vehicles/horseHarness/horseHarnessItem.xml"/>
+        <storeItem xmlFilename="vehicles/horseSaddle/horseSaddle.xml"/>
+        <storeItem xmlFilename="vehicles/horseJumps/jumpCross.xml"/>
+        <storeItem xmlFilename="vehicles/horseJumps/jumpStandards.xml"/>
+        <storeItem xmlFilename="vehicles/horseSulky/horseSulky.xml"/>
+        <storeItem xmlFilename="xml/horseFoal.xml"/>
+        <storeItem xmlFilename="xml/horseAdult.xml"/>
+    </storeItems>
+    <!-- the horse ball: its own vehicle type (the game's base vehicle plus a specialization that lets horses kick it) -->
+    <specializations>
+        <specialization name="horseBallVehicle" className="HorseBallVehicle" filename="scripts/HorseBallVehicle.lua"/>
+        <specialization name="horseHarnessItemVehicle" className="HorseHarnessItemVehicle" filename="scripts/HorseHarnessItemVehicle.lua"/>
+        <specialization name="horseSaddleItemVehicle" className="HorseSaddleItemVehicle" filename="scripts/HorseSaddleItemVehicle.lua"/>
+        <specialization name="horseObjectInfo" className="HorseObjectInfo" filename="scripts/HorseObjectInfo.lua"/>
+    </specializations>
+    <vehicleTypes>
+        <type name="horseBall" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseBallVehicle"/>
+            <specialization name="horseObjectInfo"/>
+        </type>
+        <type name="horseHarnessItem" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseHarnessItemVehicle"/>
+            <specialization name="horseObjectInfo"/>
+        </type>
+        <type name="horseSaddleItem" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseSaddleItemVehicle"/>
+            <specialization name="horseObjectInfo"/>
+        </type>
+        <!-- the horse jumps: the game's base vehicle (dynamic objects: picked up with the hands, knocked over by a horse), only the weight line in the info box -->
+        <type name="horseJump" parent="base" filename="$dataS/scripts/vehicles/Vehicle.lua">
+            <specialization name="horseObjectInfo"/>
+        </type>
+        <!-- the sulky: a trailed, wheeled vehicle (the game's attachable base: wheels, an input attacher joint) -->
+        <type name="horseSulky" parent="baseAttachable" filename="$dataS/scripts/vehicles/Vehicle.lua"/>
+    </vehicleTypes>
+    <handToolSpecializations>
+        <specialization name="horseCarrot" filename="scripts/HandToolHorseCarrot.lua" className="HandToolHorseCarrot"/>
+        <specialization name="horseLeash" filename="scripts/HandToolHorseLeash.lua" className="HandToolHorseLeash"/>
+        <specialization name="horseHarness" filename="scripts/HandToolHorseHarness.lua" className="HandToolHorseHarness"/>
+    </handToolSpecializations>
+    <handToolTypes>
+        <type name="horseCarrot" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseCarrot"/>
+        </type>
+        <type name="horseLeash" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseLeash"/>
+        </type>
+        <type name="horseHarness" parent="base" filename="$dataS/scripts/handTools/HandTool.lua">
+            <specialization name="horseHarness"/>
+        </type>
+    </handToolTypes>
+
+    <actions>
+        <!-- no category: these have to work from a vehicle's seat as well (leading horses while driving to the new stable) -->
+        <action name="HORSEDYN_CALL" axisType="HALF"/>
+        <action name="HORSEDYN_RELEASE" axisType="HALF"/>
+        <action name="HORSEDYN_FREEZE" axisType="HALF"/>
+        <action name="HORSEDYN_ROPE_LONGER" axisType="HALF"/>
+        <action name="HORSEDYN_ROPE_SHORTER" axisType="HALF"/>
+    </actions>
+
+    <inputBinding>
+        <!-- the log wire keys are unbound on purpose (they were Ctrl+K and Ctrl+M, the vehicle winch's keys): to test whether they stole the winch's keys; bind them yourself in the key settings -->
+        <actionBinding action="HORSEDYN_ROPE_LONGER"/>
+        <actionBinding action="HORSEDYN_ROPE_SHORTER"/>
+    </inputBinding>
+
+    <!-- no default keys for the tools: they are used with the mouse (their own action), the call/release/freeze actions can be bound in the settings; while a horse pulls something its keys are the pulled vehicle's (HorseHitch.keys). The wire of a tied log is unbound for now (it was Ctrl+M out, Ctrl+K in) -->
+
+    <l10n>
+        <text name="input_HORSEDYN_ROPE_LONGER">
+            <en>Let more wire out (a log tied to a horse)</en>
+        </text>
+        <text name="input_HORSEDYN_ROPE_SHORTER">
+            <en>Take wire in (a log tied to a horse)</en>
+        </text>
+        <text name="warning_horseDynamicsHandToolOwned">
+            <en>You already own this tool.</en>
+            <de>Dieses Werkzeug besitzt du bereits.</de>
+        </text>
+        <text name="warning_horseDynamicsBetterOwned">
+            <en>You already own the leather version of this tool.</en>
+            <de>Du besitzt bereits die Lederversion dieses Werkzeugs.</de>
+        </text>
+        <text name="warning_horseDynamicsHarnessed">
+            <en>This horse wears a harness: take it off with the harness tool before you ride it.</en>
+            <de>Dieses Pferd traegt ein Geschirr: nimm es mit dem Geschirr-Werkzeug ab, bevor du es reitest.</de>
+        </text>
+        <text name="action_horseCarrot">
+            <en>Call the horses of the pasture / let them go</en>
+            <de>Pferde der Weide rufen / freilassen</de>
+        </text>
+        <text name="action_horseLeash">
+            <en>Leash the nearest horse / let it go</en>
+            <de>Nächstes Pferd anleinen / freilassen</de>
+        </text>
+        <text name="hd_coat">
+            <en>Coat</en>
+            <de>Fell</de>
+        </text>
+        <text name="category_animalGear">
+            <en>Animal Gear</en>
+            <de>Tierzubehör</de>
+        </text>
+        <text name="category_horses">
+            <en>Horses</en>
+            <de>Pferde</de>
+        </text>
+        <text name="configuration_horseBallWeight">
+            <en>Weight</en>
+            <de>Gewicht</de>
+        </text>
+        <text name="hd_putHarnessOn">
+            <en>Put the harness on the horse</en>
+            <de>Geschirr anlegen</de>
+        </text>
+        <text name="hd_takeHarnessOff">
+            <en>Take the harness off the horse</en>
+            <de>Geschirr abnehmen</de>
+        </text>
+        <text name="hd_putSaddleOn">
+            <en>Put the saddle on the horse</en>
+            <de>Sattel auflegen</de>
+        </text>
+        <text name="hd_takeSaddleOff">
+            <en>Take the saddle off the horse</en>
+            <de>Sattel abnehmen</de>
+        </text>
+        <text name="action_leashUnhitch">
+            <en>Unhitch the vehicle</en>
+            <de>Fahrzeug abkuppeln</de>
+        </text>
+        <text name="action_horseHarness">
+            <en>Put the harness on the horse / take it off</en>
+            <de>Geschirr anlegen / abnehmen</de>
+        </text>
+        <text name="input_HORSEDYN_CALL">
+            <en>Call the nearest horse</en>
+            <de>Nächstes Pferd rufen</de>
+        </text>
+        <text name="input_HORSEDYN_FREEZE">
+            <en>Freeze the led horses / let them go on</en>
+            <de>Gefuehrte Pferde anhalten / weitergehen lassen</de>
+        </text>
+        <text name="input_HORSEDYN_RELEASE">
+            <en>Give the horses back</en>
+            <de>Pferde freigeben</de>
+        </text>
+
+        <!-- UIHelper.createControlsDynamically needs a _title and an _info per control (prefix hd_ + name) and a _title for the section header -->
+        <text name="hd_setting_title">
+            <en>Horse Dynamics</en>
+        </text>
+        <text name="hd_gallopLimit_title">
+            <en>A pulling horse never gallops</en>
+        </text>
+        <text name="hd_gallopLimit_info">
+            <en>A horse that pulls a vehicle trots at most (a canter under a rider). Off: it gallops with a plough behind it.</en>
+        </text>
+        <text name="hd_playerCap_title">
+            <en>Loads slow you down</en>
+        </text>
+        <text name="hd_playerCap_info">
+            <en>While a horse pulls something, your walking and running speed is held to what the horse itself can do (a pulling horse trots at most): you do not outrun it, and the load behind it costs you nothing more. Off: no cap.</en>
+        </text>
+        <text name="hd_canterJump_title">
+            <en>Jump at a canter</en>
+        </text>
+        <text name="hd_canterJump_info">
+            <en>The game's canter jump is a steep hop (half the height of a gallop's, at the canter's speed: it looks like jumping straight up and clears only low bars). On: a canter jump rises to 60 % of the full height (1.2 m) and stretches forward (the speed is raised by half as it leaves the ground): a lower, longer arc that clears a bar at 90 cm. Off: the game's own.</en>
+        </text>
+        <text name="hd_leashAfterRide_title">
+            <en>Leash in hand after dismounting</en>
+        </text>
+        <text name="hd_leashAfterRide_info">
+            <en>When you get off a horse, the leash tool (if you own it) goes into your hand: lead the horse, a click lets it go. Off: the hands stay empty.</en>
+        </text>
+        <text name="hd_pullLimit_title">
+            <en>A horse is no tractor</en>
+        </text>
+        <text name="hd_pullLimit_info">
+            <en>The horse's pull is limited to about 4 kN: a heavy load hardly gets going and it says so. Off: any load that a small plough or cultivator can be.</en>
+        </text>
+    </l10n>
+</modDesc>

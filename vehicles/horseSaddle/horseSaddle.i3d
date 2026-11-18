@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<i3D name="horseSaddle" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
+  <Asset>
+    <Export program="make_saddle_item.py" version="1"/>
+  </Asset>
+  <Files>
+    <File fileId="1" filename="$dataS/character/animals/domesticated/horse/saddle_diffuse.png" />
+    <File fileId="2" filename="$dataS/character/animals/domesticated/horse/saddle_normal.png" />
+    <File fileId="3" filename="$dataS/character/animals/domesticated/horse/saddle_specular.png" />
+  </Files>
+  <Materials>
+    <Material name="saddle_mat" materialId="1">
+      <Texture fileId="1" />
+      <Normalmap fileId="2" />
+      <Glossmap fileId="3" />
+    </Material>
+  </Materials>
+  <Shapes externalShapesFile="horseSaddle.i3d.shapes">
+  </Shapes>
+  <Scene>
+    <Shape name="horseSaddle_main_component1" shapeId="2" dynamic="true" compound="true" density="0.0005" collisionFilterGroup="0x10004" collisionFilterMask="0xfe3ffb83" linearDamping="0.1" angularDamping="0.5" staticFriction="0.8" dynamicFriction="0.6" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" clipDistance="300" nodeId="1">
+      <Shape name="horseSaddle_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1" clipDistance="300" nodeId="2"/>
+    </Shape>
+  </Scene>
+
+</i3D>

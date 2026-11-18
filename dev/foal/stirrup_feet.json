@@ -1,0 +1,5 @@
+{
+ "note": "hdStirrup measure, 2026-11-13 11:46, rider on an adult horse: ToeBase nodes in the horse's model space; the sole offset is how far below the toe base the top of the tread plate is",
+ "horseAdult": { "L": [0.458, 1.036, 0.263], "R": [-0.412, 1.031, 0.270] },
+ "sole": 0.045
+}

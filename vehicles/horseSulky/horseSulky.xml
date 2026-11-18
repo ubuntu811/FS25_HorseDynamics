@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseSulky" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>Sulky (FS25_HorseDynamics), made by tools/make_horse_sulky.py.</annotation>
+
+    <storeData>
+        <name>
+            <en>Sulky</en>
+            <de>Sulky</de>
+        </name>
+        <functions>
+            <function>A plain, modern two-wheeled cart for one horse. Hitch it to a horse in its harness at the drawbar eye, like a wagon.</function>
+        </functions>
+        <image>vehicles/horseSulky/store_horseSulky.dds</image>
+        <price>650</price>
+        <lifetime>1000</lifetime>
+        <category>horses</category>
+        <brand>NONE</brand>
+        <showInStore>true</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>TRAILERS</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <base>
+        <typeDesc>Sulky</typeDesc>
+        <filename>vehicles/horseSulky/horseSulky.i3d</filename>
+        <size width="1.75" length="3.62" height="1.38" lengthOffset="0.75"/>
+        <components maxMass="700">
+            <component centerOfMass="0 0.875 -0.150" solverIterationCount="10" mass="238"/>
+            <component centerOfMass="0.000 0.886 1.761" solverIterationCount="10" mass="12"/>
+            <!-- the hinge: the tongue swings 30 degrees up and 30 degrees down about the cross axis (symmetric, so it does not matter which way the joint turns) -->
+            <joint component1="1" component2="2" node="componentJoint" rotLimit="30 0 0" rotMinLimit="-30 0 0" transLimit="0 0 0" />
+        </components>
+        <schemaOverlay attacherJointPosition="0 0" name="IMPLEMENT" />
+        <mapHotspot type="TOOL_TRAILED" />
+    </base>
+
+    <wheels>
+        <wheelConfigurations>
+            <wheelConfiguration name="$l10n_configuration_valueDefault" price="0" saveId="DEFAULT">
+                <wheels>
+                    <wheel isLeft="true">
+                        <physics repr="wheelLeft" radius="0.575" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
+                    </wheel>
+                    <wheel isLeft="false">
+                        <physics repr="wheelRight" radius="0.575" width="0.05" mass="0.02" restLoad="0.2" forcePointRatio="0.15" initialCompression="5" suspTravel="0.05" spring="60" damper="20"/>
+                    </wheel>
+                </wheels>
+            </wheelConfiguration>
+        </wheelConfigurations>
+    </wheels>
+
+    <attachable>
+        <inputAttacherJoints>
+            <inputAttacherJoint node="attacherJoint" jointType="trailer" attacherHeight="1" />
+        </inputAttacherJoints>
+        <brakeForce force="0.05" maxForce="0.15" maxForceMass="700"/>
+        <support animationName="moveSupport" />
+    </attachable>
+
+    <!-- the rear support legs: down (end of the animation) while nobody pulls, folded up backwards (its start) while hitched, like every trailer's support leg -->
+    <animations>
+        <animation name="moveSupport">
+            <part node="skidPivotL" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+            <part node="skidPivotR" startTime="0" endTime="1" startRot="75 0 0" endRot="0 0 0" />
+        </animation>
+    </animations>
+
+    <ai>
+        <agentAttachment jointNode="attacherJoint" rotCenterWheelIndices="1 2" width="1.88" height="1.38" length="3.25" lengthOffset="0.50"/>
+    </ai>
+
+    <i3dMappings>
+        <i3dMapping id="horseSulky_main_component1" node="0>" />
+        <i3dMapping id="horseSulky_tongue_component2" node="1>" />
+        <i3dMapping id="attacherJoint" node="1>2" />
+        <i3dMapping id="wheelLeft" node="0>6" />
+        <i3dMapping id="wheelRight" node="0>7" />
+        <i3dMapping id="skidPivotL" node="0>8" />
+        <i3dMapping id="skidPivotR" node="0>9" />
+        <i3dMapping id="componentJoint" node="0>10" />
+    </i3dMappings>
+</vehicle>

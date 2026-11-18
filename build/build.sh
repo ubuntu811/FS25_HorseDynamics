@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+# Exit immediately if a command exits with a non-zero status
+set -e
+
+# Define configuration variables
+MOD_NAME="FS25_HorseDynamics"
+TARGET_ZIP="build/${MOD_NAME}.zip"
+BUILD_DIR="build/.build_staging"
+
+
+echo "=== Starting FS25 Mod Packaging Loop ==="
+
+# 1. Clean up any previous old build artifacts
+if [ -f "$TARGET_ZIP" ]; then
+    echo "--> Removing old target zip archive..."
+    rm "$TARGET_ZIP"
+fi
+
+if [ -d "$BUILD_DIR" ]; then
+    rm -rf "$BUILD_DIR"
+fi
+
+mkdir -p $BUILD_DIR
+
+echo "--> Copying production files to staging area..."
+# Copy the core runtime logic and metadata
+for i in icon.dds store/ models/foal/ models/horse/ models/hall/ shaders/ handTools/ vehicles/ placeables/ scripts/ textures/ xml/ modDesc.xml; do
+  mkdir -p "$(dirname "$BUILD_DIR/$i")"
+  cp -r "$i" "$BUILD_DIR/$i"
+done
+# only the .dds files are needed (the .png sources of the two tiny solid-colour rope textures stay in the repo)
+rm -f "$BUILD_DIR"/textures/*.png
+
+# 3. Compile the production archive
+echo "--> Compiling optimized production zip archive..."
+cd "$BUILD_DIR"
+# Zip everything inside the folder (-r for recursive, -q for quiet execution)
+zip -rq "../${MOD_NAME}.zip" ./*
+cd ..
+
+# 4. Post-build cleanup
+echo "--> Tearing down temporary staging directory..."
+rm -rf "$BUILD_DIR"
+
+echo "========================================="
+echo " SUCCESS: Built production package!"
+echo " File: ./${TARGET_ZIP}"
+echo "========================================="
+

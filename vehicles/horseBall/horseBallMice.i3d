@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<i3D name="horseBallMice" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
+  <Asset>
+    <Export program="make_horse_ball.py" version="1"/>
+  </Asset>
+  <Files>
+    <File fileId="1" filename="$data/shaders/vehicleShader.xml" />
+    <File fileId="2" filename="$data/shared/white_diffuse.png" />
+    <File fileId="3" filename="$data/shared/default_normal.png" />
+    <File fileId="8" filename="horseBallMice_diffuse.dds" />
+    <File fileId="4" filename="$data/shared/default_vmask.png" />
+    <File fileId="5" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_diffuse.png" />
+    <File fileId="6" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_normal.png" />
+    <File fileId="7" filename="$data/shared/detailLibrary/calibrated/calibratedPaint_specular.png" />
+  </Files>
+  <Materials>
+    <Material name="ball_mat" materialId="1" customShaderId="1">
+      <CustomParameter name="clearCoatIntensity" value="0.8"/>
+      <CustomParameter name="clearCoatSmoothness" value="0.9"/>
+      <CustomParameter name="colorScale" value="1 1 1"/>
+      <CustomParameter name="smoothnessScale" value="0.9"/>
+      <Custommap name="detailDiffuse" fileId="5"/>
+      <Custommap name="detailNormal" fileId="6"/>
+      <Custommap name="detailSpecular" fileId="7"/>
+      <Texture fileId="2"/>
+      <Normalmap fileId="3"/>
+      <Glossmap fileId="4"/>
+    </Material>
+    <Material name="mice_mat" materialId="2" customShaderId="1" alphaBlending="true">
+      <CustomParameter name="clearCoatIntensity" value="0.6"/>
+      <CustomParameter name="clearCoatSmoothness" value="0.9"/>
+      <CustomParameter name="colorScale" value="1 1 1"/>
+      <CustomParameter name="smoothnessScale" value="0.8"/>
+      <Custommap name="detailDiffuse" fileId="5"/>
+      <Custommap name="detailNormal" fileId="6"/>
+      <Custommap name="detailSpecular" fileId="7"/>
+      <Texture fileId="8"/>
+      <Normalmap fileId="3"/>
+      <Glossmap fileId="4"/>
+    </Material>
+  </Materials>
+  <Shapes externalShapesFile="horseBallMice.i3d.shapes">
+  </Shapes>
+  <Scene>
+    <Shape name="horseBall_main_component1" shapeId="2" dynamic="true" compound="true" collisionFilterGroup="0x10004" collisionFilterMask="0xfe1ffb83" linearDamping="0.15" angularDamping="0.15" staticFriction="1" dynamicFriction="1" castsShadows="false" receiveShadows="false" nonRenderable="true" materialIds="1" nodeId="1">
+      <Shape name="horseBall_vis" shapeId="1" castsShadows="true" receiveShadows="true" materialIds="1" nodeId="2"/>
+      <Shape name="horseBall_mice" shapeId="3" castsShadows="false" receiveShadows="true" materialIds="2" nodeId="3"/>
+    </Shape>
+  </Scene>
+
+</i3D>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseBall" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>A ball covered in mouse stickers for the horses to kick around (FS25_HorseDynamics).</annotation>
+
+    <storeData>
+        <name>
+            <en>Mouse ball</en>
+            <de>Mäuseball</de>
+        </name>
+        <functions>
+            <function>A ball covered in little mice for the horses to kick around: ride or lead a horse into it.</function>
+        </functions>
+        <image>store/mouseBall.dds</image>
+        <price>25</price>
+        <lifetime>1000</lifetime>
+        <category>animalGear</category>
+        <brand>NONE</brand>
+        <showInStore>true</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>OTHER</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <!-- the base colour under the stickers: the game's palette as a shop option (the material ball_mat; the stickers are a second, transparent shell: mice_mat); white by default -->
+    <designColorConfigurations title="Base colour" useDefaultColors="true" defaultColorIndex="1" price="0">
+        <material materialSlotName="ball_mat" materialTemplateUseColorOnly="true"/>
+    </designColorConfigurations>
+
+    <!-- the weight: a shop option (the game's additionalMass configuration data) on top of the 3 kg of the component; the ball does not roll on for ever: damping is set on its shape (the i3d) -->
+    <horseBallWeightConfigurations>
+        <horseBallWeightConfiguration name="Normal (3 kg)" price="0"/>
+        <horseBallWeightConfiguration name="Beach ball (0.5 kg)" price="0">
+            <component node="horseBall_main_component1" additionalMass="-2.5"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Medium (10 kg)" price="10">
+            <component node="horseBall_main_component1" additionalMass="7"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Heavy (25 kg)" price="25">
+            <component node="horseBall_main_component1" additionalMass="22"/>
+        </horseBallWeightConfiguration>
+        <horseBallWeightConfiguration name="Medicine ball (60 kg)" price="60">
+            <component node="horseBall_main_component1" additionalMass="57"/>
+        </horseBallWeightConfiguration>
+    </horseBallWeightConfigurations>
+
+    <base>
+        <typeDesc>Horse toy</typeDesc>
+        <filename>vehicles/horseBall/horseBallMice.i3d</filename>
+        <size width="1.0" length="1.0" height="1.0" />
+        <canBeReset>true</canBeReset>
+        <components maxMass="500">
+            <component centerOfMass="0 0.45 0" solverIterationCount="10" mass="3"/>
+        </components>
+        <showInVehicleMenu>true</showInVehicleMenu>
+        <mapHotspot available="false" />
+        <input allowed="false"/>
+    </base>
+
+    <i3dMappings>
+        <i3dMapping id="horseBall_main_component1" node="0>" />
+    </i3dMappings>
+</vehicle>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<vehicle type="horseSaddleItem" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/vehicle.xsd">
+    <annotation>Horse saddle (FS25_HorseDynamics), made by dev/foal/tools/make_saddle_item.py.</annotation>
+
+    <storeData>
+        <name>
+            <en>Horse saddle</en>
+        </name>
+        <functions>
+            <function>An English saddle with its suede panels, on its own. Pick it up with your hands and carry it up to a horse (led, or one you rode out): it goes on. Look at the saddle on the horse and click to take it off again.</function>
+        </functions>
+        <image>vehicles/horseSaddle/store_horseSaddle.dds</image>
+        <price>350</price>
+        <lifetime>1000</lifetime>
+        <category>animalGear</category>
+        <brand>NONE</brand>
+        <showInStore>true</showInStore>
+        <canBeSold>true</canBeSold>
+        <allowLeasing>false</allowLeasing>
+        <financeCategory>OTHER</financeCategory>
+        <vertexBufferMemoryUsage>0</vertexBufferMemoryUsage>
+        <indexBufferMemoryUsage>0</indexBufferMemoryUsage>
+        <textureMemoryUsage>0</textureMemoryUsage>
+        <instanceVertexBufferMemoryUsage>0</instanceVertexBufferMemoryUsage>
+        <instanceIndexBufferMemoryUsage>0</instanceIndexBufferMemoryUsage>
+        <storeIconRendering>
+            <settings cameraXRot="-15" cameraYRot="35" />
+        </storeIconRendering>
+        <audioMemoryUsage>0</audioMemoryUsage>
+    </storeData>
+
+    <base>
+        <typeDesc>Saddle</typeDesc>
+        <filename>vehicles/horseSaddle/horseSaddle.i3d</filename>
+        <size width="0.8" length="0.65" height="0.55" />
+        <canBeReset>true</canBeReset>
+        <components maxMass="200">
+            <component centerOfMass="0 0.22 0" solverIterationCount="10" mass="6"/>
+        </components>
+        <showInVehicleMenu>true</showInVehicleMenu>
+        <mapHotspot available="false" />
+        <input allowed="false"/>
+    </base>
+
+    <i3dMappings>
+        <i3dMapping id="horseSaddle_main_component1" node="0>" />
+    </i3dMappings>
+</vehicle>
